@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  # Elasticsearch and Kibana setup
+  # This current Elasticsearch setup is for local testing only with a single node Elasticsearch cluster, and Kibana dashboard
+  # It based on a very minimal setup, with no TLS or HTTPS whatsoever: https://www.elastic.co/docs/deploy-manage/security/set-up-minimal-security
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.3.1
+    container_name: es01
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.enabled=true
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-u elastic:${ELASTIC_PASSWORD}", "http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 1m
+
+  # Run some commands after Elasticsearch cluster is up. Basically check until service is available to take a HTTP request, 
+  # then make a request to change password for ES's service account for Kibana
+  setup:
+    image: curlimages/curl:latest
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      echo 'Setting kibana_system password...';
+      curl -s -u elastic:${ELASTIC_PASSWORD} -X POST http://elasticsearch:9200/_security/user/kibana_system/_password \
+      -H 'Content-Type: application/json' \
+      -d '{
+        \"password\": \"${KIBANA_PASSWORD}\"
+      }';
+
+      echo 'Done!';
+      "
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-wolfi:9.3.1
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    restart: always
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+    ports:
+      - "5601:5601"
+  
+  # PostgreSQL DB setup
+  postgres:
+    image: postgres:latest
+    container_name: sqldb
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+  
+  # Redis setup
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis
+    restart: always
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  es_data:
+  postgres_data:
+  redis_data:
