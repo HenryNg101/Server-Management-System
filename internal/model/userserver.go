@@ -1,4 +1,4 @@
-package models
+package model
 
 type UserServer struct {
 	UserID   uint `gorm:"not null"`
