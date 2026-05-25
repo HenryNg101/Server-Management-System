@@ -4,27 +4,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	_ "github.com/HenryNg101/server-management-system/docs"
 	"github.com/HenryNg101/server-management-system/internal/config"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	// Dependency chain
-	// userRepo := user.NewRepository(db)
-	// userService := user.NewService(userRepo)
-	// userHandler := user.NewHandler(userService)
-
 	api := r.Group("/api/v1")
-
-	// users := api.Group("/users")
-	// {
-	// 	users.GET("/", userHandler.GetUsers)
-	// 	users.POST("/", userHandler.CreateUser)
-	// }
-
 	user.RegisterRoutes(api, db)
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return r
 }

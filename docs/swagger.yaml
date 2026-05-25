@@ -1,0 +1,92 @@
+definitions:
+  model.Membership:
+    properties:
+      server:
+        $ref: '#/definitions/model.Server'
+      serverID:
+        type: integer
+      user:
+        $ref: '#/definitions/model.User'
+      userID:
+        type: integer
+      userRole:
+        type: string
+    type: object
+  model.Server:
+    properties:
+      createdAt:
+        description: Automatically managed by GORM for creation time
+        type: string
+      id:
+        type: integer
+      ipv4Address:
+        description: IPv4 of the server
+        type: string
+      lastUpdated:
+        description: Last time the server got updated
+        type: string
+      memberships:
+        description: Manage many-to-many relationship between servers and users
+        items:
+          $ref: '#/definitions/model.Membership'
+        type: array
+      name:
+        type: string
+      port:
+        description: Port of the server
+        type: integer
+      protocol:
+        description: Network protocol that the server use, could be TCP, FTP, SSH,
+          etc.
+        type: string
+      status:
+        description: Server status at the time (Is it on or off)
+        type: boolean
+    type: object
+  model.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      memberships:
+        description: Manage many-to-many relationship between servers and users
+        items:
+          $ref: '#/definitions/model.Membership'
+        type: array
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /users:
+    get:
+      description: Retrieve list of users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.User'
+            type: array
+      summary: Get all users
+      tags:
+      - users
+    post:
+      description: Create a new user, with specifications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: ""
+      summary: Create a user
+      tags:
+      - users
+swagger: "2.0"

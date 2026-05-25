@@ -4,16 +4,16 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
 
-type UserService interface {
+type Service interface {
 	GetUsers() ([]model.User, error)
 	CreateUser(user model.User) (model.User, error)
 }
 
 type userService struct {
-	repo UserRepository
+	repo Repository
 }
 
-func NewService(r UserRepository) UserService {
+func NewService(r Repository) Service {
 	return &userService{repo: r}
 }
 

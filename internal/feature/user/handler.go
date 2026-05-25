@@ -7,15 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler struct {
-	service UserService
+type Handler struct {
+	service Service
 }
 
-func NewHandler(s UserService) *UserHandler {
-	return &UserHandler{service: s}
+func NewHandler(s Service) *Handler {
+	return &Handler{service: s}
 }
 
-func (h *UserHandler) CreateUser(c *gin.Context) {
+// CreateUser godoc
+// @Summary Create a user
+// @Description Create a new user, with specifications
+// @Tags users
+// @Produce json
+// @Success 200 {} model.User
+// @Router /users [post]
+func (h *Handler) CreateUser(c *gin.Context) {
 	var user model.User
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -31,7 +38,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
-func (h *UserHandler) GetUsers(c *gin.Context) {
+// GetUsers godoc
+// @Summary Get all users
+// @Description Retrieve list of users
+// @Tags users
+// @Produce json
+// @Success 200 {array} model.User
+// @Router /users [get]
+func (h *Handler) GetUsers(c *gin.Context) {
 	users, err := h.service.GetUsers()
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
