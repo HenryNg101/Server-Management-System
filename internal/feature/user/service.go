@@ -1,8 +1,7 @@
-package service
+package user
 
 import (
 	"github.com/HenryNg101/server-management-system/internal/model"
-	"github.com/HenryNg101/server-management-system/internal/repository"
 )
 
 type UserService interface {
@@ -11,10 +10,10 @@ type UserService interface {
 }
 
 type userService struct {
-	repo repository.UserRepository
+	repo UserRepository
 }
 
-func NewUserService(r repository.UserRepository) UserService {
+func NewService(r UserRepository) UserService {
 	return &userService{repo: r}
 }
 

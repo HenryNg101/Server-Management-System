@@ -1,6 +1,6 @@
 package model
 
-type UserServer struct {
+type Membership struct {
 	UserID   uint `gorm:"not null"`
 	User     User
 	ServerID uint `gorm:"not null"`

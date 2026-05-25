@@ -1,18 +1,17 @@
-package handler
+package user
 
 import (
 	"net/http"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
-	"github.com/HenryNg101/server-management-system/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	service service.UserService
+	service UserService
 }
 
-func NewUserHandler(s service.UserService) *UserHandler {
+func NewHandler(s UserService) *UserHandler {
 	return &UserHandler{service: s}
 }
 
