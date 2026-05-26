@@ -62,6 +62,56 @@ definitions:
 info:
   contact: {}
 paths:
+  /servers:
+    get:
+      description: Retrieve list of suitable servers based on filters
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Server'
+            type: array
+      summary: Get servers
+      tags:
+      - servers
+  /servers/:id:
+    delete:
+      description: Get a server based on ID, and delete that server
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Delete a server
+      tags:
+      - servers
+    get:
+      description: Retrieve a server based on ID
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Server'
+      summary: Get a server
+      tags:
+      - servers
+    patch:
+      description: Get a server based on ID, and then update field(s)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Server'
+      summary: Update a server
+      tags:
+      - servers
   /users:
     get:
       description: Retrieve list of users
@@ -85,7 +135,7 @@ paths:
         "200":
           description: OK
           schema:
-            type: ""
+            $ref: '#/definitions/model.User'
       summary: Create a user
       tags:
       - users

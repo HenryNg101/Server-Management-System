@@ -17,6 +17,13 @@ func NewHandler(s Service) *Handler {
 	return &Handler{service: s}
 }
 
+// CreateServer godoc
+// @Summary Create a server
+// @Description Create a new server, with specifications
+// @Tags servers
+// @Produce json
+// @Success 200 {object} model.Server
+// @Router /users [post]
 func (h *Handler) CreateServer(c *gin.Context) {
 	var req CreateServerRequest
 
@@ -34,6 +41,13 @@ func (h *Handler) CreateServer(c *gin.Context) {
 }
 
 // TODO: Add more advanced searches to this
+// GetServers godoc
+// @Summary Get servers
+// @Description Retrieve list of suitable servers based on filters
+// @Tags servers
+// @Produce json
+// @Success 200 {array} model.Server
+// @Router /servers [get]
 func (h *Handler) GetServers(c *gin.Context) {
 	servers, err := h.service.GetServers()
 	if err != nil {
@@ -43,6 +57,14 @@ func (h *Handler) GetServers(c *gin.Context) {
 	c.JSON(200, servers)
 }
 
+// TODO: Add the logic to return 404 when no server with associated ID is found
+// GetServer godoc
+// @Summary Get a server
+// @Description Retrieve a server based on ID
+// @Tags servers
+// @Produce json
+// @Success 200 {object} model.Server
+// @Router /servers/:id [get]
 func (h *Handler) GetServer(c *gin.Context) {
 	var server model.Server
 
@@ -60,6 +82,14 @@ func (h *Handler) GetServer(c *gin.Context) {
 	c.JSON(http.StatusCreated, server)
 }
 
+// TODO: Add the logic to return 404 when no server with associated ID is found
+// UpdateServer godoc
+// @Summary Update a server
+// @Description Get a server based on ID, and then update field(s)
+// @Tags servers
+// @Produce json
+// @Success 200 {object} model.Server
+// @Router /servers/:id [patch]
 func (h *Handler) UpdateServer(c *gin.Context) {
 	var req UpdateServerRequest
 
@@ -88,6 +118,13 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
+// DeleteServer godoc
+// @Summary Delete a server
+// @Description Get a server based on ID, and delete that server
+// @Tags servers
+// @Produce json
+// @Success 204
+// @Router /servers/:id [delete]
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

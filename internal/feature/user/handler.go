@@ -20,7 +20,7 @@ func NewHandler(s Service) *Handler {
 // @Description Create a new user, with specifications
 // @Tags users
 // @Produce json
-// @Success 200 {} model.User
+// @Success 200 {object} model.User
 // @Router /users [post]
 func (h *Handler) CreateUser(c *gin.Context) {
 	var user model.User
