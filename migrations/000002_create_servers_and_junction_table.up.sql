@@ -10,7 +10,7 @@ CREATE TABLE servers (
 );
 
 CREATE TABLE servers_users (
-    user_id INTEGER REFERENCES users(id),
-    server_id INTEGER REFERENCES servers(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    server_id INTEGER REFERENCES servers(id) ON DELETE CASCADE,
     user_role TEXT NOT NULL
 )
