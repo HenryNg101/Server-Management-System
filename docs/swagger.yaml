@@ -59,6 +59,32 @@ definitions:
       name:
         type: string
     type: object
+  server.ImportFailure:
+    properties:
+      error:
+        type: string
+      record:
+        additionalProperties:
+          type: string
+        type: object
+      row:
+        type: integer
+    type: object
+  server.ImportServersResponse:
+    properties:
+      failed_count:
+        type: integer
+      failures:
+        items:
+          $ref: '#/definitions/server.ImportFailure'
+        type: array
+      success_count:
+        type: integer
+      successes:
+        items:
+          $ref: '#/definitions/model.Server'
+        type: array
+    type: object
 info:
   contact: {}
 paths:
@@ -110,6 +136,20 @@ paths:
           schema:
             $ref: '#/definitions/model.Server'
       summary: Update a server
+      tags:
+      - servers
+  /servers/import:
+    post:
+      description: User uploads an Excel file with servers info, and the server will
+        try to import valid servers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.ImportServersResponse'
+      summary: Import servers from csv file
       tags:
       - servers
   /users:

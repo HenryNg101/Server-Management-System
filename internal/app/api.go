@@ -12,6 +12,13 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+/*
+	TODO: Develop these APIs:
+
+- POST   /api/v1/servers/import: Import servers from csv
+- GET    /api/v1/servers/export: Export servers to csv
+- POST   /api/v1/reports: Write report of servers statuses
+*/
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 

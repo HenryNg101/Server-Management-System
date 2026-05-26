@@ -2,15 +2,17 @@ package server
 
 import (
 	"context"
+	"errors"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository interface {
 	FindAll() ([]model.Server, error)
-	Create(user model.Server) (model.Server, error)
-	FindByID(ctx context.Context, id uint) (model.Server, error)
+	Create(ctx context.Context, server *model.Server) (*model.Server, error)
+	FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	Update(ctx context.Context, server *model.Server) (*model.Server, error)
 	ExistsByID(ctx context.Context, id uint) (bool, error)
 	Delete(ctx context.Context, id uint) error
@@ -25,25 +27,37 @@ func NewRepository(db *gorm.DB) Repository {
 }
 
 func (r *serverRepository) FindAll() ([]model.Server, error) {
-	var result []model.Server
+	var servers []model.Server
 
-	err := r.db.Model(&model.Server{}).Find(&result).Error
-	return result, err
+	err := r.db.Model(&model.Server{}).Find(&servers).Error
+	return servers, err
 }
 
-func (r *serverRepository) Create(user model.Server) (model.Server, error) {
-	err := r.db.Create(&user).Error
-	return user, err
+// Create if not exist, otherwise, returns error
+func (r *serverRepository) Create(ctx context.Context, server *model.Server) (*model.Server, error) {
+	result := r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "name"}},
+			DoNothing: true,
+		}).
+		Create(server)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	// Handle a failure to insert due to record already exist, not validations or something
+	if result.RowsAffected == 0 {
+		return nil, errors.New("The server with this name is already existed")
+	}
+	return server, nil
 }
 
-func (r *serverRepository) FindByID(ctx context.Context, id uint) (model.Server, error) {
-	var result model.Server
-
+func (r *serverRepository) FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error) {
 	err := r.db.Model(&model.Server{}).
 		Where("id = ?", id).
-		Find(&result).
+		Find(&server).
 		Error
-	return result, err
+	return server, err
 }
 
 func (r *serverRepository) Update(ctx context.Context, server *model.Server) (*model.Server, error) {

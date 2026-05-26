@@ -80,6 +80,26 @@
                 }
             }
         },
+        "/servers/import": {
+            "post": {
+                "description": "User uploads an Excel file with servers info, and the server will try to import valid servers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "servers"
+                ],
+                "summary": "Import servers from csv file",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.ImportServersResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "description": "Retrieve list of users",
@@ -206,6 +226,46 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "server.ImportFailure": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "record": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "row": {
+                    "type": "integer"
+                }
+            }
+        },
+        "server.ImportServersResponse": {
+            "type": "object",
+            "properties": {
+                "failed_count": {
+                    "type": "integer"
+                },
+                "failures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.ImportFailure"
+                    }
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "successes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Server"
+                    }
                 }
             }
         }

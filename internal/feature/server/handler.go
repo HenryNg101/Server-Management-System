@@ -32,7 +32,7 @@ func (h *Handler) CreateServer(c *gin.Context) {
 		return
 	}
 
-	created, err := h.service.CreateServer(req)
+	created, err := h.service.CreateServer(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -66,7 +66,7 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Success 200 {object} model.Server
 // @Router /servers/:id [get]
 func (h *Handler) GetServer(c *gin.Context) {
-	var server model.Server
+	var server *model.Server
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -74,7 +74,7 @@ func (h *Handler) GetServer(c *gin.Context) {
 		return
 	}
 
-	server, err = h.service.GetServer(c.Request.Context(), uint(id))
+	server, err = h.service.GetServer(c.Request.Context(), uint(id), server)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -144,4 +144,34 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 	}
 
 	c.Status(204) // No Content
+}
+
+// Import servers from csv
+// @Summary Import servers from csv file
+// @Description User uploads an Excel file with servers info, and the server will try to import valid servers
+// @Tags servers
+// @Produce json
+// @Success 200 {object} ImportServersResponse
+// @Router /servers/import [post]
+func (h *Handler) ImportServers(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(400, gin.H{"error": "file is required"})
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "cannot open file"})
+		return
+	}
+	defer f.Close()
+
+	result, err := h.service.ImportServers(c.Request.Context(), f)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
 }
