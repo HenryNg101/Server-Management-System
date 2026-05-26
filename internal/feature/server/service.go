@@ -12,7 +12,7 @@ import (
 )
 
 type Service interface {
-	GetServers() ([]model.Server, error)
+	GetServers(ctx context.Context) ([]model.Server, error)
 	CreateServer(ctx context.Context, req CreateServerRequest) (*model.Server, error)
 	GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error)
@@ -28,8 +28,8 @@ func NewService(r Repository) Service {
 	return &serverService{repo: r}
 }
 
-func (s *serverService) GetServers() ([]model.Server, error) {
-	return s.repo.FindAll()
+func (s *serverService) GetServers(ctx context.Context) ([]model.Server, error) {
+	return s.repo.FindAll(ctx)
 }
 
 func (s *serverService) CreateServer(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
@@ -99,6 +99,8 @@ func (s *serverService) DeleteServer(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
 }
 
+// TODO: Handle more edge cases of uploading
+// TODO: Improve performance of this API (It took nearly 8 seconds to loaded 10k records)
 func (s *serverService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
 	reader := csv.NewReader(r)
 

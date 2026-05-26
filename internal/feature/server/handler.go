@@ -1,9 +1,11 @@
 package server
 
 import (
+	"encoding/csv"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/gin-gonic/gin"
@@ -49,7 +51,7 @@ func (h *Handler) CreateServer(c *gin.Context) {
 // @Success 200 {array} model.Server
 // @Router /servers [get]
 func (h *Handler) GetServers(c *gin.Context) {
-	servers, err := h.service.GetServers()
+	servers, err := h.service.GetServers(c.Request.Context())
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -174,4 +176,57 @@ func (h *Handler) ImportServers(c *gin.Context) {
 	}
 
 	c.JSON(200, result)
+}
+
+// Export servers to csv file
+// @Summary Export servers info to csv file
+// @Description User ask for all servers info, and the server will export servers info to CSV file
+// @Tags servers
+// @Produce text/csv
+// @Success 200 {file} ImportServersResponse
+// @Router /servers/export [get]
+func (h *Handler) ExportServers(c *gin.Context) {
+	servers, err := h.service.GetServers(c.Request.Context())
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=servers.csv")
+
+	writer := csv.NewWriter(c.Writer)
+
+	// Write header
+	header := []string{"id", "name", "status", "ipv4_address", "port", "protocol", "created_at", "last_updated_at"}
+	if err := writer.Write(header); err != nil {
+		c.JSON(500, gin.H{"error": "failed to write csv"})
+		return
+	}
+
+	// Write rows
+	for _, s := range servers {
+		row := []string{
+			strconv.FormatUint(uint64(s.ID), 10),
+			s.Name,
+			strconv.FormatBool(s.Status),
+			s.IPv4Address,
+			strconv.FormatUint(uint64(s.Port), 10),
+			s.Protocol,
+			s.CreatedAt.Format(time.RFC3339),
+			s.LastUpdated.Format(time.RFC3339),
+		}
+
+		if err := writer.Write(row); err != nil {
+			c.JSON(500, gin.H{"error": "failed to write csv row"})
+			return
+		}
+	}
+
+	writer.Flush()
+
+	if err := writer.Error(); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 }

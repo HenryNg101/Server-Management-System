@@ -18,4 +18,5 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB) {
 	users.PATCH("/:id", handler.UpdateServer)
 	users.DELETE("/:id", handler.DeleteServer)
 	users.POST("/import", handler.ImportServers)
+	users.GET("/export", handler.ExportServers)
 }

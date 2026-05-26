@@ -10,7 +10,7 @@ import (
 )
 
 type Repository interface {
-	FindAll() ([]model.Server, error)
+	FindAll(ctx context.Context) ([]model.Server, error)
 	Create(ctx context.Context, server *model.Server) (*model.Server, error)
 	FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	Update(ctx context.Context, server *model.Server) (*model.Server, error)
@@ -26,10 +26,11 @@ func NewRepository(db *gorm.DB) Repository {
 	return &serverRepository{db: db}
 }
 
-func (r *serverRepository) FindAll() ([]model.Server, error) {
+// TODO: Add filters, pagination, and other needed stuff for more advanced searches
+func (r *serverRepository) FindAll(ctx context.Context) ([]model.Server, error) {
 	var servers []model.Server
 
-	err := r.db.Model(&model.Server{}).Find(&servers).Error
+	err := r.db.WithContext(ctx).Model(&model.Server{}).Find(&servers).Error
 	return servers, err
 }
 

@@ -15,10 +15,10 @@ import (
 /*
 	TODO: Develop these APIs:
 
-- POST   /api/v1/servers/import: Import servers from csv
-- GET    /api/v1/servers/export: Export servers to csv
 - POST   /api/v1/reports: Write report of servers statuses
 */
+// TODO: Write more proper OpenAPI docs for the APIs
+// TODO: Add JWT authentication to the system
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
