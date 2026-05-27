@@ -6,8 +6,6 @@ import (
 
 	_ "github.com/HenryNg101/server-management-system/docs"
 	"github.com/HenryNg101/server-management-system/internal/config"
-	"github.com/HenryNg101/server-management-system/internal/feature/server"
-	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -25,12 +23,11 @@ import (
 // @description API for managing servers and users, and reporting
 // @host localhost:8080
 // @BasePath /api/v1
-func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB) *gin.Engine {
+func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *App) *gin.Engine {
 	r := gin.Default()
 
 	api := r.Group("/api/v1")
-	user.RegisterRoutes(api, db)
-	server.RegisterRoutes(api, db)
+	RegisterRoutes(api, db, application)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

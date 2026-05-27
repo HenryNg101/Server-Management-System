@@ -70,14 +70,13 @@ func (r *serverRepository) FindAll(ctx context.Context, q GetServersQuery) ([]mo
 	// Since attackers can inject SQL in this through the request's sortby field and order, it's better to have the above whitelist to filter all that
 	db = db.Order(sortBy + " " + order)
 
-	// 📄 Pagination
-	offset := (q.Page - 1) * q.PageSize
+	// Pagination
+	if q.Page != nil && q.PageSize != nil {
+		offset := (*q.Page - 1) * (*q.PageSize)
+		db = db.Limit(*q.PageSize).Offset(offset)
+	}
 
-	err := db.
-		Limit(q.PageSize).
-		Offset(offset).
-		Find(&servers).Error
-
+	err := db.Find(&servers).Error
 	return servers, total, err
 }
 

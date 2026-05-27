@@ -35,7 +35,10 @@ func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*Pag
 		return nil, err
 	}
 
-	totalPages := int(math.Ceil(float64(total) / float64(q.PageSize)))
+	var totalPages *int
+	if q.PageSize != nil {
+		*totalPages = int(math.Ceil(float64(total) / float64(*q.PageSize)))
+	}
 
 	return &PaginatedServers{
 		Servers:    servers,

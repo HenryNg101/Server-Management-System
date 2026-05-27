@@ -7,8 +7,8 @@ type GetServersQuery struct {
 	Protocol *string
 	Name     *string
 
-	Page     int
-	PageSize int
+	Page     *int
+	PageSize *int
 
 	SortBy string
 	Order  string
@@ -17,9 +17,9 @@ type GetServersQuery struct {
 type PaginatedServers struct {
 	Servers    []model.Server `json:"servers"`
 	Total      int64          `json:"total"`
-	Page       int            `json:"page"`
-	PageSize   int            `json:"page_size"`
-	TotalPages int            `json:"total_pages"`
+	Page       *int           `json:"page"`
+	PageSize   *int           `json:"page_size"`
+	TotalPages *int           `json:"total_pages"`
 }
 
 type UpdateServerRequest struct {

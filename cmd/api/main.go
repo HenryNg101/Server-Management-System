@@ -5,16 +5,17 @@ import (
 
 	"github.com/HenryNg101/server-management-system/internal/app"
 	"github.com/HenryNg101/server-management-system/internal/config"
-	"github.com/HenryNg101/server-management-system/internal/platform/database"
 )
 
 func main() {
-	postgresConfig := config.LoadPostgres()
+	newApplication, err := app.NewApp()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	appConfig := config.LoadAppConfig()
 
-	postgresSession := database.NewPostgresSession(postgresConfig)
-
-	router := app.SetupRouter(appConfig, postgresSession)
+	router := app.SetupRouter(appConfig, newApplication.DB, newApplication)
 
 	if err := router.Run(":" + appConfig.Port); err != nil {
 		log.Fatalf("failed to run server: %v", err)

@@ -106,14 +106,14 @@ definitions:
     type: object
   server.PaginatedServers:
     properties:
-      data:
-        items:
-          $ref: '#/definitions/model.Server'
-        type: array
       page:
         type: integer
       page_size:
         type: integer
+      servers:
+        items:
+          $ref: '#/definitions/model.Server'
+        type: array
       total:
         type: integer
       total_pages:

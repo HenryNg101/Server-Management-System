@@ -491,17 +491,17 @@ const docTemplate = `{
         "server.PaginatedServers": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Server"
-                    }
-                },
                 "page": {
                     "type": "integer"
                 },
                 "page_size": {
                     "type": "integer"
+                },
+                "servers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Server"
+                    }
                 },
                 "total": {
                     "type": "integer"
