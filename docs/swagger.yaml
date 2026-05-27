@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   model.Membership:
     properties:
@@ -59,6 +60,24 @@ definitions:
       name:
         type: string
     type: object
+  server.CreateServerRequest:
+    properties:
+      ipv4_address:
+        type: string
+      name:
+        type: string
+      port:
+        type: integer
+      protocol:
+        type: string
+      status:
+        type: boolean
+    required:
+    - ipv4_address
+    - name
+    - port
+    - status
+    type: object
   server.ImportFailure:
     properties:
       error:
@@ -85,27 +104,113 @@ definitions:
           $ref: '#/definitions/model.Server'
         type: array
     type: object
+  server.PaginatedServers:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Server'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  server.UpdateServerRequest:
+    properties:
+      ipv4:
+        type: string
+      name:
+        type: string
+      port:
+        type: integer
+      protocol:
+        type: string
+      status:
+        type: boolean
+    type: object
+host: localhost:8080
 info:
   contact: {}
+  description: API for managing servers and users, and reporting
+  title: Server Management API
+  version: "1.0"
 paths:
   /servers:
     get:
-      description: Retrieve list of suitable servers based on filters
+      description: Retrieve servers with filtering, pagination, and sorting
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: boolean
+      - description: Filter by protocol
+        in: query
+        name: protocol
+        type: string
+      - description: Search by name
+        in: query
+        name: name
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10, max 100)
+        in: query
+        name: page_size
+        type: integer
+      - description: Sort by field (id, name, created_at)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.Server'
-            type: array
+            $ref: '#/definitions/server.PaginatedServers'
       summary: Get servers
       tags:
       - servers
-  /servers/:id:
+    post:
+      consumes:
+      - application/json
+      description: Create a new server, with specifications
+      parameters:
+      - description: Server payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.CreateServerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Server'
+      summary: Create a server
+      tags:
+      - servers
+  /servers/{id}:
     delete:
       description: Get a server based on ID, and delete that server
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -116,6 +221,12 @@ paths:
       - servers
     get:
       description: Retrieve a server based on ID
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -127,7 +238,21 @@ paths:
       tags:
       - servers
     patch:
+      consumes:
+      - application/json
       description: Get a server based on ID, and then update field(s)
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New server info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.UpdateServerRequest'
       produces:
       - application/json
       responses:
@@ -136,6 +261,53 @@ paths:
           schema:
             $ref: '#/definitions/model.Server'
       summary: Update a server
+      tags:
+      - servers
+  /servers/export:
+    get:
+      description: User ask for all servers info with optional filtering, pagination,
+        and sorting, and the server will export servers info to CSV file
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: boolean
+      - description: Filter by protocol
+        in: query
+        name: protocol
+        type: string
+      - description: Search by name
+        in: query
+        name: name
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10, max 100)
+        in: query
+        name: page_size
+        type: integer
+      - description: Sort by field (id, name, created_at)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          headers:
+            Content-Disposition:
+              description: attachment; filename=servers.csv
+              type: string
+          schema:
+            type: file
+      summary: Export servers info to csv file
       tags:
       - servers
   /servers/import:

@@ -2,6 +2,26 @@ package server
 
 import "github.com/HenryNg101/server-management-system/internal/model"
 
+type GetServersQuery struct {
+	Status   *bool
+	Protocol *string
+	Name     *string
+
+	Page     int
+	PageSize int
+
+	SortBy string
+	Order  string
+}
+
+type PaginatedServers struct {
+	Servers    []model.Server `json:"servers"`
+	Total      int64          `json:"total"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	TotalPages int            `json:"total_pages"`
+}
+
 type UpdateServerRequest struct {
 	Name        *string `json:"name"`
 	Status      *bool   `json:"status"`

@@ -8,11 +8,6 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/platform/database"
 )
 
-// @title Server Management API
-// @version 1.0
-// @description API for managing servers and users
-// @host localhost:8080
-// @BasePath /api/v1
 func main() {
 	postgresConfig := config.LoadPostgres()
 	appConfig := config.LoadAppConfig()

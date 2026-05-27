@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 )
 
 type Repository interface {
-	FindAll(ctx context.Context) ([]model.Server, error)
+	FindAll(ctx context.Context, q GetServersQuery) ([]model.Server, int64, error)
 	Create(ctx context.Context, server *model.Server) (*model.Server, error)
 	FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	Update(ctx context.Context, server *model.Server) (*model.Server, error)
@@ -26,12 +27,58 @@ func NewRepository(db *gorm.DB) Repository {
 	return &serverRepository{db: db}
 }
 
-// TODO: Add filters, pagination, and other needed stuff for more advanced searches
-func (r *serverRepository) FindAll(ctx context.Context) ([]model.Server, error) {
+func (r *serverRepository) FindAll(ctx context.Context, q GetServersQuery) ([]model.Server, int64, error) {
 	var servers []model.Server
+	var total int64
 
-	err := r.db.WithContext(ctx).Model(&model.Server{}).Find(&servers).Error
-	return servers, err
+	db := r.db.WithContext(ctx).Model(&model.Server{})
+
+	// Add filterings, one by one
+	if q.Status != nil {
+		db = db.Where("status = ?", *q.Status)
+	}
+	if q.Protocol != nil {
+		db = db.Where("protocol = ?", *q.Protocol)
+	}
+	if q.Name != nil {
+		db = db.Where("name ILIKE ?", "%"+*q.Name+"%") // Since it's just simple matching, just use this simple match
+	}
+
+	// Count BEFORE pagination, to have the true size of the results count
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Sorting (basic safe whitelist)
+	allowedSort := map[string]bool{
+		"id":           true,
+		"name":         true,
+		"created_at":   true,
+		"last_updated": true,
+	}
+
+	sortBy := "id"
+	if allowedSort[q.SortBy] {
+		sortBy = q.SortBy
+	}
+
+	order := "asc"
+	if strings.ToLower(q.Order) == "desc" {
+		order = "desc"
+	}
+
+	// Since attackers can inject SQL in this through the request's sortby field and order, it's better to have the above whitelist to filter all that
+	db = db.Order(sortBy + " " + order)
+
+	// 📄 Pagination
+	offset := (q.Page - 1) * q.PageSize
+
+	err := db.
+		Limit(q.PageSize).
+		Offset(offset).
+		Find(&servers).Error
+
+	return servers, total, err
 }
 
 // Create if not exist, otherwise, returns error

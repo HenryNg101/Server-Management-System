@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"math"
 	"net"
 	"strconv"
 
@@ -12,7 +13,7 @@ import (
 )
 
 type Service interface {
-	GetServers(ctx context.Context) ([]model.Server, error)
+	GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error)
 	CreateServer(ctx context.Context, req CreateServerRequest) (*model.Server, error)
 	GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error)
@@ -28,8 +29,21 @@ func NewService(r Repository) Service {
 	return &serverService{repo: r}
 }
 
-func (s *serverService) GetServers(ctx context.Context) ([]model.Server, error) {
-	return s.repo.FindAll(ctx)
+func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+	servers, total, err := s.repo.FindAll(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(q.PageSize)))
+
+	return &PaginatedServers{
+		Servers:    servers,
+		Total:      total,
+		Page:       q.Page,
+		PageSize:   q.PageSize,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (s *serverService) CreateServer(ctx context.Context, req CreateServerRequest) (*model.Server, error) {

@@ -23,9 +23,11 @@ func NewHandler(s Service) *Handler {
 // @Summary Create a server
 // @Description Create a new server, with specifications
 // @Tags servers
+// @Accept json
 // @Produce json
-// @Success 200 {object} model.Server
-// @Router /users [post]
+// @Param request body CreateServerRequest true "Server payload"
+// @Success 201 {object} model.Server
+// @Router /servers [post]
 func (h *Handler) CreateServer(c *gin.Context) {
 	var req CreateServerRequest
 
@@ -42,31 +44,41 @@ func (h *Handler) CreateServer(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
-// TODO: Add more advanced searches to this
-// GetServers godoc
 // @Summary Get servers
-// @Description Retrieve list of suitable servers based on filters
+// @Description Retrieve servers with filtering, pagination, and sorting
 // @Tags servers
 // @Produce json
-// @Success 200 {array} model.Server
+// @Param status query bool false "Filter by status"
+// @Param protocol query string false "Filter by protocol"
+// @Param name query string false "Search by name"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Page size (default 10, max 100)"
+// @Param sort_by query string false "Sort by field (id, name, created_at)"
+// @Param order query string false "Sort order (asc, desc)"
+// @Success 200 {object} PaginatedServers
 // @Router /servers [get]
 func (h *Handler) GetServers(c *gin.Context) {
-	servers, err := h.service.GetServers(c.Request.Context())
+	query, err := ParseServersQuery(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err})
+	}
+	result, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, servers)
+	c.JSON(200, result)
 }
 
 // TODO: Add the logic to return 404 when no server with associated ID is found
 // GetServer godoc
 // @Summary Get a server
 // @Description Retrieve a server based on ID
+// @Param id path int true "Server ID"
 // @Tags servers
 // @Produce json
 // @Success 200 {object} model.Server
-// @Router /servers/:id [get]
+// @Router /servers/{id} [get]
 func (h *Handler) GetServer(c *gin.Context) {
 	var server *model.Server
 
@@ -81,17 +93,20 @@ func (h *Handler) GetServer(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, server)
+	c.JSON(http.StatusOK, server)
 }
 
 // TODO: Add the logic to return 404 when no server with associated ID is found
 // UpdateServer godoc
 // @Summary Update a server
 // @Description Get a server based on ID, and then update field(s)
+// @Param id path int true "Server ID"
+// @Accept json
 // @Tags servers
 // @Produce json
+// @Param request body UpdateServerRequest true "New server info"
 // @Success 200 {object} model.Server
-// @Router /servers/:id [patch]
+// @Router /servers/{id} [patch]
 func (h *Handler) UpdateServer(c *gin.Context) {
 	var req UpdateServerRequest
 
@@ -123,10 +138,11 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 // DeleteServer godoc
 // @Summary Delete a server
 // @Description Get a server based on ID, and delete that server
+// @Param id path int true "Server ID"
 // @Tags servers
 // @Produce json
 // @Success 204
-// @Router /servers/:id [delete]
+// @Router /servers/{id} [delete]
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -180,13 +196,26 @@ func (h *Handler) ImportServers(c *gin.Context) {
 
 // Export servers to csv file
 // @Summary Export servers info to csv file
-// @Description User ask for all servers info, and the server will export servers info to CSV file
+// @Description User ask for all servers info with optional filtering, pagination, and sorting, and the server will export servers info to CSV file
 // @Tags servers
 // @Produce text/csv
-// @Success 200 {file} ImportServersResponse
+// @Param status query bool false "Filter by status"
+// @Param protocol query string false "Filter by protocol"
+// @Param name query string false "Search by name"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Page size (default 10, max 100)"
+// @Param sort_by query string false "Sort by field (id, name, created_at)"
+// @Param order query string false "Sort order (asc, desc)"
+// @Success 200 {file} file "CSV file"
+// @Header 200 {string} Content-Disposition "attachment; filename=servers.csv"
 // @Router /servers/export [get]
 func (h *Handler) ExportServers(c *gin.Context) {
-	servers, err := h.service.GetServers(c.Request.Context())
+	query, err := ParseServersQuery(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err})
+	}
+
+	servers, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -205,7 +234,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	}
 
 	// Write rows
-	for _, s := range servers {
+	for _, s := range servers.Servers {
 		row := []string{
 			strconv.FormatUint(uint64(s.ID), 10),
 			s.Name,
