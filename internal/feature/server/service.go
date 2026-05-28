@@ -8,6 +8,7 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
@@ -19,6 +20,7 @@ type Service interface {
 	UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error)
 	DeleteServer(ctx context.Context, id uint) error
 	ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
+	BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error
 }
 
 type serverService struct {
@@ -65,7 +67,7 @@ func (s *serverService) GetServer(ctx context.Context, id uint, server *model.Se
 }
 
 func (s *serverService) UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
-	var server *model.Server
+	server := &model.Server{}
 
 	server, err := s.repo.FindByID(ctx, id, server)
 	if err != nil {
@@ -73,32 +75,64 @@ func (s *serverService) UpdateServer(ctx context.Context, id uint, req UpdateSer
 	}
 
 	// Apply updates ONLY if provided
+	isUpdated := false
 	if req.Name != nil {
+		isUpdated = true
 		server.Name = *req.Name
 	}
 
 	if req.Status != nil {
+		isUpdated = true
 		server.Status = *req.Status
 	}
 
 	if req.IPv4Address != nil {
+		isUpdated = true
 		server.IPv4Address = *req.IPv4Address
 	}
 
 	if req.Port != nil {
+		isUpdated = true
 		server.Port = *req.Port
 	}
 
 	if req.Protocol != nil {
+		isUpdated = true
 		server.Protocol = *req.Protocol
 	}
 
+	// If anything changes, it means that, it's actually updated
+	// TODO: Handle the case where nothing is updated
+	if !isUpdated {
+		return nil, errors.New("Nothing is updated")
+	}
+
+	server.LastUpdated = time.Now()
 	updated, err := s.repo.Update(ctx, server)
 	if err != nil {
 		return nil, err
 	}
 
 	return updated, nil
+}
+
+// Bulk update statuses to be used by worker
+func (s *serverService) BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error {
+	const chunkSize = 1000
+
+	for i := 0; i < len(servers); i += chunkSize {
+		end := i + chunkSize
+		if end > len(servers) {
+			end = len(servers)
+		}
+
+		err := s.repo.BulkUpdateStatus(ctx, servers[i:end])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 var ErrNotFound = errors.New("server not found")

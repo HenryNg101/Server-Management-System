@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *App) {
+func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) {
 	// Register handlers for servers
 	serverHandler := server.NewHandler(*application.ServerService)
 

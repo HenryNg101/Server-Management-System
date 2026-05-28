@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
@@ -17,6 +18,7 @@ type Repository interface {
 	Update(ctx context.Context, server *model.Server) (*model.Server, error)
 	ExistsByID(ctx context.Context, id uint) (bool, error)
 	Delete(ctx context.Context, id uint) error
+	BulkUpdateStatus(ctx context.Context, results []*model.Server) error
 }
 
 type serverRepository struct {
@@ -112,6 +114,35 @@ func (r *serverRepository) Update(ctx context.Context, server *model.Server) (*m
 		Save(server).Error
 
 	return server, err
+}
+
+func (r *serverRepository) BulkUpdateStatus(ctx context.Context, results []*model.Server) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	var (
+		valueStrings []string
+		valueArgs    []interface{}
+	)
+
+	// Using parameterized arguments, to avoid SQL injections
+	i := 1
+	for _, r := range results {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d::bigint, $%d::boolean, $%d::timestamp)",
+			i, i+1, i+2))
+		valueArgs = append(valueArgs, r.ID, r.Status, r.LastUpdated)
+		i += 3
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE servers AS s
+		SET status = v.status, last_updated = v.last_updated
+		FROM (VALUES %s) AS v(id, status, last_updated)
+		WHERE s.id = v.id
+	`, strings.Join(valueStrings, ","))
+
+	return r.db.WithContext(ctx).Exec(query, valueArgs...).Error
 }
 
 func (r *serverRepository) ExistsByID(ctx context.Context, id uint) (bool, error) {

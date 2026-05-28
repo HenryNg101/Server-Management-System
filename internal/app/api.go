@@ -23,7 +23,7 @@ import (
 // @description API for managing servers and users, and reporting
 // @host localhost:8080
 // @BasePath /api/v1
-func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *App) *gin.Engine {
+func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Application) *gin.Engine {
 	r := gin.Default()
 
 	api := r.Group("/api/v1")

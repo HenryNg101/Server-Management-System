@@ -3,81 +3,41 @@ package main
 import (
 	"context"
 	"fmt"
-	"sync"
+	"log"
 	"time"
+
+	"github.com/HenryNg101/server-management-system/internal/app"
+	"github.com/HenryNg101/server-management-system/internal/feature/server"
+	"github.com/HenryNg101/server-management-system/internal/model"
 )
 
-type Server struct {
-	ID   int
-	Host string
-	Port int
+func fetchServers(application *app.Application, ctx context.Context) ([]model.Server, error) {
+	serverService := *application.ServerService
+	paginatedServers, err := serverService.GetServers(ctx, server.GetServersQuery{})
+	if err != nil {
+		return nil, err
+	}
+	return paginatedServers.Servers, nil
 }
 
-type Result struct {
-	ServerID int
-	Status   int // 1 = up, 0 = down
-	Latency  time.Duration
-}
+func updateServers(application *app.Application, ctx context.Context, resultServers []*model.Server) error {
+	serverService := *application.ServerService
 
-// --- MOCK: replace with your DB fetch later ---
-func fetchServers() []Server {
-	servers := make([]Server, 10000)
-	for i := 0; i < 10000; i++ {
-		servers[i] = Server{
-			ID:   i,
-			Host: "localhost", // just for demo
-			Port: 10000 + i,
-		}
+	err := serverService.BulkUpdateServersStatuses(ctx, resultServers)
+	if err != nil {
+		return err
 	}
-	return servers
-}
-
-// --- Core worker pool ---
-func runCheckCycle(ctx context.Context, servers []Server) []Result {
-	const workerCount = 200 // tune this
-
-	// Buffered channels to store all jobs and outputs
-	jobs := make(chan Server, len(servers))
-	results := make(chan Result, len(servers))
-
-	var wg sync.WaitGroup
-
-	// Start workers
-	// Each worker keeps pulling jobs to process from the buffered channel until empty
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			for s := range jobs {
-				res := ping(ctx, s)
-				results <- res
-			}
-		}()
-	}
-
-	// Send jobs
-	for _, s := range servers {
-		jobs <- s
-	}
-	close(jobs)
-
-	// Wait for workers to finish
-	wg.Wait()
-	close(results)
-
-	// Collect results
-	collected := make([]Result, 0, len(servers))
-	for r := range results {
-		collected = append(collected, r)
-	}
-
-	return collected
+	return nil
 }
 
 // --- Scheduler ---
 func main() {
+	// Create app
+	newApplication, err := app.NewApp()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create a ticker with a channel to tick every 5 seconds
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -89,8 +49,11 @@ func main() {
 		case <-ticker.C:
 			fmt.Println("Starting check cycle...")
 
-			// TODO: Use the actual server query functionality here
-			servers := fetchServers()
+			// Servers statuses checks
+			servers, err := fetchServers(newApplication, ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			start := time.Now()
 			results := runCheckCycle(ctx, servers)
@@ -98,14 +61,15 @@ func main() {
 
 			fmt.Printf("Checked %d servers in %v\n", len(results), elapsed)
 
-			// Just demo output
-			up := 0
-			for _, r := range results {
-				if r.Status == 1 {
-					up++
-				}
+			//
+			// Bulk update statuses to Postgres
+			start = time.Now()
+			err = updateServers(newApplication, ctx, results)
+			if err != nil {
+				log.Fatal(err)
 			}
-			fmt.Printf("UP: %d, DOWN: %d\n", up, len(results)-up)
+			elapsed = time.Since(start)
+			fmt.Printf("Updated %d servers statuses to DB in %v\n", len(results), elapsed)
 
 		case <-ctx.Done():
 			return

@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type App struct {
+type Application struct {
 	DB            *gorm.DB
 	ServerService *server.Service
 	UserService   *user.Service
@@ -18,7 +18,7 @@ type App struct {
 // Why I do this ? So that, when an app is created, it can use all internal functionalities without having to use other ways of communication like gRPC or HTTP
 // If it's API app, you can add handlers, add API group, etc. to it. If it's a worker, it can still get access to DB query, services, etc. without it being separated entirely
 // It might be tightly coupled, but it's good for now
-func NewApp() (*App, error) {
+func NewApp() (*Application, error) {
 	postgresConfig := config.LoadPostgres()
 	postgresSession := database.NewPostgresSession(postgresConfig)
 
@@ -28,7 +28,7 @@ func NewApp() (*App, error) {
 	userRepo := user.NewRepository(postgresSession)
 	userService := user.NewService(userRepo)
 
-	return &App{
+	return &Application{
 		DB:            postgresSession,
 		ServerService: &serverService,
 		UserService:   &userService,
