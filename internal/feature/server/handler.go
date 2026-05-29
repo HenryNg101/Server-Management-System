@@ -261,16 +261,41 @@ func (h *Handler) ExportServers(c *gin.Context) {
 }
 
 // TODO: Add time range, not just take it in a day
-// @Summary Get status report on the servers
-// @Description Retrieve servers statuses within a time range
+// TODO: Add body params in here
+// @Summary Get statuses of servers and emailing
+// @Description Get status report on the servers, and then send emails to people in the email list
 // @Tags servers
 // @Produce json
 // @Success 200 {object} Report
-// @Router /servers/report [get]
-func (h *Handler) GetReport(c *gin.Context) {
+// @Router /servers/report [post]
+func (h *Handler) SendReports(c *gin.Context) {
+	var req *SendReportRequest
+	var err error
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	startTime := time.Now()
+	endTime := time.Now()
+	if req.Start != nil {
+		startTime, err = time.Parse("2006-01-02", *req.Start)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if req.End != nil {
+		endTime, err = time.Parse("2006-01-02", *req.End)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	ctx := c.Request.Context()
 
-	report, err := h.service.GenerateDailyReport(ctx)
+	report, err := h.service.SendReports(startTime, endTime, *req.Emails, ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

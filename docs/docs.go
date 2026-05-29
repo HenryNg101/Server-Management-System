@@ -202,15 +202,15 @@ const docTemplate = `{
             }
         },
         "/servers/report": {
-            "get": {
-                "description": "Retrieve servers statuses within a time range",
+            "post": {
+                "description": "Get status report on the servers, and then send emails to people in the email list",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "servers"
                 ],
-                "summary": "Get status report on the servers",
+                "summary": "Get statuses of servers and emailing",
                 "responses": {
                     "200": {
                         "description": "OK",

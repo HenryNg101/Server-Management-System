@@ -57,3 +57,9 @@ type Report struct {
 	ServersDown  int64            `json:"servers_down"`
 	Uptime       map[uint]float64 `json:"uptime_per_server"`
 }
+
+type SendReportRequest struct {
+	Start  *string   `json:"start"`
+	End    *string   `json:"end"`
+	Emails *[]string `json:"emails"`
+}

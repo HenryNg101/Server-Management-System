@@ -26,7 +26,7 @@ type Service interface {
 	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
 
 	// Reporting
-	GenerateDailyReport(ctx context.Context) (*Report, error)
+	SendReports(startTime time.Time, endTime time.Time, emailsList []string, ctx context.Context) (*Report, error)
 }
 
 type serverService struct {
@@ -259,13 +259,14 @@ func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []
 	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
 }
 
-func (s *serverService) GenerateDailyReport(ctx context.Context) (*Report, error) {
+// TODO: Let the send email happens here
+func (s *serverService) SendReports(startTime time.Time, endTime time.Time, emailsList []string, ctx context.Context) (*Report, error) {
 	total, up, down, err := s.repo.GetStats(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	uptime, err := s.elasticRepo.GetDailyUptime(ctx)
+	uptime, err := s.elasticRepo.GetDailyUptime(ctx, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}

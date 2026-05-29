@@ -20,7 +20,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	servers.DELETE("/:id", serverHandler.DeleteServer)
 	servers.POST("/import", serverHandler.ImportServers)
 	servers.GET("/export", serverHandler.ExportServers)
-	servers.GET("/report", serverHandler.GetReport)
+	servers.POST("/report", serverHandler.SendReports)
 
 	// Register handlers for users
 	userHandler := user.NewHandler(*application.UserService)

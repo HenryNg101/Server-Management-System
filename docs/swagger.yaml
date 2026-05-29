@@ -339,8 +339,9 @@ paths:
       tags:
       - servers
   /servers/report:
-    get:
-      description: Retrieve servers statuses within a time range
+    post:
+      description: Get status report on the servers, and then send emails to people
+        in the email list
       produces:
       - application/json
       responses:
@@ -348,7 +349,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/server.Report'
-      summary: Get status report on the servers
+      summary: Get statuses of servers and emailing
       tags:
       - servers
   /users:
