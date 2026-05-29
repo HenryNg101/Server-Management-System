@@ -3,7 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
@@ -12,6 +14,7 @@ import (
 
 type ElasticServerRepository interface {
 	BulkInsertStatus(ctx context.Context, results []*model.Server) error
+	GetDailyUptime(ctx context.Context) (map[uint]float64, error)
 }
 
 type elasticServerRepository struct {
@@ -50,4 +53,68 @@ func (r *elasticServerRepository) BulkInsertStatus(ctx context.Context, results 
 	}
 
 	return nil
+}
+
+func (r *elasticServerRepository) GetDailyUptime(ctx context.Context) (map[uint]float64, error) {
+	query := `{
+	  "size": 0,
+	  "query": {
+	    "range": {
+	      "@timestamp": {
+	        "gte": "now-24h",
+	        "lt": "now"
+	      }
+	    }
+	  },
+	  "aggs": {
+	    "servers": {
+	      "terms": {
+	        "field": "server_id"
+	      },
+	      "aggs": {
+	        "uptime": {
+	          "avg": {
+	            "field": "status"
+	          }
+	        }
+	      }
+	    }
+	  }
+	}`
+
+	res, err := r.es.Search(
+		r.es.Search.WithContext(ctx),
+		r.es.Search.WithIndex("server-status"),
+		r.es.Search.WithBody(strings.NewReader(query)),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return nil, fmt.Errorf("ES error: %s", res.String())
+	}
+
+	//
+	// Parse the result, only extract what we need
+	var parsed map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+
+	result := make(map[uint]float64)
+
+	buckets := parsed["aggregations"].(map[string]interface{})["servers"].(map[string]interface{})["buckets"].([]interface{})
+
+	for _, b := range buckets {
+		bucket := b.(map[string]interface{})
+
+		serverID := uint(bucket["key"].(float64))
+		uptime := bucket["uptime"].(map[string]interface{})["value"].(float64)
+
+		result[serverID] = uptime
+	}
+
+	return result, nil
 }

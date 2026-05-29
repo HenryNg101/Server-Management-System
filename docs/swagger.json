@@ -195,6 +195,26 @@
                 }
             }
         },
+        "/servers/report": {
+            "get": {
+                "description": "Retrieve servers statuses within a time range",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "servers"
+                ],
+                "summary": "Get status report on the servers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.Report"
+                        }
+                    }
+                }
+            }
+        },
         "/servers/{id}": {
             "get": {
                 "description": "Retrieve a server based on ID",
@@ -502,6 +522,27 @@
                 },
                 "total_pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "server.Report": {
+            "type": "object",
+            "properties": {
+                "servers_down": {
+                    "type": "integer"
+                },
+                "servers_up": {
+                    "type": "integer"
+                },
+                "total_servers": {
+                    "type": "integer"
+                },
+                "uptime_per_server": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "format": "float64"
+                    }
                 }
             }
         },

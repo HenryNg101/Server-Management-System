@@ -19,6 +19,7 @@ type Repository interface {
 	ExistsByID(ctx context.Context, id uint) (bool, error)
 	Delete(ctx context.Context, id uint) error
 	BulkUpdateStatus(ctx context.Context, results []*model.Server) error
+	GetStats(ctx context.Context) (total, up, down int64, err error)
 }
 
 type serverRepository struct {
@@ -159,4 +160,21 @@ func (r *serverRepository) ExistsByID(ctx context.Context, id uint) (bool, error
 func (r *serverRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).
 		Delete(&model.Server{}, id).Error
+}
+
+func (r *serverRepository) GetStats(ctx context.Context) (total, up, down int64, err error) {
+	err = r.db.WithContext(ctx).Model(&model.Server{}).Count(&total).Error
+	if err != nil {
+		return
+	}
+
+	err = r.db.WithContext(ctx).Model(&model.Server{}).
+		Where("status = ?", true).
+		Count(&up).Error
+	if err != nil {
+		return
+	}
+
+	down = total - up
+	return
 }

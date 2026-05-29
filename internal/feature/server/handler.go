@@ -259,3 +259,22 @@ func (h *Handler) ExportServers(c *gin.Context) {
 		return
 	}
 }
+
+// TODO: Add time range, not just take it in a day
+// @Summary Get status report on the servers
+// @Description Retrieve servers statuses within a time range
+// @Tags servers
+// @Produce json
+// @Success 200 {object} Report
+// @Router /servers/report [get]
+func (h *Handler) GetReport(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	report, err := h.service.GenerateDailyReport(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, report)
+}

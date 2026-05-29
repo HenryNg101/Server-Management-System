@@ -119,6 +119,20 @@ definitions:
       total_pages:
         type: integer
     type: object
+  server.Report:
+    properties:
+      servers_down:
+        type: integer
+      servers_up:
+        type: integer
+      total_servers:
+        type: integer
+      uptime_per_server:
+        additionalProperties:
+          format: float64
+          type: number
+        type: object
+    type: object
   server.UpdateServerRequest:
     properties:
       ipv4:
@@ -322,6 +336,19 @@ paths:
           schema:
             $ref: '#/definitions/server.ImportServersResponse'
       summary: Import servers from csv file
+      tags:
+      - servers
+  /servers/report:
+    get:
+      description: Retrieve servers statuses within a time range
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.Report'
+      summary: Get status report on the servers
       tags:
       - servers
   /users:

@@ -50,3 +50,10 @@ type ImportFailure struct {
 	Error  string            `json:"error"`
 	Record map[string]string `json:"record"`
 }
+
+type Report struct {
+	TotalServers int64            `json:"total_servers"`
+	ServersUp    int64            `json:"servers_up"`
+	ServersDown  int64            `json:"servers_down"`
+	Uptime       map[uint]float64 `json:"uptime_per_server"`
+}

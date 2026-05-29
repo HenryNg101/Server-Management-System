@@ -24,6 +24,9 @@ type Service interface {
 
 	// Elastic services
 	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
+
+	// Reporting
+	GenerateDailyReport(ctx context.Context) (*Report, error)
 }
 
 type serverService struct {
@@ -254,4 +257,23 @@ func parseServer(record map[string]string) (*model.Server, error) {
 
 func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error {
 	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
+}
+
+func (s *serverService) GenerateDailyReport(ctx context.Context) (*Report, error) {
+	total, up, down, err := s.repo.GetStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	uptime, err := s.elasticRepo.GetDailyUptime(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Report{
+		TotalServers: total,
+		ServersUp:    up,
+		ServersDown:  down,
+		Uptime:       uptime,
+	}, nil
 }
