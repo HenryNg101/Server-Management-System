@@ -4,14 +4,17 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/config"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
-	"github.com/HenryNg101/server-management-system/internal/platform/database"
+	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
+	"github.com/HenryNg101/server-management-system/internal/platform/postgres"
+	"github.com/elastic/go-elasticsearch/v9"
 	"gorm.io/gorm"
 )
 
 type Application struct {
-	DB            *gorm.DB
-	ServerService *server.Service
-	UserService   *user.Service
+	PostgresSession *gorm.DB
+	ElasticSession  *elasticsearch.Client
+	ServerService   *server.Service
+	UserService     *user.Service
 }
 
 // Create a new app with services to be used
@@ -19,18 +22,29 @@ type Application struct {
 // If it's API app, you can add handlers, add API group, etc. to it. If it's a worker, it can still get access to DB query, services, etc. without it being separated entirely
 // It might be tightly coupled, but it's good for now
 func NewApp() (*Application, error) {
+	//
+	// Load configs and create initial schema/data streams/indices
 	postgresConfig := config.LoadPostgres()
-	postgresSession := database.NewPostgresSession(postgresConfig)
+	postgres.MigratePostgres(postgresConfig)
+	postgresSession := postgres.NewPostgresSession(postgresConfig)
 
+	elasticConfig := config.LoadElasticsearch()
+	esSession := elastic.NewElasticsearchSession(elasticConfig)
+	elastic.InitElasticsearch(esSession)
+
+	//
+	// Create services
 	serverRepo := server.NewRepository(postgresSession)
-	serverService := server.NewService(serverRepo)
+	elasticServerRepo := server.NewServerESRepository(esSession)
+	serverService := server.NewService(serverRepo, elasticServerRepo)
 
 	userRepo := user.NewRepository(postgresSession)
 	userService := user.NewService(userRepo)
 
 	return &Application{
-		DB:            postgresSession,
-		ServerService: &serverService,
-		UserService:   &userService,
+		PostgresSession: postgresSession,
+		ElasticSession:  esSession,
+		ServerService:   &serverService,
+		UserService:     &userService,
 	}, nil
 }

@@ -1,0 +1,13 @@
+{
+  "index_patterns": ["server-status*"],
+  "data_stream": {},
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "server_id": { "type": "long" },
+        "status": { "type": "boolean" }
+      }
+    }
+  }
+}

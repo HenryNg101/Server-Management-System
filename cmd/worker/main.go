@@ -9,7 +9,6 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/app"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/model"
-	"github.com/HenryNg101/server-management-system/internal/platform/database"
 )
 
 func fetchServers(application *app.Application, ctx context.Context) ([]model.Server, error) {
@@ -38,9 +37,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Working")
-	es := database.NewElasticsearchSession()
-	fmt.Println(es)
 
 	// Create a ticker with a channel to tick every 5 seconds
 	ticker := time.NewTicker(5 * time.Second)
@@ -58,6 +54,9 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			if len(servers) == 0 {
+				continue
+			}
 
 			start := time.Now()
 			results := runCheckCycle(ctx, servers)
@@ -74,6 +73,17 @@ func main() {
 			}
 			elapsed = time.Since(start)
 			fmt.Printf("Updated %d servers statuses to DB in %v\n", len(results), elapsed)
+
+			//
+			// Bulk insert to Elasticsearch data stream
+			start = time.Now()
+			serverService := *newApplication.ServerService
+			err = serverService.ElasticBulkInsert(ctx, results)
+			if err != nil {
+				log.Fatal(err)
+			}
+			elapsed = time.Since(start)
+			fmt.Printf("Logged %d servers statuses to Elasticsearch in %v\n", len(results), elapsed)
 
 		case <-ctx.Done():
 			return

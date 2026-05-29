@@ -15,7 +15,7 @@ func main() {
 
 	appConfig := config.LoadAppConfig()
 
-	router := app.SetupRouter(appConfig, newApplication.DB, newApplication)
+	router := app.SetupRouter(appConfig, newApplication.PostgresSession, newApplication)
 
 	if err := router.Run(":" + appConfig.Port); err != nil {
 		log.Fatalf("failed to run server: %v", err)

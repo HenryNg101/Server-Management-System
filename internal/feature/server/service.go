@@ -21,14 +21,18 @@ type Service interface {
 	DeleteServer(ctx context.Context, id uint) error
 	ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
 	BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error
+
+	// Elastic services
+	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
 }
 
 type serverService struct {
-	repo Repository
+	repo        Repository
+	elasticRepo ElasticServerRepository
 }
 
-func NewService(r Repository) Service {
-	return &serverService{repo: r}
+func NewService(r Repository, elastic ElasticServerRepository) Service {
+	return &serverService{repo: r, elasticRepo: elastic}
 }
 
 func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
@@ -246,4 +250,8 @@ func parseServer(record map[string]string) (*model.Server, error) {
 		Port:        uint(port),
 		Protocol:    protocol,
 	}, nil
+}
+
+func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error {
+	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
 }
