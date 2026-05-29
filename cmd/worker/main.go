@@ -9,6 +9,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/app"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/model"
+	"github.com/HenryNg101/server-management-system/internal/platform/database"
 )
 
 func fetchServers(application *app.Application, ctx context.Context) ([]model.Server, error) {
@@ -37,6 +38,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("Working")
+	es := database.NewElasticsearchSession()
+	fmt.Println(es)
 
 	// Create a ticker with a channel to tick every 5 seconds
 	ticker := time.NewTicker(5 * time.Second)

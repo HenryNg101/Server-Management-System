@@ -6,10 +6,21 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/elastic/go-elasticsearch/v9"
+	"github.com/elastic/go-elasticsearch/v8"
 )
 
 func NewElasticsearchSession() *elasticsearch.Client {
+	// es, err := elasticsearch.New(
+	// 	elasticsearch.WithAddresses(fmt.Sprintf("%s:%s", os.Getenv("ELASTIC_HOST"), os.Getenv("ELASTIC_PORT"))),
+	// 	elasticsearch.WithTransportOptions(
+	// 		// Intentionally disable any attempt of using HTTP/2.0 for simplicity
+	// 		// Got network hanging issue before, and I checked that default config use this option as "true"
+	// 		elastictransport.WithTransport(&http.Transport{
+	// 			ForceAttemptHTTP2: false,
+	// 		}),
+	// 	),
+	// 	elasticsearch.WithBasicAuth(os.Getenv("ELASTIC_USER"), os.Getenv("ELASTIC_PASSWORD")),
+	// )
 
 	cfg := elasticsearch.Config{
 		Addresses: []string{fmt.Sprintf("%s:%s", os.Getenv("ELASTIC_HOST"), os.Getenv("ELASTIC_PORT"))},
