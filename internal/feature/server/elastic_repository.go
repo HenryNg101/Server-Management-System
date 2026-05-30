@@ -14,7 +14,7 @@ import (
 
 type ElasticServerRepository interface {
 	BulkInsertStatus(ctx context.Context, results []*model.Server) error
-	GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time) (map[uint]float64, error)
+	GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]float64, error)
 }
 
 type elasticServerRepository struct {
@@ -55,7 +55,7 @@ func (r *elasticServerRepository) BulkInsertStatus(ctx context.Context, results 
 	return nil
 }
 
-func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time) (map[uint]float64, error) {
+func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]float64, error) {
 	query := fmt.Sprintf(`{
 	  "size": 0,
 	  "query": {
@@ -69,7 +69,11 @@ func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime 
 	  "aggs": {
 	    "servers": {
 	      "terms": {
-	        "field": "server_id"
+	        "field": "server_id",
+			"size": %d,
+			"order": {
+				"uptime": "asc"
+			}
 	      },
 	      "aggs": {
 	        "uptime": {
@@ -80,7 +84,7 @@ func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime 
 	      }
 	    }
 	  }
-	}`, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+	}`, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339), topN)
 
 	res, err := r.es.Search(
 		r.es.Search.WithContext(ctx),

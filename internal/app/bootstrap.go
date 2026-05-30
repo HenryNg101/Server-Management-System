@@ -36,7 +36,15 @@ func NewApp() (*Application, error) {
 	// Create services
 	serverRepo := server.NewRepository(postgresSession)
 	elasticServerRepo := server.NewServerESRepository(esSession)
-	serverService := server.NewService(serverRepo, elasticServerRepo)
+	mailerConfig := config.LoadMailer()
+	mailerUtility := server.NewMailer(
+		mailerConfig.Server,
+		mailerConfig.Port,
+		mailerConfig.UserName,
+		mailerConfig.Password,
+		mailerConfig.FromEmail,
+	)
+	serverService := server.NewService(serverRepo, elasticServerRepo, mailerUtility)
 
 	userRepo := user.NewRepository(postgresSession)
 	userService := user.NewService(userRepo)

@@ -10,11 +10,6 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-/*
-	TODO: Develop these APIs:
-
-- POST   /api/v1/reports: Write report of servers statuses
-*/
 // TODO: Write more proper OpenAPI docs for the APIs
 // TODO: Add JWT authentication to the system
 

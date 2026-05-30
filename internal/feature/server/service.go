@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
@@ -26,16 +28,17 @@ type Service interface {
 	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
 
 	// Reporting
-	SendReports(startTime time.Time, endTime time.Time, emailsList []string, ctx context.Context) (*Report, error)
+	SendReports(startTime time.Time, endTime time.Time, topN int, emailsList []string, ctx context.Context) (*Report, error)
 }
 
 type serverService struct {
 	repo        Repository
 	elasticRepo ElasticServerRepository
+	mailUtility MailingUtility
 }
 
-func NewService(r Repository, elastic ElasticServerRepository) Service {
-	return &serverService{repo: r, elasticRepo: elastic}
+func NewService(r Repository, elastic ElasticServerRepository, mailer MailingUtility) Service {
+	return &serverService{repo: r, elasticRepo: elastic, mailUtility: mailer}
 }
 
 func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
@@ -260,21 +263,72 @@ func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []
 }
 
 // TODO: Let the send email happens here
-func (s *serverService) SendReports(startTime time.Time, endTime time.Time, emailsList []string, ctx context.Context) (*Report, error) {
+func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList []string, ctx context.Context) (*Report, error) {
 	total, up, down, err := s.repo.GetStats(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	uptime, err := s.elasticRepo.GetDailyUptime(ctx, startTime, endTime)
+	uptime, err := s.elasticRepo.GetDailyUptime(ctx, startTime, endTime, topN)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Report{
+	serversReport := &Report{
 		TotalServers: total,
 		ServersUp:    up,
 		ServersDown:  down,
 		Uptime:       uptime,
-	}, nil
+	}
+
+	mailHtmlContent := buildReportHTML(serversReport, startTime, endTime)
+
+	subject := fmt.Sprintf(
+		"Server Report (%s → %s)",
+		startTime.Format("2006-01-02"),
+		endTime.Add(-24*time.Hour).Format("2006-01-02"),
+	)
+
+	// TODO: Make this async -> No blocking of waiting for sending all emails
+	err = s.mailUtility.Send(emailsList, subject, mailHtmlContent)
+	if err != nil {
+		return nil, err
+	}
+	return serversReport, nil
+}
+
+func buildReportHTML(report *Report, startTime, endTime time.Time) string {
+	var b strings.Builder
+
+	b.WriteString("<h2>Server Report</h2>")
+	b.WriteString(fmt.Sprintf("<p><b>Period:</b> %s → %s</p>",
+		startTime.Format("2006-01-02"),
+		endTime.Add(-24*time.Hour).Format("2006-01-02"),
+	))
+
+	// Summary
+	b.WriteString("<h3>Summary</h3>")
+	b.WriteString(fmt.Sprintf(`
+	<ul>
+		<li>Total Servers: %d</li>
+		<li>Up: %d</li>
+		<li>Down: %d</li>
+	</ul>
+	`, report.TotalServers, report.ServersUp, report.ServersDown))
+
+	// Table
+	b.WriteString("<h3>Uptime per Server</h3>")
+	b.WriteString(`<table border="1" cellpadding="5" cellspacing="0">
+	<tr><th>Server ID</th><th>Uptime</th></tr>`)
+
+	for id, uptime := range report.Uptime {
+		b.WriteString(fmt.Sprintf(
+			"<tr><td>%d</td><td>%.2f%%</td></tr>",
+			id, uptime*100,
+		))
+	}
+
+	b.WriteString("</table>")
+
+	return b.String()
 }

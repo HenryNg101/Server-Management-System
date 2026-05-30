@@ -295,7 +295,7 @@ func (h *Handler) SendReports(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	report, err := h.service.SendReports(startTime, endTime, *req.Emails, ctx)
+	report, err := h.service.SendReports(startTime, endTime, *req.TopN, *req.Emails, ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

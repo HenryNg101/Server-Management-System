@@ -28,6 +28,14 @@ type ElasticSearchConfig struct {
 	DataStreamName string
 }
 
+type MailerConfig struct {
+	Server    string
+	Port      string
+	UserName  string
+	Password  string
+	FromEmail string
+}
+
 func getEnv(key, fallback string) string {
 	err := godotenv.Load()
 	if err != nil {
@@ -64,5 +72,15 @@ func LoadElasticsearch() *ElasticSearchConfig {
 		Password:       getEnv("ELASTIC_PASSWORD", "password"),
 		Port:           getEnv("ELASTIC_PORT", "9200"),
 		DataStreamName: getEnv("ELASTIC_DATA_STREAM_SOURCE", "data_stream"),
+	}
+}
+
+func LoadMailer() *MailerConfig {
+	return &MailerConfig{
+		Server:    getEnv("MAIL_SERVER", "smtp.gmail.com"),
+		Port:      getEnv("MAIL_PORT", "587"),
+		UserName:  getEnv("MAIL_USER", "example@gmail.com"), // This one won't work, you have to do use your own actual email for auth
+		Password:  getEnv("MAIL_PASSWORD", ""),              // Same idea. You have to generate from your auth email
+		FromEmail: getEnv("MAIL_FROM_USER", "example@gmail.com"),
 	}
 }
