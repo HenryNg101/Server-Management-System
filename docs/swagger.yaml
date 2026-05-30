@@ -133,6 +133,24 @@ definitions:
           type: number
         type: object
     type: object
+  server.SendReportRequest:
+    properties:
+      count:
+        description: The number of top N worst servers you want to show in the report
+        type: integer
+      emails:
+        description: Optional. It might sends emails or nah
+        items:
+          type: string
+        type: array
+      end:
+        type: string
+      start:
+        type: string
+    required:
+    - end
+    - start
+    type: object
   server.UpdateServerRequest:
     properties:
       ipv4:
@@ -326,8 +344,16 @@ paths:
       - servers
   /servers/import:
     post:
+      consumes:
+      - multipart/form-data
       description: User uploads an Excel file with servers info, and the server will
         try to import valid servers
+      parameters:
+      - description: Input servers file (CSV)
+        in: formData
+        name: file
+        required: true
+        type: file
       produces:
       - application/json
       responses:
@@ -342,6 +368,13 @@ paths:
     post:
       description: Get status report on the servers, and then send emails to people
         in the email list
+      parameters:
+      - description: Report request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.SendReportRequest'
       produces:
       - application/json
       responses:
@@ -369,6 +402,13 @@ paths:
       - users
     post:
       description: Create a new user, with specifications
+      parameters:
+      - description: User to be created
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.User'
       produces:
       - application/json
       responses:

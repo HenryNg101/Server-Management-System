@@ -19,6 +19,7 @@ func NewHandler(s Service) *Handler {
 // @Summary Create a user
 // @Description Create a new user, with specifications
 // @Tags users
+// @Param request body model.User true "User to be created"
 // @Produce json
 // @Success 200 {object} model.User
 // @Router /users [post]

@@ -168,7 +168,9 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 // @Summary Import servers from csv file
 // @Description User uploads an Excel file with servers info, and the server will try to import valid servers
 // @Tags servers
+// @Accept multipart/form-data
 // @Produce json
+// @Param file formData file true "Input servers file (CSV)"
 // @Success 200 {object} ImportServersResponse
 // @Router /servers/import [post]
 func (h *Handler) ImportServers(c *gin.Context) {
@@ -262,10 +264,12 @@ func (h *Handler) ExportServers(c *gin.Context) {
 
 // TODO: Add time range, not just take it in a day
 // TODO: Add body params in here
+// TODO: Add pagination where it's possible
 // @Summary Get statuses of servers and emailing
 // @Description Get status report on the servers, and then send emails to people in the email list
 // @Tags servers
 // @Produce json
+// @Param request body SendReportRequest true "Report request"
 // @Success 200 {object} Report
 // @Router /servers/report [post]
 func (h *Handler) SendReports(c *gin.Context) {
@@ -295,11 +299,10 @@ func (h *Handler) SendReports(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	report, err := h.service.SendReports(startTime, endTime, *req.TopN, *req.Emails, ctx)
+	report, err := h.service.SendReports(startTime, endTime, *req.TopN, req.Emails, ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, report)
 }

@@ -184,6 +184,9 @@ const docTemplate = `{
         "/servers/import": {
             "post": {
                 "description": "User uploads an Excel file with servers info, and the server will try to import valid servers",
+                "consumes": [
+                    "multipart/form-data"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -191,6 +194,15 @@ const docTemplate = `{
                     "servers"
                 ],
                 "summary": "Import servers from csv file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Input servers file (CSV)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -211,6 +223,17 @@ const docTemplate = `{
                     "servers"
                 ],
                 "summary": "Get statuses of servers and emailing",
+                "parameters": [
+                    {
+                        "description": "Report request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.SendReportRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -344,6 +367,17 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "Create a user",
+                "parameters": [
+                    {
+                        "description": "User to be created",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -549,6 +583,32 @@ const docTemplate = `{
                         "type": "number",
                         "format": "float64"
                     }
+                }
+            }
+        },
+        "server.SendReportRequest": {
+            "type": "object",
+            "required": [
+                "end",
+                "start"
+            ],
+            "properties": {
+                "count": {
+                    "description": "The number of top N worst servers you want to show in the report",
+                    "type": "integer"
+                },
+                "emails": {
+                    "description": "Optional. It might sends emails or nah",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
                 }
             }
         },

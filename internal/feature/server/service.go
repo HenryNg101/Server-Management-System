@@ -28,7 +28,7 @@ type Service interface {
 	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
 
 	// Reporting
-	SendReports(startTime time.Time, endTime time.Time, topN int, emailsList []string, ctx context.Context) (*Report, error)
+	SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error)
 }
 
 type serverService struct {
@@ -263,7 +263,7 @@ func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []
 }
 
 // TODO: Let the send email happens here
-func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList []string, ctx context.Context) (*Report, error) {
+func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error) {
 	total, up, down, err := s.repo.GetStats(ctx)
 	if err != nil {
 		return nil, err
@@ -281,6 +281,10 @@ func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN
 		Uptime:       uptime,
 	}
 
+	if emailsList == nil {
+		return serversReport, nil
+	}
+
 	mailHtmlContent := buildReportHTML(serversReport, startTime, endTime)
 
 	subject := fmt.Sprintf(
@@ -290,7 +294,7 @@ func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN
 	)
 
 	// TODO: Make this async -> No blocking of waiting for sending all emails
-	err = s.mailUtility.Send(emailsList, subject, mailHtmlContent)
+	err = s.mailUtility.Send(*emailsList, subject, mailHtmlContent)
 	if err != nil {
 		return nil, err
 	}
