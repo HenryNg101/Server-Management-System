@@ -21,6 +21,7 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
+// @description Type 'Bearer ' followed by your JWT token.
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Application) *gin.Engine {
 	r := gin.Default()
 

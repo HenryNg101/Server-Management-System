@@ -58,6 +58,30 @@ const docTemplate = `{
                 }
             }
         },
+        "/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/servers": {
             "get": {
                 "security": [
@@ -766,6 +790,7 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
+            "description": "Type 'Bearer ' followed by your JWT token.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

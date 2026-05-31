@@ -2,7 +2,9 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/HenryNg101/server-management-system/internal/middleware/auth"
 	internalAuth "github.com/HenryNg101/server-management-system/internal/middleware/auth"
 
 	"github.com/gin-gonic/gin"
@@ -49,4 +51,36 @@ func (h *Handler) Login(c *gin.Context) {
 
 	resp := LoginResponse{Token: token}
 	c.JSON(http.StatusOK, &resp)
+}
+
+// TODO:
+// Refresh godoc
+// @Summary Refresh token
+// @Tags auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} LoginResponse
+// @Router /refresh [post]
+func (h *Handler) Refresh(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 {
+		c.JSON(401, gin.H{"error": "invalid token"})
+		return
+	}
+
+	claims, err := auth.ParseToken(parts[1])
+	if err != nil {
+		c.JSON(401, gin.H{"error": "invalid token"})
+		return
+	}
+
+	newToken, err := auth.GenerateToken(claims.UserID, claims.Role)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to generate token"})
+		return
+	}
+
+	c.JSON(200, gin.H{"token": newToken})
 }

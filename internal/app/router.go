@@ -26,17 +26,12 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	protected := rg.Group("/")
 	protected.Use(internalAuth.AuthMiddleware())
 
-	protected.GET("/servers", serverHandler.GetServers)
-	// protected.POST("/servers", serverHandler.CreateServer)
-	protected.GET("/servers/:id", serverHandler.GetServer)
-	// protected.PATCH("/servers/:id", serverHandler.UpdateServer)
-	// protected.DELETE("/servers/:id", serverHandler.DeleteServer)
-	// protected.POST("/servers/import", serverHandler.ImportServers)
-	// protected.GET("/servers/export", serverHandler.ExportServers)
-	// protected.POST("/servers/report", serverHandler.SendReports)
+	// refresh (needs token)
+	protected.POST("/refresh", authH.Refresh)
 
+	protected.GET("/servers", serverHandler.GetServers)
+	protected.GET("/servers/:id", serverHandler.GetServer)
 	protected.GET("/users", userHandler.GetUsers)
-	// protected.POST("/users", userHandler.CreateUser)
 
 	//
 	// Admin only APIs

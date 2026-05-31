@@ -225,6 +225,20 @@ paths:
       summary: Login
       tags:
       - auth
+  /refresh:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+      security:
+      - BearerAuth: []
+      summary: Refresh token
+      tags:
+      - auth
   /servers:
     get:
       description: Retrieve servers with filtering, pagination, and sorting
@@ -495,6 +509,7 @@ paths:
       - users
 securityDefinitions:
   BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
     in: header
     name: Authorization
     type: apiKey
