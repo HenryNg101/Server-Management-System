@@ -281,7 +281,7 @@ func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN
 		Uptime:       uptime,
 	}
 
-	if emailsList == nil {
+	if emailsList == nil || len(*emailsList) == 0 {
 		return serversReport, nil
 	}
 
