@@ -105,7 +105,7 @@ func (r *serverRepository) Create(ctx context.Context, server *model.Server) (*m
 func (r *serverRepository) FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error) {
 	err := r.db.Model(&model.Server{}).
 		Where("id = ?", id).
-		Find(&server).
+		First(&server).
 		Error
 	return server, err
 }

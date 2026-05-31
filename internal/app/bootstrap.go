@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/HenryNg101/server-management-system/internal/config"
+	"github.com/HenryNg101/server-management-system/internal/feature/auth"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
@@ -15,6 +16,7 @@ type Application struct {
 	ElasticSession  *elasticsearch.Client
 	ServerService   *server.Service
 	UserService     *user.Service
+	AuthService     *auth.Service
 }
 
 // Create a new app with services to be used
@@ -49,10 +51,13 @@ func NewApp() (*Application, error) {
 	userRepo := user.NewRepository(postgresSession)
 	userService := user.NewService(userRepo)
 
+	authService := auth.NewService(userRepo)
+
 	return &Application{
 		PostgresSession: postgresSession,
 		ElasticSession:  esSession,
 		ServerService:   &serverService,
 		UserService:     &userService,
+		AuthService:     &authService,
 	}, nil
 }

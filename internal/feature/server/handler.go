@@ -23,6 +23,7 @@ func NewHandler(s Service) *Handler {
 // @Summary Create a server
 // @Description Create a new server, with specifications
 // @Tags servers
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param request body CreateServerRequest true "Server payload"
@@ -47,6 +48,7 @@ func (h *Handler) CreateServer(c *gin.Context) {
 // @Summary Get servers
 // @Description Retrieve servers with filtering, pagination, and sorting
 // @Tags servers
+// @Security BearerAuth
 // @Produce json
 // @Param status query bool false "Filter by status"
 // @Param protocol query string false "Filter by protocol"
@@ -76,6 +78,7 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Description Retrieve a server based on ID
 // @Param id path int true "Server ID"
 // @Tags servers
+// @Security BearerAuth
 // @Produce json
 // @Success 200 {object} model.Server
 // @Router /servers/{id} [get]
@@ -103,6 +106,7 @@ func (h *Handler) GetServer(c *gin.Context) {
 // @Param id path int true "Server ID"
 // @Accept json
 // @Tags servers
+// @Security BearerAuth
 // @Produce json
 // @Param request body UpdateServerRequest true "New server info"
 // @Success 200 {object} model.Server
@@ -140,6 +144,7 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 // @Description Get a server based on ID, and delete that server
 // @Param id path int true "Server ID"
 // @Tags servers
+// @Security BearerAuth
 // @Produce json
 // @Success 204
 // @Router /servers/{id} [delete]
@@ -168,6 +173,7 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 // @Summary Import servers from csv file
 // @Description User uploads an Excel file with servers info, and the server will try to import valid servers
 // @Tags servers
+// @Security BearerAuth
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "Input servers file (CSV)"
@@ -200,6 +206,7 @@ func (h *Handler) ImportServers(c *gin.Context) {
 // @Summary Export servers info to csv file
 // @Description User ask for all servers info with optional filtering, pagination, and sorting, and the server will export servers info to CSV file
 // @Tags servers
+// @Security BearerAuth
 // @Produce text/csv
 // @Param status query bool false "Filter by status"
 // @Param protocol query string false "Filter by protocol"
@@ -268,6 +275,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 // @Summary Get statuses of servers and emailing
 // @Description Get status report on the servers, and then send emails to people in the email list
 // @Tags servers
+// @Security BearerAuth
 // @Produce json
 // @Param request body SendReportRequest true "Report request"
 // @Success 200 {object} Report

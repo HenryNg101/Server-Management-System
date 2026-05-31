@@ -1,6 +1,8 @@
 package user
 
 import (
+	"context"
+
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"gorm.io/gorm"
 )
@@ -8,6 +10,7 @@ import (
 type Repository interface {
 	FindAll() ([]model.User, error)
 	Create(user model.User) (model.User, error)
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
 }
 
 type userRepository struct {
@@ -28,4 +31,13 @@ func (r *userRepository) FindAll() ([]model.User, error) {
 func (r *userRepository) Create(user model.User) (model.User, error) {
 	err := r.db.Create(&user).Error
 	return user, err
+}
+
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	var result model.User
+	err := r.db.WithContext(ctx).
+		Where("email = ?", email).
+		First(&result).
+		Error
+	return &result, err
 }

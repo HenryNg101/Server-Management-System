@@ -1,5 +1,19 @@
 basePath: /api/v1
 definitions:
+  auth.LoginRequest:
+    properties:
+      email:
+        example: admin@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  auth.LoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
   model.Membership:
     properties:
       server:
@@ -59,7 +73,19 @@ definitions:
         type: array
       name:
         type: string
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/model.UserRole'
     type: object
+  model.UserRole:
+    enum:
+    - admin
+    - user
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleUser
   server.CreateServerRequest:
     properties:
       ipv4_address:
@@ -171,6 +197,34 @@ info:
   title: Server Management API
   version: "1.0"
 paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
   /servers:
     get:
       description: Retrieve servers with filtering, pagination, and sorting
@@ -210,6 +264,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/server.PaginatedServers'
+      security:
+      - BearerAuth: []
       summary: Get servers
       tags:
       - servers
@@ -231,6 +287,8 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/model.Server'
+      security:
+      - BearerAuth: []
       summary: Create a server
       tags:
       - servers
@@ -248,6 +306,8 @@ paths:
       responses:
         "204":
           description: No Content
+      security:
+      - BearerAuth: []
       summary: Delete a server
       tags:
       - servers
@@ -266,6 +326,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.Server'
+      security:
+      - BearerAuth: []
       summary: Get a server
       tags:
       - servers
@@ -292,6 +354,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.Server'
+      security:
+      - BearerAuth: []
       summary: Update a server
       tags:
       - servers
@@ -339,6 +403,8 @@ paths:
               type: string
           schema:
             type: file
+      security:
+      - BearerAuth: []
       summary: Export servers info to csv file
       tags:
       - servers
@@ -361,6 +427,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/server.ImportServersResponse'
+      security:
+      - BearerAuth: []
       summary: Import servers from csv file
       tags:
       - servers
@@ -382,6 +450,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/server.Report'
+      security:
+      - BearerAuth: []
       summary: Get statuses of servers and emailing
       tags:
       - servers
@@ -397,6 +467,8 @@ paths:
             items:
               $ref: '#/definitions/model.User'
             type: array
+      security:
+      - BearerAuth: []
       summary: Get all users
       tags:
       - users
@@ -416,7 +488,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.User'
+      security:
+      - BearerAuth: []
       summary: Create a user
       tags:
       - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -84,3 +84,7 @@ func LoadMailer() *MailerConfig {
 		FromEmail: getEnv("MAIL_FROM_USER", "example@gmail.com"),
 	}
 }
+
+func LoadJWTSecret() string {
+	return getEnv("JWT_SECRET", "")
+}

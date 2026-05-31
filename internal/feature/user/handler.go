@@ -19,6 +19,7 @@ func NewHandler(s Service) *Handler {
 // @Summary Create a user
 // @Description Create a new user, with specifications
 // @Tags users
+// @Security BearerAuth
 // @Param request body model.User true "User to be created"
 // @Produce json
 // @Success 200 {object} model.User
@@ -43,6 +44,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 // @Summary Get all users
 // @Description Retrieve list of users
 // @Tags users
+// @Security BearerAuth
 // @Produce json
 // @Success 200 {array} model.User
 // @Router /users [get]
