@@ -151,7 +151,10 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.PaginatedServers"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/server.GetServerResponse"
+                            }
                         }
                     }
                 }
@@ -370,7 +373,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Server"
+                            "$ref": "#/definitions/server.GetServerResponse"
                         }
                     }
                 }
@@ -470,7 +473,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.User"
+                                "$ref": "#/definitions/user.GetUsersResponse"
                             }
                         }
                     }
@@ -688,6 +691,38 @@ const docTemplate = `{
                 }
             }
         },
+        "server.GetServerResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Automatically managed by GORM for creation time",
+                    "type": "string"
+                },
+                "ipv4_address": {
+                    "description": "IPv4 of the server",
+                    "type": "string"
+                },
+                "last_updated": {
+                    "description": "Last time the server got updated",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "port": {
+                    "description": "Port of the server",
+                    "type": "integer"
+                },
+                "protocol": {
+                    "description": "Network protocol that the server use, could be TCP, FTP, SSH, etc.",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Server status at the time (Is it on or off)",
+                    "type": "boolean"
+                }
+            }
+        },
         "server.ImportFailure": {
             "type": "object",
             "properties": {
@@ -725,29 +760,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.Server"
                     }
-                }
-            }
-        },
-        "server.PaginatedServers": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "servers": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Server"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
                 }
             }
         },
@@ -815,6 +827,23 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "boolean"
+                }
+            }
+        },
+        "user.GetUsersResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/model.UserRole"
                 }
             }
         }

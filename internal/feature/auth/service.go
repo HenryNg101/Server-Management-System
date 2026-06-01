@@ -10,6 +10,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	internalAuth "github.com/HenryNg101/server-management-system/internal/middleware/auth"
 	"github.com/HenryNg101/server-management-system/internal/model"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service interface {
@@ -35,11 +36,10 @@ func (s *authService) ValidateUser(ctx context.Context, email string, password s
 		return nil, err
 	}
 
-	// Plain text password for now (TODO: Must hash later)
-	if user.Password != password {
-		return nil, errors.New("invalid password")
+	// Hash check
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		return nil, errors.New("invalid credentials")
 	}
-
 	return user, nil
 }
 

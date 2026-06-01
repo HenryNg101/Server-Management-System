@@ -57,17 +57,29 @@ func (h *Handler) CreateServer(c *gin.Context) {
 // @Param page_size query int false "Page size (default 10, max 100)"
 // @Param sort_by query string false "Sort by field (id, name, created_at)"
 // @Param order query string false "Sort order (asc, desc)"
-// @Success 200 {object} PaginatedServers
+// @Success 200 {array} GetServerResponse
 // @Router /servers [get]
 func (h *Handler) GetServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err})
 	}
-	result, err := h.service.GetServers(c.Request.Context(), query)
+	paginatedResult, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+	result := make([]GetServerResponse, 0)
+	for _, server := range paginatedResult.Servers {
+		result = append(result, GetServerResponse{
+			Name:        server.Name,
+			Status:      server.Status,
+			IPv4Address: server.IPv4Address,
+			Port:        server.Port,
+			Protocol:    server.Protocol,
+			CreatedAt:   server.CreatedAt,
+			LastUpdated: server.LastUpdated,
+		})
 	}
 	c.JSON(200, result)
 }
@@ -80,23 +92,30 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Tags servers
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} model.Server
+// @Success 200 {object} GetServerResponse
 // @Router /servers/{id} [get]
 func (h *Handler) GetServer(c *gin.Context) {
-	var server *model.Server
-
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
+	var server *model.Server
 	server, err = h.service.GetServer(c.Request.Context(), uint(id), server)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, server)
+	c.JSON(http.StatusOK, &GetServerResponse{
+		Name:        server.Name,
+		Status:      server.Status,
+		IPv4Address: server.IPv4Address,
+		Port:        server.Port,
+		Protocol:    server.Protocol,
+		CreatedAt:   server.CreatedAt,
+		LastUpdated: server.LastUpdated,
+	})
 }
 
 // TODO: Add the logic to return 404 when no server with associated ID is found
@@ -236,7 +255,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	writer := csv.NewWriter(c.Writer)
 
 	// Write header
-	header := []string{"id", "name", "status", "ipv4_address", "port", "protocol", "created_at", "last_updated_at"}
+	header := []string{"name", "status", "ipv4_address", "port", "protocol", "created_at", "last_updated_at"}
 	if err := writer.Write(header); err != nil {
 		c.JSON(500, gin.H{"error": "failed to write csv"})
 		return
@@ -245,7 +264,6 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	// Write rows
 	for _, s := range servers.Servers {
 		row := []string{
-			strconv.FormatUint(uint64(s.ID), 10),
 			s.Name,
 			strconv.FormatBool(s.Status),
 			s.IPv4Address,

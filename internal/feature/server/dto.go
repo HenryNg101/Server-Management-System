@@ -1,6 +1,10 @@
 package server
 
-import "github.com/HenryNg101/server-management-system/internal/model"
+import (
+	"time"
+
+	"github.com/HenryNg101/server-management-system/internal/model"
+)
 
 type GetServersQuery struct {
 	Status   *bool
@@ -12,6 +16,16 @@ type GetServersQuery struct {
 
 	SortBy string
 	Order  string
+}
+
+type GetServerResponse struct {
+	Name        string    `json:"name"`
+	Status      bool      `json:"status"`       // Server status at the time (Is it on or off)
+	IPv4Address string    `json:"ipv4_address"` // IPv4 of the server
+	Port        uint      `json:"port"`         // Port of the server
+	Protocol    string    `json:"protocol"`     // Network protocol that the server use, could be TCP, FTP, SSH, etc.
+	CreatedAt   time.Time `json:"created_at"`   // Automatically managed by GORM for creation time
+	LastUpdated time.Time `json:"last_updated"` // Last time the server got updated
 }
 
 type PaginatedServers struct {

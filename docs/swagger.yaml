@@ -120,6 +120,30 @@ definitions:
     - port
     - status
     type: object
+  server.GetServerResponse:
+    properties:
+      created_at:
+        description: Automatically managed by GORM for creation time
+        type: string
+      ipv4_address:
+        description: IPv4 of the server
+        type: string
+      last_updated:
+        description: Last time the server got updated
+        type: string
+      name:
+        type: string
+      port:
+        description: Port of the server
+        type: integer
+      protocol:
+        description: Network protocol that the server use, could be TCP, FTP, SSH,
+          etc.
+        type: string
+      status:
+        description: Server status at the time (Is it on or off)
+        type: boolean
+    type: object
   server.ImportFailure:
     properties:
       error:
@@ -145,21 +169,6 @@ definitions:
         items:
           $ref: '#/definitions/model.Server'
         type: array
-    type: object
-  server.PaginatedServers:
-    properties:
-      page:
-        type: integer
-      page_size:
-        type: integer
-      servers:
-        items:
-          $ref: '#/definitions/model.Server'
-        type: array
-      total:
-        type: integer
-      total_pages:
-        type: integer
     type: object
   server.Report:
     properties:
@@ -205,6 +214,17 @@ definitions:
         type: string
       status:
         type: boolean
+    type: object
+  user.GetUsersResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/model.UserRole'
     type: object
 host: localhost:8080
 info:
@@ -298,7 +318,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.PaginatedServers'
+            items:
+              $ref: '#/definitions/server.GetServerResponse'
+            type: array
       security:
       - BearerAuth: []
       summary: Get servers
@@ -360,7 +382,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Server'
+            $ref: '#/definitions/server.GetServerResponse'
       security:
       - BearerAuth: []
       summary: Get a server
@@ -500,7 +522,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.User'
+              $ref: '#/definitions/user.GetUsersResponse'
             type: array
       security:
       - BearerAuth: []

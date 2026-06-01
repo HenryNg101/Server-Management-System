@@ -14,8 +14,8 @@ func fetchEmails(application *app.Application) (*[]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	userEmails := make([]string, 0, len(users))
-	for _, user := range users {
+	userEmails := make([]string, 0, len(*users))
+	for _, user := range *users {
 		userEmails = append(userEmails, user.Email)
 	}
 	return &userEmails, nil

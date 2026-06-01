@@ -5,6 +5,7 @@ import (
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
@@ -32,6 +33,8 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	bytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	user.Password = string(bytes)
 	created, err := h.service.CreateUser(user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -46,7 +49,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 // @Tags users
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {array} model.User
+// @Success 200 {array} GetUsersResponse
 // @Router /users [get]
 func (h *Handler) GetUsers(c *gin.Context) {
 	users, err := h.service.GetUsers()
