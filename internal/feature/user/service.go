@@ -1,12 +1,14 @@
 package user
 
 import (
+	"context"
+
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
 
 type Service interface {
 	GetUsers() (*[]GetUsersResponse, error)
-	CreateUser(user model.User) (model.User, error)
+	CreateUser(ctx context.Context, user model.User) (model.User, error)
 }
 
 type userService struct {
@@ -34,6 +36,6 @@ func (s *userService) GetUsers() (*[]GetUsersResponse, error) {
 	return &result, nil
 }
 
-func (s *userService) CreateUser(user model.User) (model.User, error) {
-	return s.repo.Create(user)
+func (s *userService) CreateUser(ctx context.Context, user model.User) (model.User, error) {
+	return s.repo.Create(ctx, user)
 }

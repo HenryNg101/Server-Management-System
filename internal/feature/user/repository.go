@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	FindAll() ([]model.User, error)
-	Create(user model.User) (model.User, error)
+	Create(ctx context.Context, user model.User) (model.User, error)
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
 }
 
@@ -28,8 +28,8 @@ func (r *userRepository) FindAll() ([]model.User, error) {
 	return result, err
 }
 
-func (r *userRepository) Create(user model.User) (model.User, error) {
-	err := r.db.Create(&user).Error
+func (r *userRepository) Create(ctx context.Context, user model.User) (model.User, error) {
+	err := r.db.WithContext(ctx).Create(&user).Error
 	return user, err
 }
 

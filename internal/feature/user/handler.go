@@ -35,7 +35,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 	bytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(bytes)
-	created, err := h.service.CreateUser(user)
+	created, err := h.service.CreateUser(c, user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
