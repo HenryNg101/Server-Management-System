@@ -97,3 +97,29 @@ func (h *Handler) Refresh(c *gin.Context) {
 		NewRefreshToken: refreshToken,
 	})
 }
+
+// Logout godoc
+// @Summary Logout
+// @Description Invalidate refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} map[string]string
+// @Router /logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	var req RefreshRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "invalid request"})
+		return
+	}
+
+	err := h.service.DeleteOldRefreshToken(c, req.RefreshToken)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to logout"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "logged out"})
+}

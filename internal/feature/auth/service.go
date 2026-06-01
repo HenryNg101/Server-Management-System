@@ -18,7 +18,7 @@ type Service interface {
 	GenerateRefreshToken(ctx context.Context, userID uint, role string) (string, error)
 	StoreRefreshToken(ctx context.Context, userID uint, role string, refreshToken string, ttl time.Duration) error
 	GetUserFromRefreshToken(ctx context.Context, refreshToken string) (*RefreshData, error)
-	DeleteOldRefreshToken(ctx context.Context, key string)
+	DeleteOldRefreshToken(ctx context.Context, key string) error
 }
 
 type authService struct {
@@ -77,7 +77,7 @@ func (s *authService) GetUserFromRefreshToken(ctx context.Context, refreshToken 
 	return &data, nil
 }
 
-func (s *authService) DeleteOldRefreshToken(ctx context.Context, refreshToken string) {
+func (s *authService) DeleteOldRefreshToken(ctx context.Context, refreshToken string) error {
 	key := fmt.Sprintf("refresh:%s", refreshToken)
-	s.redisRepo.DeleteOldRefreshToken(ctx, key)
+	return s.redisRepo.DeleteOldRefreshToken(ctx, key)
 }

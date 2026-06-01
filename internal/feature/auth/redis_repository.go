@@ -10,7 +10,7 @@ import (
 type RedisServerRepository interface {
 	StoreToken(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	GetUserInfo(ctx context.Context, key string) (string, error)
-	DeleteOldRefreshToken(ctx context.Context, key string)
+	DeleteOldRefreshToken(ctx context.Context, key string) error
 }
 
 type redisServerRepository struct {
@@ -29,6 +29,6 @@ func (r *redisServerRepository) GetUserInfo(ctx context.Context, key string) (st
 	return r.redisClient.Get(ctx, key).Result()
 }
 
-func (r *redisServerRepository) DeleteOldRefreshToken(ctx context.Context, key string) {
-	r.redisClient.Del(ctx, key)
+func (r *redisServerRepository) DeleteOldRefreshToken(ctx context.Context, key string) error {
+	return r.redisClient.Del(ctx, key).Err()
 }

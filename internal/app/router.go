@@ -21,6 +21,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	// Public API
 	rg.POST("/login", authH.Login)
 	rg.POST("/refresh", authH.Refresh)
+	rg.POST("/logout", authH.Logout)
 
 	//
 	// Protected APIs
