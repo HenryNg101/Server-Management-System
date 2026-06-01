@@ -36,6 +36,12 @@ type MailerConfig struct {
 	FromEmail string
 }
 
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+}
+
 func getEnv(key, fallback string) string {
 	err := godotenv.Load()
 	if err != nil {
@@ -59,7 +65,7 @@ func LoadPostgres() *PostgresConfig {
 	return &PostgresConfig{
 		Host:         getEnv("POSTGRES_HOST", "localhost"),
 		User:         getEnv("POSTGRES_USER", "postgres"),
-		Password:     getEnv("POSTGRES_PASSWORD", "password"),
+		Password:     getEnv("POSTGRES_PASSWORD", ""),
 		DatabaseName: getEnv("POSTGRES_DB", "postgres"),
 		Port:         getEnv("POSTGRES_PORT", "5432"),
 	}
@@ -69,7 +75,7 @@ func LoadElasticsearch() *ElasticSearchConfig {
 	return &ElasticSearchConfig{
 		Host:           getEnv("ELASTIC_HOST", "localhost"),
 		User:           getEnv("ELASTIC_USER", "elastic"),
-		Password:       getEnv("ELASTIC_PASSWORD", "password"),
+		Password:       getEnv("ELASTIC_PASSWORD", ""),
 		Port:           getEnv("ELASTIC_PORT", "9200"),
 		DataStreamName: getEnv("ELASTIC_DATA_STREAM_SOURCE", "data_stream"),
 	}
@@ -87,4 +93,12 @@ func LoadMailer() *MailerConfig {
 
 func LoadJWTSecret() string {
 	return getEnv("JWT_SECRET", "")
+}
+
+func LoadRedis() *RedisConfig {
+	return &RedisConfig{
+		Host:     getEnv("REDIS_HOST", "localhost"),
+		Port:     getEnv("REDIS_PORT", "localhost"),
+		Password: getEnv("REDIS_PASSWORD", ""),
+	}
 }

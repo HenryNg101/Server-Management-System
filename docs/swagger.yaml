@@ -11,7 +11,23 @@ definitions:
     type: object
   auth.LoginResponse:
     properties:
-      token:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  auth.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RefreshResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
         type: string
     type: object
   model.Membership:
@@ -227,15 +243,20 @@ paths:
       - auth
   /refresh:
     post:
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.LoginResponse'
-      security:
-      - BearerAuth: []
+            $ref: '#/definitions/auth.RefreshResponse'
       summary: Refresh token
       tags:
       - auth

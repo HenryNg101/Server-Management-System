@@ -1,10 +1,9 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/HenryNg101/server-management-system/internal/middleware/auth"
 	internalAuth "github.com/HenryNg101/server-management-system/internal/middleware/auth"
 
 	"github.com/gin-gonic/gin"
@@ -43,44 +42,58 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := internalAuth.GenerateToken(user.ID, string(user.Role))
+	accessToken, err := internalAuth.GenerateAccessToken(user.ID, string(user.Role))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate access token - %s\n", err.Error())})
+		return
+	}
+	// Generate and store refresh token to Redis
+	refreshToken, err := h.service.GenerateRefreshToken(c, user.ID, string(user.Role))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate refresh token - %s\n", err.Error())})
 		return
 	}
 
-	resp := LoginResponse{Token: token}
+	resp := LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}
 	c.JSON(http.StatusOK, &resp)
 }
 
-// TODO:
 // Refresh godoc
 // @Summary Refresh token
 // @Tags auth
-// @Security BearerAuth
 // @Produce json
-// @Success 200 {object} LoginResponse
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} RefreshResponse
 // @Router /refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 {
-		c.JSON(401, gin.H{"error": "invalid token"})
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "invalid request"})
 		return
 	}
 
-	claims, err := auth.ParseToken(parts[1])
+	userInfo, err := h.service.GetUserFromRefreshToken(c, req.RefreshToken)
 	if err != nil {
-		c.JSON(401, gin.H{"error": "invalid token"})
+		c.JSON(401, gin.H{"error": "invalid refresh token"})
 		return
 	}
 
-	newToken, err := auth.GenerateToken(claims.UserID, claims.Role)
+	// Delete old token (rotation) -> For security purposes
+	// This is so that, when user refresh for a new token, potential attackers can't make use of the old one anymore
+	h.service.DeleteOldRefreshToken(c, req.RefreshToken)
+
+	// Issue new tokens
+	accessToken, _ := internalAuth.GenerateAccessToken(userInfo.UserID, userInfo.Role)
+	refreshToken, err := h.service.GenerateRefreshToken(c, userInfo.UserID, userInfo.Role)
+
+	// Store new refresh token
+	// err = h.service.StoreRefreshToken(c, userID, refreshToken, 7*24*time.Hour)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "failed to generate token"})
-		return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.JSON(200, gin.H{"token": newToken})
+	c.JSON(http.StatusOK, &RefreshResponse{
+		NewAccessToken:  accessToken,
+		NewRefreshToken: refreshToken,
+	})
 }

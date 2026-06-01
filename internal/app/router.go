@@ -20,14 +20,12 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	//
 	// Public API
 	rg.POST("/login", authH.Login)
+	rg.POST("/refresh", authH.Refresh)
 
 	//
 	// Protected APIs
 	protected := rg.Group("/")
 	protected.Use(internalAuth.AuthMiddleware())
-
-	// refresh (needs token)
-	protected.POST("/refresh", authH.Refresh)
 
 	protected.GET("/servers", serverHandler.GetServers)
 	protected.GET("/servers/:id", serverHandler.GetServer)
