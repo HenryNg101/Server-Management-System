@@ -30,12 +30,11 @@ type Application struct {
 // It might be tightly coupled, but it's good for now
 func NewApp() (*Application, error) {
 	//
-	// Load configs and create initial schema/data streams/indices
+	// Load configs
 	postgresConfig := config.LoadPostgres()
 	if len(postgresConfig.Password) == 0 {
 		return nil, errors.New("Password for Postgres connection is not set. You have to set it in .env file in root folder using POSTGRES_PASSWORD variable")
 	}
-	postgres.MigratePostgres(postgresConfig)
 	postgresSession := postgres.NewPostgresSession(postgresConfig)
 
 	elasticConfig := config.LoadElasticsearch()
@@ -43,7 +42,7 @@ func NewApp() (*Application, error) {
 		return nil, errors.New("Password for Elasticsearch connection is not set. You have to set it in .env file in root folder using ELASTIC_PASSWORD variable")
 	}
 	esSession := elastic.NewElasticsearchSession(elasticConfig)
-	elastic.InitElasticsearch(esSession)
+	// elastic.InitElasticsearch(esSession)
 
 	redisConfig := config.LoadRedis()
 	if len(redisConfig.Password) == 0 {

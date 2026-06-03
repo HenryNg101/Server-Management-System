@@ -1,6 +1,128 @@
 version: "3.8"
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/api
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      - ELASTIC_HOST=http://elasticsearch
+      - ELASTIC_PORT=9200
+      - ELASTIC_USER=${ELASTIC_USER}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_USER=${MAIL_FROM_USER}
+
+      - JWT_SECRET=${JWT_SECRET}
+
+  servers_checker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/worker/servers_checker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      - ELASTIC_HOST=http://elasticsearch
+      - ELASTIC_PORT=9200
+      - ELASTIC_USER=${ELASTIC_USER}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_USER=${MAIL_FROM_USER}
+
+      - JWT_SECRET=${JWT_SECRET}
+  
+  emailer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/worker/emailer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      - ELASTIC_HOST=http://elasticsearch
+      - ELASTIC_PORT=9200
+      - ELASTIC_USER=${ELASTIC_USER}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_USER=${MAIL_FROM_USER}
+
+      - JWT_SECRET=${JWT_SECRET}
+
   # Elasticsearch and Kibana setup
   # This current Elasticsearch setup is for local testing only with a single node Elasticsearch cluster, and Kibana dashboard
   # It based on a very minimal setup, with no TLS or HTTPS whatsoever: https://www.elastic.co/docs/deploy-manage/security/set-up-minimal-security
@@ -17,7 +139,7 @@ services:
     volumes:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "curl", "-s", "-u elastic:${ELASTIC_PASSWORD}", "http://localhost:9200"]
+      test: ["CMD-SHELL", "curl -s -u ${ELASTIC_USER}:${ELASTIC_PASSWORD} ${ELASTIC_HOST}:${ELASTIC_PORT} >/dev/null || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -25,28 +147,28 @@ services:
 
   # Run some commands after Elasticsearch cluster is up. Basically check until service is available to take a HTTP request, 
   # then make a request to change password for ES's service account for Kibana
-  setup:
+  elasticsearch-setup:
     image: curlimages/curl:latest
     depends_on:
       elasticsearch:
         condition: service_healthy
-    entrypoint: >
-      sh -c "
-      echo 'Setting kibana_system password...';
-      curl -s -u elastic:${ELASTIC_PASSWORD} -X POST http://elasticsearch:9200/_security/user/kibana_system/_password \
-      -H 'Content-Type: application/json' \
-      -d '{
-        \"password\": \"${KIBANA_PASSWORD}\"
-      }';
-
-      echo 'Done!';
-      "
+    entrypoint: ["/bin/sh", "/scripts/elasticsearch/setup.sh"]
+    volumes:
+      - ./scripts:/scripts
+    environment:
+      - ELASTIC_USER=${ELASTIC_USER}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+    restart: no
 
   kibana:
     image: docker.elastic.co/kibana/kibana-wolfi:9.3.1
     container_name: kibana
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+      elasticsearch-setup:
+        condition: service_completed_successfully
     restart: always
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
@@ -68,6 +190,25 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Postgres schema migration
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
+      "up"
+    ]
   
   # Redis setup
   redis:
@@ -81,6 +222,11 @@ services:
       - "8001:8001"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   es_data:

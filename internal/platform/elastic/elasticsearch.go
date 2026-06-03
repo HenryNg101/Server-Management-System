@@ -1,8 +1,6 @@
 package elastic
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,61 +38,60 @@ func NewElasticsearchSession(config *config.ElasticSearchConfig) *elasticsearch.
 	return es
 }
 
-func InitElasticsearch(es *elasticsearch.Client) {
-	ctx := context.Background()
+// func InitElasticsearch(es *elasticsearch.Client) {
+// 	ctx := context.Background()
 
-	createIndexTemplateIfNotExist(es, ctx)
-	createDataStreamIfNotExist(es, ctx)
-}
+// 	createIndexTemplateIfNotExist(es, ctx)
+// 	createDataStreamIfNotExist(es, ctx)
+// }
 
-//go:embed server-status-template-v1.json
-var serverStatusTemplate []byte
+// var serverStatusTemplate []byte
 
-func createIndexTemplateIfNotExist(es *elasticsearch.Client, ctx context.Context) {
-	// Check if the template exists already
-	templateName := "server-status-template"
-	res, err := es.Indices.ExistsIndexTemplate(templateName)
-	if err != nil {
-		log.Fatalf("check template error: %v", err)
-	}
-	defer res.Body.Close()
+// func createIndexTemplateIfNotExist(es *elasticsearch.Client, ctx context.Context) {
+// 	// Check if the template exists already
+// 	templateName := "server-status-template"
+// 	res, err := es.Indices.ExistsIndexTemplate(templateName)
+// 	if err != nil {
+// 		log.Fatalf("check template error: %v", err)
+// 	}
+// 	defer res.Body.Close()
 
-	if res.StatusCode == 200 {
-		log.Println("Index template for data stream is already exists")
-		return
-	}
+// 	if res.StatusCode == 200 {
+// 		log.Println("Index template for data stream is already exists")
+// 		return
+// 	}
 
-	//
-	// Create index template
-	res, err = es.Indices.PutIndexTemplate(
-		templateName,
-		bytes.NewReader(serverStatusTemplate),
-	)
-	if err != nil || res.IsError() {
-		log.Fatalf("create template failed: %v", err)
-	}
+// 	//
+// 	// Create index template
+// 	res, err = es.Indices.PutIndexTemplate(
+// 		templateName,
+// 		bytes.NewReader(serverStatusTemplate),
+// 	)
+// 	if err != nil || res.IsError() {
+// 		log.Fatalf("create template failed: %v", err)
+// 	}
 
-	log.Println("Index template for data stream created")
-}
+// 	log.Println("Index template for data stream created")
+// }
 
-func createDataStreamIfNotExist(es *elasticsearch.Client, ctx context.Context) {
-	name := "server-status"
+// func createDataStreamIfNotExist(es *elasticsearch.Client, ctx context.Context) {
+// 	name := "server-status"
 
-	// Check existence
-	res, err := es.Indices.GetDataStream(
-		es.Indices.GetDataStream.WithName(name),
-	)
-	if err == nil && res.StatusCode == 200 {
-		log.Println("Data stream already exists")
-		res.Body.Close()
-		return
-	}
+// 	// Check existence
+// 	res, err := es.Indices.GetDataStream(
+// 		es.Indices.GetDataStream.WithName(name),
+// 	)
+// 	if err == nil && res.StatusCode == 200 {
+// 		log.Println("Data stream already exists")
+// 		res.Body.Close()
+// 		return
+// 	}
 
-	// Create
-	res, err = es.Indices.CreateDataStream(name)
-	if err != nil || res.IsError() {
-		log.Fatalf("Create data stream failed: %v", err)
-	}
+// 	// Create
+// 	res, err = es.Indices.CreateDataStream(name)
+// 	if err != nil || res.IsError() {
+// 		log.Fatalf("Create data stream failed: %v", err)
+// 	}
 
-	log.Println("Data stream created")
-}
+// 	log.Println("Data stream created")
+// }

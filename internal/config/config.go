@@ -7,6 +7,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Load the stuff first
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+}
+
 type ApplicationConfig struct {
 	Host string
 	Port string
@@ -43,11 +50,6 @@ type RedisConfig struct {
 }
 
 func getEnv(key, fallback string) string {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file: ", err)
-	}
-
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
