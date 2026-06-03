@@ -7,6 +7,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/feature/auth"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
+	"github.com/HenryNg101/server-management-system/internal/logger"
 	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
 	"github.com/HenryNg101/server-management-system/internal/platform/postgres"
 	redisServer "github.com/HenryNg101/server-management-system/internal/platform/redis"
@@ -29,6 +30,10 @@ type Application struct {
 // If it's API app, you can add handlers, add API group, etc. to it. If it's a worker, it can still get access to DB query, services, etc. without it being separated entirely
 // It might be tightly coupled, but it's good for now
 func NewApp() (*Application, error) {
+	// Enable logging to be going to stdout
+	logger.Init()
+	logger.Log.Println("App has been started")
+
 	//
 	// Load configs
 	postgresConfig := config.LoadPostgres()
@@ -42,7 +47,6 @@ func NewApp() (*Application, error) {
 		return nil, errors.New("Password for Elasticsearch connection is not set. You have to set it in .env file in root folder using ELASTIC_PASSWORD variable")
 	}
 	esSession := elastic.NewElasticsearchSession(elasticConfig)
-	// elastic.InitElasticsearch(esSession)
 
 	redisConfig := config.LoadRedis()
 	if len(redisConfig.Password) == 0 {

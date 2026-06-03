@@ -9,8 +9,12 @@ import (
 
 // Load the stuff first
 func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Prevent accidental loading of env variables to docker containers for services
+	if os.Getenv("APP_ENV") != "docker" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Println("No .env file found, using environment variables")
+		}
 	}
 }
 

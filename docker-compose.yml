@@ -1,4 +1,19 @@
-version: "3.8"
+# Using anchors and aliases to have a common config for multiple services (DRY principle)
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+x-common-dependency: &common-dependency
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  elasticsearch:
+    condition: service_healthy
+  migrate:
+    condition: service_completed_successfully
 
 services:
   api:
@@ -10,38 +25,12 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    depends_on: *common-dependency
+    env_file:
+      - .env.docker
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-      - ELASTIC_HOST=http://elasticsearch
-      - ELASTIC_PORT=9200
-      - ELASTIC_USER=${ELASTIC_USER}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USER=${MAIL_USER}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM_USER=${MAIL_FROM_USER}
-
-      - JWT_SECRET=${JWT_SECRET}
+      - APP_ENV=docker
+    logging: *default-logging
 
   servers_checker:
     build:
@@ -50,38 +39,12 @@ services:
       args:
         CMD_PATH: ./cmd/worker/servers_checker
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    depends_on: *common-dependency
+    env_file:
+      - .env.docker
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-      - ELASTIC_HOST=http://elasticsearch
-      - ELASTIC_PORT=9200
-      - ELASTIC_USER=${ELASTIC_USER}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USER=${MAIL_USER}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM_USER=${MAIL_FROM_USER}
-
-      - JWT_SECRET=${JWT_SECRET}
+      - APP_ENV=docker
+    logging: *default-logging
   
   emailer:
     build:
@@ -90,60 +53,35 @@ services:
       args:
         CMD_PATH: ./cmd/worker/emailer
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    depends_on: *common-dependency
+    env_file:
+      - .env.docker
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-      - ELASTIC_HOST=http://elasticsearch
-      - ELASTIC_PORT=9200
-      - ELASTIC_USER=${ELASTIC_USER}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USER=${MAIL_USER}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM_USER=${MAIL_FROM_USER}
-
-      - JWT_SECRET=${JWT_SECRET}
+      - APP_ENV=docker
+    logging: *default-logging
 
   # Elasticsearch and Kibana setup
   # This current Elasticsearch setup is for local testing only with a single node Elasticsearch cluster, and Kibana dashboard
   # It based on a very minimal setup, with no TLS or HTTPS whatsoever: https://www.elastic.co/docs/deploy-manage/security/set-up-minimal-security
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.3.1
-    container_name: es01
     restart: always
+    env_file:
+      - .env.docker
     environment:
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.security.enabled=true
     ports:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -u ${ELASTIC_USER}:${ELASTIC_PASSWORD} ${ELASTIC_HOST}:${ELASTIC_PORT} >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -s -u ${ELASTIC_USER}:${ELASTIC_PASSWORD} http://localhost:${ELASTIC_PORT}/_cluster/health | grep -q '\"status\"'"]
       interval: 10s
       timeout: 10s
       retries: 5
       start_period: 1m
+    logging: *default-logging
 
   # Run some commands after Elasticsearch cluster is up. Basically check until service is available to take a HTTP request, 
   # then make a request to change password for ES's service account for Kibana
@@ -155,11 +93,10 @@ services:
     entrypoint: ["/bin/sh", "/scripts/elasticsearch/setup.sh"]
     volumes:
       - ./scripts:/scripts
-    environment:
-      - ELASTIC_USER=${ELASTIC_USER}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+    env_file:
+      - .env.docker
     restart: no
+    logging: *default-logging
 
   kibana:
     image: docker.elastic.co/kibana/kibana-wolfi:9.3.1
@@ -171,30 +108,30 @@ services:
         condition: service_completed_successfully
     restart: always
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=${ELASTIC_HOST}:${ELASTIC_PORT}
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
     ports:
       - "5601:5601"
+    logging: *default-logging
   
   # PostgreSQL DB setup
   postgres:
     image: postgres:latest
     container_name: sqldb
     restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+    env_file:
+      - .env.docker
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
 
   # Postgres schema migration
   migrate:
@@ -204,17 +141,22 @@ services:
         condition: service_healthy
     volumes:
       - ./migrations:/migrations
+    env_file:
+      - .env.docker
     command: [
       "-path", "/migrations",
-      "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
+      "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
       "up"
     ]
+    logging: *default-logging
   
   # Redis setup
   redis:
     image: redis/redis-stack:latest
     container_name: redis
     restart: always
+    env_file:
+      - .env.docker
     environment:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
     ports:
@@ -223,10 +165,11 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
 
 volumes:
   es_data:

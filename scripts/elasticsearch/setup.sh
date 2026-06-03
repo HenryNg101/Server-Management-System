@@ -1,9 +1,11 @@
 #!/bin/sh
 
-set -e
+# Making this script fails on any issues that would lead to undefined behaviors
+# Fail on error, undefined variable(s), or pipe issues
+set -euo pipefail
 
-ES_URL="http://elasticsearch:9200"
-AUTH="-u ${ELASTIC_USER}:${ELASTIC_PASSWORD}"
+ES_URL="$ELASTIC_HOST:$ELASTIC_PORT"
+AUTH="-u $ELASTIC_USER:$ELASTIC_PASSWORD"
 
 echo "Waiting for Elasticsearch..."
 
@@ -18,17 +20,19 @@ echo "Elasticsearch is up!"
 # -------------------------------------------------------------------------------------
 echo 'Setting kibana_system password...';
 
-curl -s -u ${ELASTIC_USER}:${ELASTIC_PASSWORD} -X POST ${ES_URL}/_security/user/kibana_system/_password \
+curl -s $AUTH -X POST $ES_URL/_security/user/kibana_system/_password \
 -H 'Content-Type: application/json' \
--d "{\"password\": \"${KIBANA_PASSWORD}\"}"
+-d "{\"password\": \"$KIBANA_PASSWORD\"}"
 
 # -------------------------
 # Create index templates
 # -------------------------
 
-echo "Creating index template: server-status-template"
+INDEX_TEMPLATE="server-status-template"
 
-curl -s $AUTH -X PUT "${ES_URL}/_index_template/server-status-template" \
+echo -e "\nCreating index template: $INDEX_TEMPLATE"
+
+curl -s $AUTH -X PUT $ES_URL/_index_template/$INDEX_TEMPLATE \
   -H "Content-Type: application/json" \
   -d @/scripts/elasticsearch/server-status-template-v1.json
 
@@ -42,17 +46,17 @@ curl -s $AUTH -X PUT "${ES_URL}/_index_template/server-status-template" \
 create_data_stream_if_not_exists () {
   NAME=$1
 
-  echo "Checking data stream: $NAME"
+  echo -e "\nChecking data stream: $NAME"
 
-  if curl -s $AUTH "${ES_URL}/_data_stream/${NAME}" | grep -q '"name"'; then
-    echo "Data stream ${NAME} already exists"
+  if curl -s $AUTH "$ES_URL/_data_stream/${NAME}" | grep -q '"name"'; then
+    echo "Data stream $NAME already exists"
   else
-    echo "Creating data stream: ${NAME}"
-    curl -s $AUTH -X PUT "${ES_URL}/_data_stream/${NAME}"
+    echo "Creating data stream: $NAME"
+    curl -s $AUTH -X PUT $ES_URL/_data_stream/$NAME
   fi
 }
 
-create_data_stream_if_not_exists "server-status"
+create_data_stream_if_not_exists $ELASTIC_DATA_STREAM_SOURCE
 
 # Add more later
 # create_data_stream_if_not_exists "another-stream"

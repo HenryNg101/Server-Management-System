@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -47,7 +46,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("Starting check cycle...")
+			log.Println("Starting check cycle...")
 
 			// Servers statuses checks
 			servers, err := fetchServers(newApplication, ctx)
@@ -62,7 +61,7 @@ func main() {
 			results := runCheckCycle(ctx, servers)
 			elapsed := time.Since(start)
 
-			fmt.Printf("Checked %d servers in %v\n", len(results), elapsed)
+			log.Printf("Checked %d servers in %v\n", len(results), elapsed)
 
 			//
 			// Bulk update statuses to Postgres
@@ -72,7 +71,7 @@ func main() {
 				log.Fatal(err)
 			}
 			elapsed = time.Since(start)
-			fmt.Printf("Updated %d servers statuses to DB in %v\n", len(results), elapsed)
+			log.Printf("Updated %d servers statuses to DB in %v\n", len(results), elapsed)
 
 			//
 			// Bulk insert to Elasticsearch data stream
@@ -83,7 +82,7 @@ func main() {
 				log.Fatal(err)
 			}
 			elapsed = time.Since(start)
-			fmt.Printf("Logged %d servers statuses to Elasticsearch in %v\n", len(results), elapsed)
+			log.Printf("Logged %d servers statuses to Elasticsearch in %v\n", len(results), elapsed)
 
 		case <-ctx.Done():
 			return

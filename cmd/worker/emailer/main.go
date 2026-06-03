@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -38,7 +37,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("Sending report emails...")
+			log.Println("Sending report emails...")
 
 			// Fetch all emails
 			emailAddresses, err := fetchEmails(newApplication)

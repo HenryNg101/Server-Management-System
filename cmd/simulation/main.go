@@ -31,7 +31,7 @@ func SeedAdmin(userService user.Service) {
 func main() {
 	// Use all CPUs efficiently
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	fmt.Println(runtime.NumCPU())
+	log.Println(runtime.NumCPU())
 
 	// Create app
 	newApplication, err := app.NewApp()
