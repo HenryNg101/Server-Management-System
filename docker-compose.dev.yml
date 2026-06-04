@@ -1,0 +1,17 @@
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+
+  elasticsearch:
+    ports:
+      - "9200:9200"
+  
+  kibana:
+    ports:
+      - "5601:5601"
