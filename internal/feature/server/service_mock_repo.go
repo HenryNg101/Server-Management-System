@@ -9,14 +9,14 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
 
-type fakeRepo struct {
+type mockRepo struct {
 	servers map[uint]*model.Server
 	nextID  uint
 	dbExist bool
 }
 
-func NewFakeRepo() *fakeRepo {
-	return &fakeRepo{
+func NewFakeRepo() *mockRepo {
+	return &mockRepo{
 		servers: make(map[uint]*model.Server),
 		nextID:  0,
 		dbExist: true,
@@ -26,7 +26,7 @@ func NewFakeRepo() *fakeRepo {
 // --------------------
 // FIND ALL (basic filtering + pagination)
 // --------------------
-func (f *fakeRepo) FindAll(ctx context.Context, q GetServersQuery) ([]model.Server, int64, error) {
+func (f *mockRepo) FindAll(ctx context.Context, q GetServersQuery) ([]model.Server, int64, error) {
 	var result []model.Server
 	if !f.dbExist {
 		return result, 0, errors.New("db error")
@@ -78,7 +78,7 @@ func (f *fakeRepo) FindAll(ctx context.Context, q GetServersQuery) ([]model.Serv
 // --------------------
 // CREATE
 // --------------------
-func (f *fakeRepo) Create(ctx context.Context, s *model.Server) (*model.Server, error) {
+func (f *mockRepo) Create(ctx context.Context, s *model.Server) (*model.Server, error) {
 	if !f.dbExist {
 		return nil, errors.New("db error")
 	}
@@ -91,7 +91,7 @@ func (f *fakeRepo) Create(ctx context.Context, s *model.Server) (*model.Server, 
 // --------------------
 // FIND BY ID
 // --------------------
-func (f *fakeRepo) FindByID(ctx context.Context, id uint, out *model.Server) (*model.Server, error) {
+func (f *mockRepo) FindByID(ctx context.Context, id uint, out *model.Server) (*model.Server, error) {
 	if !f.dbExist {
 		return nil, errors.New("db error")
 	}
@@ -105,7 +105,7 @@ func (f *fakeRepo) FindByID(ctx context.Context, id uint, out *model.Server) (*m
 // --------------------
 // UPDATE
 // --------------------
-func (f *fakeRepo) Update(ctx context.Context, server *model.Server) (*model.Server, error) {
+func (f *mockRepo) Update(ctx context.Context, server *model.Server) (*model.Server, error) {
 	if !f.dbExist {
 		return nil, errors.New("db error")
 	}
@@ -120,7 +120,7 @@ func (f *fakeRepo) Update(ctx context.Context, server *model.Server) (*model.Ser
 // --------------------
 // EXISTS
 // --------------------
-func (f *fakeRepo) ExistsByID(ctx context.Context, id uint) (bool, error) {
+func (f *mockRepo) ExistsByID(ctx context.Context, id uint) (bool, error) {
 	if !f.dbExist {
 		return false, errors.New("db error")
 	}
@@ -134,7 +134,7 @@ func (f *fakeRepo) ExistsByID(ctx context.Context, id uint) (bool, error) {
 // --------------------
 // DELETE
 // --------------------
-func (f *fakeRepo) Delete(ctx context.Context, id uint) error {
+func (f *mockRepo) Delete(ctx context.Context, id uint) error {
 	if !f.dbExist {
 		return errors.New("db error")
 	}
@@ -149,7 +149,7 @@ func (f *fakeRepo) Delete(ctx context.Context, id uint) error {
 // --------------------
 // BULK UPDATE STATUS
 // --------------------
-func (f *fakeRepo) BulkUpdateStatus(ctx context.Context, results []*model.Server) error {
+func (f *mockRepo) BulkUpdateStatus(ctx context.Context, results []*model.Server) error {
 	if !f.dbExist {
 		return errors.New("db error")
 	}
@@ -166,7 +166,7 @@ func (f *fakeRepo) BulkUpdateStatus(ctx context.Context, results []*model.Server
 // --------------------
 // STATS
 // --------------------
-func (f *fakeRepo) GetStats(ctx context.Context) (total, up, down int64, err error) {
+func (f *mockRepo) GetStats(ctx context.Context) (total, up, down int64, err error) {
 	if !f.dbExist {
 		return 0, 0, 0, errors.New("db error")
 	}
@@ -181,7 +181,7 @@ func (f *fakeRepo) GetStats(ctx context.Context) (total, up, down int64, err err
 	return
 }
 
-func (f *fakeRepo) Seed(servers ...*model.Server) error {
+func (f *mockRepo) Seed(servers ...*model.Server) error {
 	if !f.dbExist {
 		return errors.New("db error")
 	}
@@ -193,6 +193,6 @@ func (f *fakeRepo) Seed(servers ...*model.Server) error {
 	return nil
 }
 
-func (f *fakeRepo) SetDbExists(v bool) {
+func (f *mockRepo) SetDbExists(v bool) {
 	f.dbExist = v
 }

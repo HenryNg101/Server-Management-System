@@ -9,6 +9,7 @@ import (
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -28,6 +29,8 @@ func NewHandler(s Service) *Handler {
 // @Produce json
 // @Param request body CreateServerRequest true "Server payload"
 // @Success 201 {object} model.Server
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /servers [post]
 func (h *Handler) CreateServer(c *gin.Context) {
 	var req CreateServerRequest
@@ -39,7 +42,7 @@ func (h *Handler) CreateServer(c *gin.Context) {
 
 	created, err := h.service.CreateServer(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, created)
@@ -58,15 +61,17 @@ func (h *Handler) CreateServer(c *gin.Context) {
 // @Param sort_by query string false "Sort by field (id, name, created_at)"
 // @Param order query string false "Sort order (asc, desc)"
 // @Success 200 {array} GetServerResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /servers [get]
 func (h *Handler) GetServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 	paginatedResult, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	result := make([]GetServerResponse, 0)
@@ -81,10 +86,9 @@ func (h *Handler) GetServers(c *gin.Context) {
 			LastUpdated: server.LastUpdated,
 		})
 	}
-	c.JSON(200, result)
+	c.JSON(http.StatusOK, result)
 }
 
-// TODO: Add the logic to return 404 when no server with associated ID is found
 // GetServer godoc
 // @Summary Get a server
 // @Description Retrieve a server based on ID
@@ -93,18 +97,24 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} GetServerResponse
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /servers/{id} [get]
 func (h *Handler) GetServer(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	var server *model.Server
 	server, err = h.service.GetServer(c.Request.Context(), uint(id), server)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 	c.JSON(http.StatusOK, &GetServerResponse{
@@ -118,7 +128,6 @@ func (h *Handler) GetServer(c *gin.Context) {
 	})
 }
 
-// TODO: Add the logic to return 404 when no server with associated ID is found
 // UpdateServer godoc
 // @Summary Update a server
 // @Description Get a server based on ID, and then update field(s)
@@ -129,6 +138,9 @@ func (h *Handler) GetServer(c *gin.Context) {
 // @Produce json
 // @Param request body UpdateServerRequest true "New server info"
 // @Success 200 {object} model.Server
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Router /servers/{id} [patch]
 func (h *Handler) UpdateServer(c *gin.Context) {
 	var req UpdateServerRequest
@@ -151,7 +163,11 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -166,6 +182,8 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 204
+// @Failure 500 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Router /servers/{id} [delete]
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -177,11 +195,11 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 	err = h.service.DeleteServer(c.Request.Context(), uint(serverId))
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			c.JSON(404, gin.H{"error": "server not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "server not found"})
 			return
 		}
 
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -240,7 +258,8 @@ func (h *Handler) ImportServers(c *gin.Context) {
 func (h *Handler) ExportServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err})
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
 	}
 
 	servers, err := h.service.GetServers(c.Request.Context(), query)
@@ -287,9 +306,6 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	}
 }
 
-// TODO: Add time range, not just take it in a day
-// TODO: Add body params in here
-// TODO: Add pagination where it's possible
 // @Summary Get statuses of servers and emailing
 // @Description Get status report on the servers, and then send emails to people in the email list
 // @Tags servers
@@ -297,6 +313,8 @@ func (h *Handler) ExportServers(c *gin.Context) {
 // @Produce json
 // @Param request body SendReportRequest true "Report request"
 // @Success 200 {object} Report
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /servers/report [post]
 func (h *Handler) SendReports(c *gin.Context) {
 	var req *SendReportRequest
@@ -306,7 +324,7 @@ func (h *Handler) SendReports(c *gin.Context) {
 		return
 	}
 
-	startTime := time.Now()
+	startTime := time.Now().Add(-24 * time.Hour)
 	endTime := time.Now()
 	if req.Start != nil {
 		startTime, err = time.Parse("2006-01-02", *req.Start)
@@ -322,10 +340,22 @@ func (h *Handler) SendReports(c *gin.Context) {
 			return
 		}
 	}
+	if req.TopN == nil {
+		topN := 10
+		req.TopN = &topN
+	}
+	if *req.TopN < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Count must be greater than 0"})
+		return
+	}
 
-	ctx := c.Request.Context()
-
-	report, err := h.service.SendReports(startTime, endTime, *req.TopN, req.Emails, ctx)
+	report, err := h.service.SendReports(
+		startTime,
+		endTime,
+		*req.TopN,
+		req.Emails,
+		c.Request.Context(),
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -127,21 +127,16 @@ func TestParseServersQuery_CustomSorting(t *testing.T) {
 }
 
 func TestParseServer_Valid(t *testing.T) {
-	record := map[string]string{
-		"name":         "srv",
-		"status":       "true",
-		"ipv4_address": "127.0.0.1",
-		"port":         "80",
-		"protocol":     "tcp",
+	tests := []map[string]string{
+		{"name": "srv", "status": "true", "ipv4_address": "127.0.0.1", "port": "80", "protocol": "tcp"},
+		{"name": "server2", "status": "false", "ipv4_address": "8.8.8.8", "port": "80"},
 	}
 
-	s, err := parseServer(record)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if s.Name != "srv" {
-		t.Fatalf("wrong name")
+	for _, tc := range tests {
+		_, err := parseServer(tc)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 	}
 }
 

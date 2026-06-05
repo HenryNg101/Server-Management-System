@@ -7,7 +7,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
 
-func setupService() (Service, *fakeRepo) {
+func setupService() (Service, *mockRepo) {
 	repo := NewFakeRepo()
 	svc := NewService(repo, nil, nil)
 	return svc, repo

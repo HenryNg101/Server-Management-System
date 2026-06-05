@@ -109,7 +109,6 @@ func (s *serverService) UpdateServer(ctx context.Context, id uint, req UpdateSer
 	}
 
 	// If anything changes, it means that, it's actually updated
-	// TODO: Handle the case where nothing is updated
 	if !isUpdated {
 		return nil, errors.New("Nothing is updated")
 	}
@@ -211,7 +210,6 @@ func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []
 	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
 }
 
-// TODO: Let the send email happens here
 func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error) {
 	total, up, down, err := s.repo.GetStats(ctx)
 	if err != nil {

@@ -368,6 +368,18 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/model.Server'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
       summary: Create a server

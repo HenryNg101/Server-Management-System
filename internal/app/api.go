@@ -11,7 +11,6 @@ import (
 )
 
 // TODO: Write more proper OpenAPI docs for the APIs
-// TODO: Add JWT authentication to the system
 
 // @title Server Management API
 // @version 1.0

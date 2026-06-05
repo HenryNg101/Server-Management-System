@@ -73,8 +73,8 @@ type Report struct {
 }
 
 type SendReportRequest struct {
-	Start  *string   `json:"start" binding:"required"`
-	End    *string   `json:"end" binding:"required"`
+	Start  *string   `json:"start"`
+	End    *string   `json:"end"`
 	TopN   *int      `json:"count"`            // The number of top N worst servers you want to show in the report
 	Emails *[]string `json:"emails,omitempty"` // Optional. It might sends emails or nah
 }
