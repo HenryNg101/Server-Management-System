@@ -109,7 +109,12 @@ func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime 
 
 	result := make(map[uint]float64)
 
-	buckets := parsed["aggregations"].(map[string]interface{})["servers"].(map[string]interface{})["buckets"].([]interface{})
+	aggs, ok := parsed["aggregations"].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	buckets := aggs["servers"].(map[string]interface{})["buckets"].([]interface{})
 
 	for _, b := range buckets {
 		bucket := b.(map[string]interface{})

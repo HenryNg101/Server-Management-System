@@ -165,14 +165,14 @@ func (r *serverRepository) Delete(ctx context.Context, id uint) error {
 func (r *serverRepository) GetStats(ctx context.Context) (total, up, down int64, err error) {
 	err = r.db.WithContext(ctx).Model(&model.Server{}).Count(&total).Error
 	if err != nil {
-		return
+		return 0, 0, 0, err
 	}
 
 	err = r.db.WithContext(ctx).Model(&model.Server{}).
 		Where("status = ?", true).
 		Count(&up).Error
 	if err != nil {
-		return
+		return 0, 0, 0, err
 	}
 
 	down = total - up
