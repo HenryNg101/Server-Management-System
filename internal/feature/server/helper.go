@@ -2,8 +2,13 @@ package server
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,14 +39,16 @@ func ParseServersQuery(c *gin.Context) (GetServersQuery, error) {
 		if err != nil {
 			return query, errors.New("Invalid page")
 		}
-		*query.Page = int(parsed)
+		page := int(parsed)
+		query.Page = &page
 	}
 	if pageSize := c.Query("page_size"); pageSize != "" {
 		parsed, err := strconv.ParseInt(pageSize, 10, 64)
 		if err != nil {
 			return query, errors.New("Invalid page size")
 		}
-		*query.PageSize = int(parsed)
+		pageSize := int(parsed)
+		query.PageSize = &pageSize
 	}
 
 	// It's not always about pagination. What if I want to retrieve all for, let's say, export function, right ?
@@ -63,4 +70,83 @@ func ParseServersQuery(c *gin.Context) (GetServersQuery, error) {
 	query.Order = c.DefaultQuery("order", "asc")
 
 	return query, nil
+}
+
+func mapRow(headers, row []string) map[string]string {
+	m := make(map[string]string)
+	for i := range headers {
+		m[headers[i]] = row[i]
+	}
+	return m
+}
+
+func parseServer(record map[string]string) (*model.Server, error) {
+	name := record["name"]
+	if name == "" {
+		return nil, errors.New("name is required")
+	}
+
+	status, err := strconv.ParseBool(record["status"])
+	if err != nil {
+		return nil, errors.New("invalid status")
+	}
+
+	ip := record["ipv4_address"]
+	if net.ParseIP(ip) == nil {
+		return nil, errors.New("invalid IP")
+	}
+
+	port, err := strconv.Atoi(record["port"])
+	if err != nil || port < 0 || port > 65535 {
+		return nil, errors.New("invalid port")
+	}
+
+	protocol := record["protocol"]
+	if protocol == "" {
+		protocol = "tcp"
+	}
+
+	return &model.Server{
+		Name:        name,
+		Status:      status,
+		IPv4Address: ip,
+		Port:        uint(port),
+		Protocol:    protocol,
+	}, nil
+}
+
+func buildReportHTML(report *Report, startTime, endTime time.Time) string {
+	var b strings.Builder
+
+	b.WriteString("<h2>Server Report</h2>")
+	b.WriteString(fmt.Sprintf("<p><b>Period:</b> %s → %s</p>",
+		startTime.Format("2006-01-02"),
+		endTime.Add(-24*time.Hour).Format("2006-01-02"),
+	))
+
+	// Summary
+	b.WriteString("<h3>Summary</h3>")
+	b.WriteString(fmt.Sprintf(`
+	<ul>
+		<li>Total Servers: %d</li>
+		<li>Up: %d</li>
+		<li>Down: %d</li>
+	</ul>
+	`, report.TotalServers, report.ServersUp, report.ServersDown))
+
+	// Table
+	b.WriteString("<h3>Uptime per Server</h3>")
+	b.WriteString(`<table border="1" cellpadding="5" cellspacing="0">
+	<tr><th>Server ID</th><th>Uptime</th></tr>`)
+
+	for id, uptime := range report.Uptime {
+		b.WriteString(fmt.Sprintf(
+			"<tr><td>%d</td><td>%.2f%%</td></tr>",
+			id, uptime*100,
+		))
+	}
+
+	b.WriteString("</table>")
+
+	return b.String()
 }

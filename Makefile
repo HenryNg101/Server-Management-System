@@ -1,12 +1,13 @@
 INFRA = -f docker-compose.infra.yml
 APP   = -f docker-compose.yml
+DEV	  = -f docker-compose.dev.yml
 
 # For the development purposes
 dev.up:
-	docker compose $(INFRA) -f docker-compose.dev.yml up -d
+	docker compose $(INFRA) $(DEV) up -d
 
 dev.down:
-	docker compose $(INFRA) -f docker-compose.dev.yml down
+	docker compose $(INFRA) $(DEV) down
 
 # For Docker and actual deployment
 prod.up:
