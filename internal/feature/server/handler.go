@@ -98,12 +98,13 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} GetServerResponse
 // @Failure 404 {object} map[string]string
+// @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /servers/{id} [get]
 func (h *Handler) GetServer(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -152,7 +153,7 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -184,11 +185,12 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 // @Success 204
 // @Failure 500 {object} map[string]string
 // @Failure 404 {object} map[string]string
+// @Failure 400 {object} map[string]string
 // @Router /servers/{id} [delete]
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
