@@ -38,7 +38,7 @@ It allows users to:
 
 ## 1. Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (Name it `.env.docker` if you want to run the whole app in docker):
 
 ```
 POSTGRES_USER=postgres
@@ -69,10 +69,18 @@ JWT_SECRET=your_secret
 
 ---
 
-## 2. Start Infrastructure
+## 2. How to run
 
+### For dev environment (To setup infrastructure)
+
+Setup:
 ```bash
-docker compose up -d
+make dev.up
+````
+
+Tear down:
+```bash
+make dev.down
 ````
 
 Services:
@@ -84,9 +92,31 @@ Services:
 
 **Note**: Elasticsearch may take some time to fully start.
 
+### For prod simulation
+
+Start up:
+```bash
+make prod.up
+```
+
+Tear down:
+```bash
+make prod.down
+```
+
+Check logs of the whole system:
+```bash
+make prod.logs
+```
+
+Check logs of specific services:
+```bash
+make prod.logs SERVICE=<service-name>
+```
+
 ---
 
-## 3. Run Applications
+## 3. Run Applications (For dev mode)
 
 ### API Server
 
@@ -121,7 +151,7 @@ go run ./cmd/worker/emailer
 go run ./cmd/simulation
 ```
 
-* Simulates 10,000 servers on localhost
+* Simulates opening 10k services on 10k ports on localhost
 * For testing only (not production)
 
 ---
@@ -284,5 +314,8 @@ The codebase is structured to support testing with clear separation of:
 /internal
 /migrations
 /docs
-docker-compose.yml
+docker-compose.*.yml
+Makefile
+go.mod
+go.sum
 ```

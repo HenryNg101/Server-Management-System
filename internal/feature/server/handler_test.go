@@ -181,7 +181,7 @@ func TestHandlerGetServer_InvalidID(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 500, w.Code)
+	require.Equal(t, 400, w.Code)
 }
 
 func TestHandlerGetServer_NotFound(t *testing.T) {
@@ -241,7 +241,7 @@ func TestHandlerUpdateServer_InvalidID(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 500, w.Code)
+	require.Equal(t, 400, w.Code)
 }
 
 func TestHandlerUpdateServer_ServiceError(t *testing.T) {
@@ -306,7 +306,7 @@ func TestHandlerDeleteServer_InvalidID(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 500, w.Code)
+	require.Equal(t, 400, w.Code)
 }
 
 func TestHandlerDeleteServer_InternalError(t *testing.T) {
