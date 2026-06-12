@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  client-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+      args:
+        CMD_PATH: ./cmd/client/fake_server
+    ports:
+      - "3000:3000"
+    labels:
+      - monitor=true
+    mem_limit: 100m
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy
+    environment:
+      - CONTAINERS=1
+      - INFO=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  monitoring-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    depends_on:
+      - docker-proxy
+    environment:
+      - SERVER_ID=1
+      - API_URL=http://host.docker.internal:8080/agent/heartbeat
+      - DOCKER_HOST=tcp://docker-proxy:2375
+    volumes:
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      - /proc:/host/proc:ro

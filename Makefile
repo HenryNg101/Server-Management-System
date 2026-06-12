@@ -1,6 +1,7 @@
 INFRA = -f docker-compose.infra.yml
 APP   = -f docker-compose.yml
 DEV	  = -f docker-compose.dev.yml
+CLIENT = -f docker-compose.client.yml
 
 # For the development purposes
 dev.up:
@@ -18,3 +19,10 @@ prod.down:
 
 prog.logs:
 	docker compose $(APP) $(INFRA) logs -f $(SERVICE)
+
+# For client
+client.up:
+	docker compose $(CLIENT) up -d
+
+client.down:
+	docker compose $(CLIENT) down

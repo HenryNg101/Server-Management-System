@@ -809,8 +809,6 @@ Unit testings were done using different methods for each component of the codeba
 
 Also, mock codes are used, for components that need extra dependencies. While it's hard to fully cover every cases in the codebase, I'm trying to get as much as I could
 
--- 
-
 # 11. Deployment & Environment Strategy
 
 ## 11.1 Multi-Environment Configuration
