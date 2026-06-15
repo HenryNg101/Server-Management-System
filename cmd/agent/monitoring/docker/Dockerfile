@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o agent ./cmd/client/agent/monitoring
+RUN go build -o agent ./cmd/agent/monitoring/docker
 
 # ---- runtime ----
 FROM alpine:latest

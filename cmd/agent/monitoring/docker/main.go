@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/shirou/gopsutil/v4/mem"
 )
 
 type ContainerMetric struct {
@@ -43,61 +41,6 @@ func isPortOpen(addr string) bool {
 	}
 	conn.Close()
 	return true
-}
-
-// --------------------
-// FIND CGROUP PATH
-// --------------------
-func getCgroupPath(containerID string) string {
-	paths := []string{
-		"/host/sys/fs/cgroup/docker/" + containerID,
-		"/host/sys/fs/cgroup/system.slice/docker-" + containerID + ".scope",
-	}
-
-	for _, p := range paths {
-		if _, err := os.Stat(p); err == nil {
-			fmt.Println("FOUND cgroup path:", p)
-			return p
-		}
-	}
-
-	fmt.Println("NO cgroup path for:", containerID)
-	return ""
-}
-
-// --------------------
-// MEMORY FROM CGROUP
-// --------------------
-func getContainerMemory(cgroupPath string) float64 {
-	usageBytes, err := os.ReadFile(filepath.Join(cgroupPath, "memory.current"))
-	if err != nil {
-		return 0
-	}
-
-	usage, _ := strconv.ParseFloat(strings.TrimSpace(string(usageBytes)), 64)
-
-	limitBytes, err := os.ReadFile(filepath.Join(cgroupPath, "memory.max"))
-	if err != nil {
-		return 0
-	}
-
-	limitStr := strings.TrimSpace(string(limitBytes))
-
-	// fallback to host memory total
-	if limitStr == "max" {
-		memInfo, err := mem.VirtualMemory()
-		if err != nil || memInfo.Total == 0 {
-			return 0
-		}
-		return (usage / float64(memInfo.Total)) * 100
-	}
-
-	limit, _ := strconv.ParseFloat(limitStr, 64)
-	if limit == 0 {
-		return 0
-	}
-
-	return (usage / limit) * 100
 }
 
 // --------------------
@@ -153,8 +96,6 @@ func main() {
 				continue
 			}
 
-			mem := getContainerMemory(cgroupPath)
-
 			// ---- simple health check (best effort)
 			status := false
 			if len(c.Ports) > 0 {
@@ -163,14 +104,17 @@ func main() {
 				status = isPortOpen(addr)
 			}
 
+			// Dealing with metrics
 			metrics = append(metrics, ContainerMetric{
 				Name:        name,
 				Status:      status,
 				CPUUsage:    0, // TODO later
-				MemoryUsage: mem,
+				MemoryUsage: getContainerMemory(cgroupPath),
 			})
 		}
 
+		//
+		// Sending metrics to HTTP server
 		payload := Payload{
 			ServerID:  serverID,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
