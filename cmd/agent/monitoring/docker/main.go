@@ -2,63 +2,17 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/HenryNg101/server-management-system/internal/monitoring/metrics"
 )
-
-type ContainerMetric struct {
-	Name        string  `json:"name"`
-	Status      bool    `json:"status"`
-	CPUUsage    float64 `json:"cpu_usage"`
-	MemoryUsage float64 `json:"memory_usage"`
-}
-
-type Payload struct {
-	ServerID  int               `json:"server_id"`
-	Timestamp string            `json:"timestamp"`
-	Metrics   []ContainerMetric `json:"metrics"`
-}
-
-// --------------------
-// HEALTH CHECK (simple TCP)
-// --------------------
-func isPortOpen(addr string) bool {
-	conn, err := net.DialTimeout("tcp", addr, 1*time.Second)
-	if err != nil {
-		return false
-	}
-	conn.Close()
-	return true
-}
-
-// --------------------
-// DISCOVER CONTAINERS
-// --------------------
-func listContainers() ([]container.Summary, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return nil, err
-	}
-
-	f := filters.NewArgs()
-	f.Add("label", "monitor=true")
-
-	return cli.ContainerList(context.Background(), container.ListOptions{
-		Filters: f,
-	})
-}
 
 // --------------------
 // MAIN
@@ -82,7 +36,9 @@ func main() {
 			continue
 		}
 
-		var metrics []ContainerMetric
+		var containerMetrics []ContainerMetric
+		cpuTrackers := make(map[string]*metrics.CPUTracker)
+		ioTrackers := make(map[string]*metrics.IOTracker)
 
 		for _, c := range containers {
 			name := "unknown"
@@ -91,10 +47,13 @@ func main() {
 			}
 
 			// ---- cgroup path
-			cgroupPath := getCgroupPath(c.ID)
+			cgroupPath := metrics.GetCgroupPath(c.ID)
 			if cgroupPath == "" {
 				continue
 			}
+
+			cpuTracker := metrics.AddCPUTracker(cpuTrackers, c.ID)
+			ioTracker := metrics.AddIOTracker(ioTrackers, c.ID)
 
 			// ---- simple health check (best effort)
 			status := false
@@ -105,11 +64,29 @@ func main() {
 			}
 
 			// Dealing with metrics
-			metrics = append(metrics, ContainerMetric{
-				Name:        name,
-				Status:      status,
-				CPUUsage:    0, // TODO later
-				MemoryUsage: getContainerMemory(cgroupPath),
+			oomEvents, oomKills := metrics.GetOOMEvents(cgroupPath)
+			readBPS, writeBPS := ioTracker.GetIO(cgroupPath)
+			containerMetrics = append(containerMetrics, ContainerMetric{
+				Name:   name,
+				Status: status,
+
+				CPUUsage:      cpuTracker.GetCPUPercent(cgroupPath),
+				CPUThrottling: metrics.GetCPUThrottling(cgroupPath),
+				CPUPressure:   metrics.GetCPUPressure(cgroupPath),
+
+				MemoryUsage:      metrics.GetContainerMemory(cgroupPath),
+				MemoryWorkingSet: metrics.GetMemoryWorkingSet(cgroupPath),
+				MemoryRSS:        metrics.GetMemoryRSS(cgroupPath),
+				MemoryPressure:   metrics.GetMemoryPressure(cgroupPath),
+
+				OOMEvents: oomEvents,
+				OOMKills:  oomKills,
+
+				PIDs: metrics.GetPIDs(cgroupPath),
+
+				ReadBPS:    readBPS,
+				WriteBPS:   writeBPS,
+				IOPressure: metrics.GetIOPressure(cgroupPath),
 			})
 		}
 
@@ -118,7 +95,7 @@ func main() {
 		payload := Payload{
 			ServerID:  serverID,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Metrics:   metrics,
+			Metrics:   containerMetrics,
 		}
 
 		body, _ := json.Marshal(payload)

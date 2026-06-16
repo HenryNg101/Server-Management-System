@@ -1,13 +1,24 @@
-package main
+package metrics
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type CPUTracker struct {
 	prevUsage float64
 	prevTime  time.Time
+}
+
+func AddCPUTracker(cpuTrackers map[string]*CPUTracker, id string) *CPUTracker {
+	if t, ok := cpuTrackers[id]; ok {
+		return t
+	}
+	t := &CPUTracker{}
+	cpuTrackers[id] = t
+	return t
 }
 
 // --------------------
@@ -52,7 +63,16 @@ func (t *CPUTracker) GetCPUPercent(cgroupPath string) float64 {
 // So, if during the time inside a period, a container used up all of CPU time, it will have to be waiting -> One CPU throttling state in that period
 // Basically, we don't want this happening too many times
 // --------------------
-func getCPUThrottling(cgroupPath string) float64 {
+func GetCPUThrottling(cgroupPath string) float64 {
+	data, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.max"))
+	if err != nil {
+		return 0
+	}
+
+	if strings.HasPrefix(string(data), "max") {
+		return 0 // no limit → no throttling
+	}
+
 	stats := readKVFile(filepath.Join(cgroupPath, "cpu.stat"))
 
 	nrPeriods := stats["nr_periods"]     // Number of CPU periods that had gone passed
@@ -65,6 +85,6 @@ func getCPUThrottling(cgroupPath string) float64 {
 	return (nrThrottled / nrPeriods) * 100
 }
 
-func getCPUPressure(cgroupPath string) float64 {
+func GetCPUPressure(cgroupPath string) float64 {
 	return getResourcePressure(cgroupPath, "cpu")
 }

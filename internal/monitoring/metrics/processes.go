@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 // --------------------
 // Get the number of running processes inside the container. Good to debug in case of process explosions
 // --------------------
-func getPIDs(cgroupPath string) float64 {
+func GetPIDs(cgroupPath string) float64 {
 	data, err := os.ReadFile(filepath.Join(cgroupPath, "pids.current"))
 	if err != nil {
 		return 0

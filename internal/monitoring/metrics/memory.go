@@ -1,7 +1,6 @@
-package main
+package metrics
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,14 +12,13 @@ import (
 // --------------------
 // Memory from cgroup, to track the percentage of memory used, compared to the maximum limit allowed
 // --------------------
-func getContainerMemory(cgroupPath string) float64 {
+func GetContainerMemory(cgroupPath string) float64 {
 	usageBytes, err := os.ReadFile(filepath.Join(cgroupPath, "memory.current"))
 	if err != nil {
 		return 0
 	}
 
 	usage, _ := strconv.ParseFloat(strings.TrimSpace(string(usageBytes)), 64)
-	fmt.Println("Memory used: ", usage)
 
 	limitBytes, err := os.ReadFile(filepath.Join(cgroupPath, "memory.max"))
 	if err != nil {
@@ -50,7 +48,7 @@ func getContainerMemory(cgroupPath string) float64 {
 // Calculate the memory working set (Working Set Size - WSS), which is the amount of RAM actively being used, exclude reclaimable cache
 // This is done based on the same way that cAdvisor does it, by subtracting total memory usage to inactive file cache
 // --------------------
-func getMemoryWorkingSet(cgroupPath string) float64 {
+func GetMemoryWorkingSet(cgroupPath string) float64 {
 	stats := readKVFile(filepath.Join(cgroupPath, "memory.stat"))
 
 	total := stats["anon"] + stats["file"]
@@ -64,7 +62,7 @@ func getMemoryWorkingSet(cgroupPath string) float64 {
 // This is different from WSS, because this doesn't include active file caches, only direct usage
 // In cgroup, this can be calculated approximately by anon memory, which consists of anonymous mappings like heaps and stacks memory
 // --------------------
-func getMemoryRSS(cgroupPath string) float64 {
+func GetMemoryRSS(cgroupPath string) float64 {
 	stats := readKVFile(filepath.Join(cgroupPath, "memory.stat"))
 	return stats["anon"]
 }
@@ -73,12 +71,12 @@ func getMemoryRSS(cgroupPath string) float64 {
 // Track the number of times where Out Of Memory (OOM) events happened, which is good for alerting
 // "oom" stats means the times memory pressure occurred, and "oom_kill" means the times processes were actually killed
 // --------------------
-func getOOMEvents(cgroupPath string) (float64, float64) {
+func GetOOMEvents(cgroupPath string) (float64, float64) {
 	stats := readKVFile(filepath.Join(cgroupPath, "memory.events"))
 
 	return stats["oom"], stats["oom_kill"]
 }
 
-func getMemoryPressure(cgroupPath string) float64 {
+func GetMemoryPressure(cgroupPath string) float64 {
 	return getResourcePressure(cgroupPath, "memory")
 }

@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"os"
@@ -14,8 +14,18 @@ type IOTracker struct {
 	prevTime  time.Time
 }
 
+func AddIOTracker(ioTrackers map[string]*IOTracker, id string) *IOTracker {
+	if t, ok := ioTrackers[id]; ok {
+		return t
+	}
+	t := &IOTracker{}
+	ioTrackers[id] = t
+	return t
+}
+
 // --------------------
-// Calculate IO throughput of the container
+// Calculate IO throughput of the container, by adding all read and write throughput of block devices in the container
+// The only exception is loop device, which has major number start off with 7:, to prevent double counting, as loop devices are virtual filesystems that maps back to file on real disk
 // We also use delta here, to calculate average read/write, to see how many bytes per second got read/written
 // --------------------
 func (t *IOTracker) GetIO(cgroupPath string) (float64, float64) {
@@ -24,20 +34,27 @@ func (t *IOTracker) GetIO(cgroupPath string) (float64, float64) {
 		return 0, 0
 	}
 
-	// Calculate read and write bytes
 	var readBytes, writeBytes float64
 
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		parts := strings.Fields(line)
+
+		// skip loop devices
+		if len(parts) > 0 && strings.HasPrefix(parts[0], "7:") {
+			continue
+		}
+
 		for _, p := range parts {
 			if strings.HasPrefix(p, "rbytes=") {
 				val := strings.TrimPrefix(p, "rbytes=")
-				readBytes, _ = strconv.ParseFloat(val, 64)
+				v, _ := strconv.ParseFloat(val, 64)
+				readBytes += v
 			}
 			if strings.HasPrefix(p, "wbytes=") {
 				val := strings.TrimPrefix(p, "wbytes=")
-				writeBytes, _ = strconv.ParseFloat(val, 64)
+				v, _ := strconv.ParseFloat(val, 64)
+				writeBytes += v
 			}
 		}
 	}
@@ -63,9 +80,9 @@ func (t *IOTracker) GetIO(cgroupPath string) (float64, float64) {
 		return 0, 0
 	}
 
-	return deltaRead / deltaTime, deltaWrite / deltaTime // bytes/sec
+	return deltaRead / deltaTime, deltaWrite / deltaTime // bytes / sec
 }
 
-func getIOPressure(cgroupPath string) float64 {
+func GetIOPressure(cgroupPath string) float64 {
 	return getResourcePressure(cgroupPath, "io")
 }
