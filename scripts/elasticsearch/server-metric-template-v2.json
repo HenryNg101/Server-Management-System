@@ -1,0 +1,49 @@
+{
+  "index_patterns": ["server-metrics-v2*"],
+  "data_stream": {},
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "server_id": { "type": "long" },
+        "container_name": { "type": "keyword" },
+
+        "status": { "type": "boolean" },
+
+        "cpu": {
+          "properties": {
+            "usage": { "type": "float" },
+            "throttling": { "type": "float" },
+            "pressure": { "type": "float" }
+          }
+        },
+
+        "memory": {
+          "properties": {
+            "usage": { "type": "float" },
+            "working_set": { "type": "long" },
+            "rss": { "type": "long" },
+            "pressure": { "type": "float" }
+          }
+        },
+
+        "io": {
+          "properties": {
+            "read_bps": { "type": "float" },
+            "write_bps": { "type": "float" },
+            "pressure": { "type": "float" }
+          }
+        },
+
+        "pids": { "type": "integer" },
+
+        "oom": {
+          "properties": {
+            "events": { "type": "integer" },
+            "kills": { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}

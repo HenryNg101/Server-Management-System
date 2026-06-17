@@ -26,7 +26,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	//
 	// Protected APIs
 	protected := rg.Group("/")
-	protected.Use(internalAuth.AuthMiddleware())
+	protected.Use(internalAuth.UserAuthMiddleware())
 
 	protected.GET("/servers", serverHandler.GetServers)
 	protected.GET("/servers/:id", serverHandler.GetServer)

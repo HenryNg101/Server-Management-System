@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	"github.com/HenryNg101/server-management-system/internal/monitoring/metrics"
 )
 
@@ -36,7 +37,7 @@ func main() {
 			continue
 		}
 
-		var containerMetrics []ContainerMetric
+		var containerMetrics []agent.ContainerMetric
 		cpuTrackers := make(map[string]*metrics.CPUTracker)
 		ioTrackers := make(map[string]*metrics.IOTracker)
 
@@ -66,7 +67,7 @@ func main() {
 			// Dealing with metrics
 			oomEvents, oomKills := metrics.GetOOMEvents(cgroupPath)
 			readBPS, writeBPS := ioTracker.GetIO(cgroupPath)
-			containerMetrics = append(containerMetrics, ContainerMetric{
+			containerMetrics = append(containerMetrics, agent.ContainerMetric{
 				Name:   name,
 				Status: status,
 
@@ -92,7 +93,7 @@ func main() {
 
 		//
 		// Sending metrics to HTTP server
-		payload := Payload{
+		payload := agent.Payload{
 			ServerID:  serverID,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Metrics:   containerMetrics,
