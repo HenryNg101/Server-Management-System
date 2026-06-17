@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/HenryNg101/server-management-system/internal/config"
+	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	"github.com/HenryNg101/server-management-system/internal/feature/auth"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
@@ -16,6 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: Add Kafka dependency here somehow
 type Application struct {
 	PostgresSession *gorm.DB
 	ElasticSession  *elasticsearch.Client
@@ -23,6 +25,7 @@ type Application struct {
 	ServerService   *server.Service
 	UserService     *user.Service
 	AuthService     *auth.Service
+	AgentService    *agent.Service
 }
 
 // Create a new app with services to be used
@@ -77,6 +80,9 @@ func NewApp() (*Application, error) {
 	authRedisRepo := auth.NewRepository(redisSession)
 	authService := auth.NewService(userRepo, authRedisRepo)
 
+	agentRepo := agent.NewRepository(postgresSession)
+	agentService := agent.NewService(agentRepo)
+
 	return &Application{
 		PostgresSession: postgresSession,
 		ElasticSession:  esSession,
@@ -84,5 +90,6 @@ func NewApp() (*Application, error) {
 		ServerService:   &serverService,
 		UserService:     &userService,
 		AuthService:     &authService,
+		AgentService:    &agentService,
 	}, nil
 }

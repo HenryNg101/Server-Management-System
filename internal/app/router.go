@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	authHandler "github.com/HenryNg101/server-management-system/internal/feature/auth"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
@@ -16,6 +17,15 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	// Register handlers for servers and users
 	serverHandler := server.NewHandler(*application.ServerService)
 	userHandler := user.NewHandler(*application.UserService)
+	agentHandler := agent.NewHandler(*application.AgentService)
+
+	//
+	// Agent's APIs
+	agentGroup := rg.Group("/api/v1/agent")
+	agentGroup.Use(internalAuth.AgentAuthMiddleware(db, *application.AgentService))
+	{
+		agentGroup.POST("/metrics", agentHandler.IngestMetrics)
+	}
 
 	//
 	// Public API

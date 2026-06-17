@@ -1,26 +1,42 @@
 package agent
 
 import (
-	"github.com/HenryNg101/server-management-system/internal/platform/kafka"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
-func IngestMetrics(producer *kafka.Producer) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var msg MetricMessage
+type Handler struct {
+	service Service
+}
 
-		if err := c.ShouldBindJSON(&msg); err != nil {
-			c.JSON(400, gin.H{"error": "invalid payload"})
-			return
-		}
+func NewHandler(service Service) *Handler {
+	return &Handler{service: service}
+}
 
-		// 🔥 CRITICAL: override server_id
-		serverID := c.GetUint("server_id")
-		msg.ServerID = int(serverID)
+// Help people log in, and generate tokens for them
+// Metrics godoc
+// @Summary Metrics
+// @Description Ingest metrics from agent upload
+// @Tags agents
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body MetricMessage true "Server's metrics"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /agent/metrics [post]
+func (h *Handler) IngestMetrics(c *gin.Context) {
+	var msg MetricMessage
 
-		// send to Kafka
-		producer.Send(msg)
-
-		c.JSON(200, gin.H{"status": "ok"})
+	if err := c.ShouldBindJSON(&msg); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
 	}
+
+	// TODO: override server_id
+	serverID := c.GetUint("server_id")
+	msg.ServerID = int(serverID)
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

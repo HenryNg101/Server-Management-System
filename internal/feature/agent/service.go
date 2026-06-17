@@ -12,6 +12,7 @@ import (
 type Service interface {
 	CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error)
 	AgentExist(ctx context.Context, key string, server *model.Agent) error
+	PushMetrics(ctx context.Context, msg MetricMessage) error
 }
 
 type agentService struct {
@@ -22,6 +23,12 @@ func NewService(r Repository) Service {
 	return &agentService{repo: r}
 }
 
+// TODO: Push to Kafka
+func (s *agentService) PushMetrics(ctx context.Context, msg MetricMessage) error {
+	return nil
+}
+
+// TODO: Use this in server's creation
 func (s *agentService) CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error) {
 	rawKey, hash, err := generateAPIKey()
 	if err != nil {
