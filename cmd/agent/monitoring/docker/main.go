@@ -15,6 +15,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/monitoring/metrics"
 )
 
+// TODO: Add API usage here, and claiming API key through config somehow
 // --------------------
 // MAIN
 // --------------------

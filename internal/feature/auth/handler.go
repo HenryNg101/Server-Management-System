@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	internalAuth "github.com/HenryNg101/server-management-system/internal/middleware/auth"
+	internalAuth "github.com/HenryNg101/server-management-system/internal/shared/auth"
 
 	"github.com/gin-gonic/gin"
 )

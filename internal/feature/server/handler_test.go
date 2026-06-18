@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
+	"github.com/HenryNg101/server-management-system/internal/shared/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/go-openapi/testify/v2/require"
 	"gorm.io/gorm"
@@ -37,7 +38,7 @@ func setupRouter(s Service) *gin.Engine {
 }
 
 func TestHandlerCreateServer_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
 			return &model.Server{
 				Name:        req.Name,
@@ -47,8 +48,18 @@ func TestHandlerCreateServer_Success(t *testing.T) {
 				Protocol:    req.Protocol,
 			}, nil
 		},
+		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
+			rawKey, hash, err := auth.GenerateAPIKey()
+			if err != nil {
+				return nil, "", err
+			}
+			agent := model.Agent{
+				ServerID: serverID,
+				APIKey:   hash,
+			}
+			return &agent, rawKey, err
+		},
 	}
-
 	r := setupRouter(mock)
 
 	body := `{
@@ -70,15 +81,25 @@ func TestHandlerCreateServer_Success(t *testing.T) {
 }
 
 func TestHandlerCreateServer_MissingField(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
 			return &model.Server{
 				Name:   req.Name,
 				Status: req.Status,
 			}, nil
 		},
+		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
+			rawKey, hash, err := auth.GenerateAPIKey()
+			if err != nil {
+				return nil, "", err
+			}
+			agent := model.Agent{
+				ServerID: serverID,
+				APIKey:   hash,
+			}
+			return &agent, rawKey, err
+		},
 	}
-
 	r := setupRouter(mock)
 
 	body := `{
@@ -96,7 +117,7 @@ func TestHandlerCreateServer_MissingField(t *testing.T) {
 }
 
 func TestHandlerGetServers_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{
 				Servers: []model.Server{
@@ -106,7 +127,6 @@ func TestHandlerGetServers_Success(t *testing.T) {
 			}, nil
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest(http.MethodGet, "/servers?page=1&page_size=10", nil)
@@ -120,12 +140,11 @@ func TestHandlerGetServers_Success(t *testing.T) {
 }
 
 func TestHandlerGetServers_InvalidQuery(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{}, nil
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers?status=invalid_bool", nil)
@@ -137,12 +156,11 @@ func TestHandlerGetServers_InvalidQuery(t *testing.T) {
 }
 
 func TestGetServers_ServiceError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return nil, errors.New("db fail")
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers", nil)
@@ -154,12 +172,11 @@ func TestGetServers_ServiceError(t *testing.T) {
 }
 
 func TestHandlerGetServer_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
 			return &model.Server{Name: "server1"}, nil
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers/1", nil)
@@ -172,8 +189,7 @@ func TestHandlerGetServer_Success(t *testing.T) {
 }
 
 func TestHandlerGetServer_InvalidID(t *testing.T) {
-	mock := &mockService{}
-
+	mock := &MockServerService{}
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers/abc", nil)
@@ -185,12 +201,11 @@ func TestHandlerGetServer_InvalidID(t *testing.T) {
 }
 
 func TestHandlerGetServer_NotFound(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
 			return nil, gorm.ErrRecordNotFound
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers/1", nil)
@@ -202,12 +217,11 @@ func TestHandlerGetServer_NotFound(t *testing.T) {
 }
 
 func TestHandlerGetServer_InternalError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
 			return nil, errors.New("db error")
 		},
 	}
-
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("GET", "/servers/1", nil)
@@ -219,7 +233,7 @@ func TestHandlerGetServer_InternalError(t *testing.T) {
 }
 
 func TestHandlerUpdateServer_InvalidJSON(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("PATCH", "/servers/1", strings.NewReader(`invalid`))
@@ -232,7 +246,8 @@ func TestHandlerUpdateServer_InvalidJSON(t *testing.T) {
 }
 
 func TestHandlerUpdateServer_InvalidID(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("PATCH", "/servers/abc", strings.NewReader(`{}`))
@@ -245,7 +260,7 @@ func TestHandlerUpdateServer_InvalidID(t *testing.T) {
 }
 
 func TestHandlerUpdateServer_ServiceError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		updateFn: func(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
 			return nil, errors.New("update fail")
 		},
@@ -263,7 +278,7 @@ func TestHandlerUpdateServer_ServiceError(t *testing.T) {
 }
 
 func TestHandlerUpdateServer_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		updateFn: func(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
 			return &model.Server{Name: "updated"}, nil
 		},
@@ -281,7 +296,7 @@ func TestHandlerUpdateServer_Success(t *testing.T) {
 }
 
 func TestHandlerDeleteServer_NotFound(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		deleteFn: func(ctx context.Context, id uint) error {
 			return ErrNotFound
 		},
@@ -298,7 +313,8 @@ func TestHandlerDeleteServer_NotFound(t *testing.T) {
 }
 
 func TestHandlerDeleteServer_InvalidID(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("DELETE", "/servers/abc", nil)
@@ -310,7 +326,7 @@ func TestHandlerDeleteServer_InvalidID(t *testing.T) {
 }
 
 func TestHandlerDeleteServer_InternalError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		deleteFn: func(ctx context.Context, id uint) error {
 			return errors.New("fail")
 		},
@@ -327,7 +343,7 @@ func TestHandlerDeleteServer_InternalError(t *testing.T) {
 }
 
 func TestHandlerDeleteServer_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		deleteFn: func(ctx context.Context, id uint) error {
 			return nil
 		},
@@ -347,7 +363,7 @@ func TestHandlerImportServers_Success(t *testing.T) {
 	csvData := `name,status,ipv4_address,port,protocol
 server1,true,127.0.0.1,8080,http`
 
-	mock := &mockService{
+	mock := &MockServerService{
 		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
 			return &ImportServersResponse{
 				SuccessCount: 1,
@@ -374,7 +390,8 @@ server1,true,127.0.0.1,8080,http`
 }
 
 func TestHandlerImportServers_NoFile(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("POST", "/servers/import", nil)
@@ -386,7 +403,7 @@ func TestHandlerImportServers_NoFile(t *testing.T) {
 }
 
 func TestHandlerImportServers_ServiceError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
 			return nil, errors.New("import fail")
 		},
@@ -410,7 +427,7 @@ func TestHandlerImportServers_ServiceError(t *testing.T) {
 }
 
 func TestHandlerExportServers_ServiceError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return nil, errors.New("fail")
 		},
@@ -427,7 +444,7 @@ func TestHandlerExportServers_ServiceError(t *testing.T) {
 }
 
 func TestHandlerExportServers_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{
 				Servers: []model.Server{
@@ -449,7 +466,7 @@ func TestHandlerExportServers_Success(t *testing.T) {
 }
 
 func TestHandlerSendReports_Success(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
 			return &Report{
 				TotalServers: 10,
@@ -475,7 +492,7 @@ func TestHandlerSendReports_Success(t *testing.T) {
 }
 
 func TestHandlerSendReports_SuccessNoBody(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
 			return &Report{
 				TotalServers: 10,
@@ -499,7 +516,8 @@ func TestHandlerSendReports_SuccessNoBody(t *testing.T) {
 }
 
 func TestHandlerSendReports_InvalidJSON(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(`invalid`))
@@ -512,7 +530,8 @@ func TestHandlerSendReports_InvalidJSON(t *testing.T) {
 }
 
 func TestHandlerSendReports_InvalidStartDate(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	body := `{"start":"bad-date","count":1}`
@@ -527,7 +546,8 @@ func TestHandlerSendReports_InvalidStartDate(t *testing.T) {
 }
 
 func TestHandlerSendReports_InvalidEndDate(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	body := `{"end":"bad-date","count":1}`
@@ -542,7 +562,8 @@ func TestHandlerSendReports_InvalidEndDate(t *testing.T) {
 }
 
 func TestHandlerSendReports_InvalidTopN(t *testing.T) {
-	mock := &mockService{}
+	mock := &MockServerService{}
+
 	r := setupRouter(mock)
 
 	body := `{"count":0}`
@@ -557,7 +578,7 @@ func TestHandlerSendReports_InvalidTopN(t *testing.T) {
 }
 
 func TestHandlerSendReports_ServiceError(t *testing.T) {
-	mock := &mockService{
+	mock := &MockServerService{
 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
 			return nil, errors.New("fail")
 		},

@@ -1,5 +1,5 @@
 {
-  "index_patterns": ["server-metrics-v2*"],
+  "index_patterns": ["server-metrics*"],
   "data_stream": {},
   "template": {
     "mappings": {

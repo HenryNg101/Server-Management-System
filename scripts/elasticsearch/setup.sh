@@ -36,6 +36,16 @@ curl -s $AUTH -X PUT $ES_URL/_index_template/$INDEX_TEMPLATE \
   -H "Content-Type: application/json" \
   -d @/scripts/elasticsearch/server-status-template-v1.json
 
+# Create another template
+
+INDEX_TEMPLATE="server-metric-template"
+
+echo -e "\nCreating index template: $INDEX_TEMPLATE"
+
+curl -s $AUTH -X PUT $ES_URL/_index_template/$INDEX_TEMPLATE \
+  -H "Content-Type: application/json" \
+  -d @/scripts/elasticsearch/server-metric-template-v1.json
+
 # Add more templates here later
 # curl ... another-template.json
 
@@ -56,7 +66,8 @@ create_data_stream_if_not_exists () {
   fi
 }
 
-create_data_stream_if_not_exists $ELASTIC_DATA_STREAM_SOURCE
+create_data_stream_if_not_exists $ELASTIC_STATUS_DATA_STREAM_SOURCE
+create_data_stream_if_not_exists $ELASTIC_METRICS_DATA_STREAM_SOURCE
 
 # Add more later
 # create_data_stream_if_not_exists "another-stream"

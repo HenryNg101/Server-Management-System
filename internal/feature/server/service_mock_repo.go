@@ -10,16 +10,20 @@ import (
 )
 
 type mockRepo struct {
-	servers map[uint]*model.Server
-	nextID  uint
-	dbExist bool
+	servers     map[uint]*model.Server
+	agents      map[uint]*model.Agent
+	nextID      uint
+	nextAgentID uint
+	dbExist     bool
 }
 
 func NewFakeRepo() *mockRepo {
 	return &mockRepo{
-		servers: make(map[uint]*model.Server),
-		nextID:  0,
-		dbExist: true,
+		servers:     make(map[uint]*model.Server),
+		agents:      make(map[uint]*model.Agent),
+		nextID:      0,
+		nextAgentID: 0,
+		dbExist:     true,
 	}
 }
 
@@ -86,6 +90,19 @@ func (f *mockRepo) Create(ctx context.Context, s *model.Server) (*model.Server, 
 	s.ID = f.nextID
 	f.servers[s.ID] = s
 	return s, nil
+}
+
+// --------------------
+// CREATE AGENT
+// --------------------
+func (f *mockRepo) CreateAgent(ctx context.Context, agent *model.Agent) (*model.Agent, error) {
+	if !f.dbExist {
+		return nil, errors.New("db error")
+	}
+	f.nextAgentID++
+	agent.ID = f.nextAgentID
+	f.agents[agent.ID] = agent
+	return agent, nil
 }
 
 // --------------------

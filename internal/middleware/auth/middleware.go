@@ -5,8 +5,8 @@ import (
 
 	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	"github.com/HenryNg101/server-management-system/internal/model"
+	internalAuth "github.com/HenryNg101/server-management-system/internal/shared/auth"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 func UserAuthMiddleware() gin.HandlerFunc {
@@ -24,7 +24,7 @@ func UserAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := ParseToken(parts[1])
+		claims, err := internalAuth.ParseToken(parts[1])
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid token"})
 			return
@@ -37,7 +37,7 @@ func UserAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func AgentAuthMiddleware(db *gorm.DB, agentService agent.Service) gin.HandlerFunc {
+func AgentAuthMiddleware(agentService agent.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 

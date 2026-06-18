@@ -28,7 +28,7 @@ func NewHandler(s Service) *Handler {
 // @Accept json
 // @Produce json
 // @Param request body CreateServerRequest true "Server payload"
-// @Success 201 {object} model.Server
+// @Success 201 {object} CreateServerResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /servers [post]
@@ -36,16 +36,25 @@ func (h *Handler) CreateServer(c *gin.Context) {
 	var req CreateServerRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 		return
 	}
 
-	created, err := h.service.CreateServer(c.Request.Context(), req)
+	createdServer, err := h.service.CreateServer(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Server creation error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, created)
+	createdAgent, apiKey, err := h.service.CreateAgent(c, createdServer.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Agent creation error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, CreateServerResponse{
+		CreatedServer: *createdServer,
+		CreatedAgent:  *createdAgent,
+		ApiKey:        apiKey,
+	})
 }
 
 // @Summary Get servers
@@ -67,11 +76,11 @@ func (h *Handler) CreateServer(c *gin.Context) {
 func (h *Handler) GetServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 	}
 	paginatedResult, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Get servers error": err.Error()})
 		return
 	}
 	result := make([]GetServerResponse, 0)
@@ -104,7 +113,7 @@ func (h *Handler) GetServers(c *gin.Context) {
 func (h *Handler) GetServer(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 		return
 	}
 
@@ -112,9 +121,9 @@ func (h *Handler) GetServer(c *gin.Context) {
 	server, err = h.service.GetServer(c.Request.Context(), uint(id), server)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"Get server error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"Get server error": err.Error()})
 		}
 		return
 	}
@@ -147,13 +156,13 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 	var req UpdateServerRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request body error": err.Error()})
 		return
 	}
 
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Parse server ID error": err.Error()})
 		return
 	}
 
@@ -165,9 +174,9 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"Update server error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"Update server error": err.Error()})
 		}
 		return
 	}
@@ -190,18 +199,18 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Parse server ID error": err.Error()})
 		return
 	}
 
 	err = h.service.DeleteServer(c.Request.Context(), uint(serverId))
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "server not found"})
+			c.JSON(http.StatusNotFound, gin.H{"Delete server error": "server not found"})
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Delete server error": err.Error()})
 		return
 	}
 
@@ -221,20 +230,20 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 func (h *Handler) ImportServers(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(400, gin.H{"error": "file is required"})
+		c.JSON(400, gin.H{"Input file error": "file is required"})
 		return
 	}
 
 	f, err := file.Open()
 	if err != nil {
-		c.JSON(500, gin.H{"error": "cannot open file"})
+		c.JSON(500, gin.H{"Input file error": "cannot open file"})
 		return
 	}
 	defer f.Close()
 
 	result, err := h.service.ImportServers(c.Request.Context(), f)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"Import servers error": err.Error()})
 		return
 	}
 
@@ -260,13 +269,13 @@ func (h *Handler) ImportServers(c *gin.Context) {
 func (h *Handler) ExportServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 		return
 	}
 
 	servers, err := h.service.GetServers(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Get servers error": err.Error()})
 		return
 	}
 
@@ -278,7 +287,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	// Write header
 	header := []string{"name", "status", "ipv4_address", "port", "protocol", "created_at", "last_updated_at"}
 	if err := writer.Write(header); err != nil {
-		c.JSON(500, gin.H{"error": "failed to write csv"})
+		c.JSON(http.StatusInternalServerError, gin.H{"File write error": err.Error()})
 		return
 	}
 
@@ -295,7 +304,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 		}
 
 		if err := writer.Write(row); err != nil {
-			c.JSON(500, gin.H{"error": "failed to write csv row"})
+			c.JSON(http.StatusInternalServerError, gin.H{"File write error": err.Error()})
 			return
 		}
 	}
@@ -303,7 +312,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	writer.Flush()
 
 	if err := writer.Error(); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"File write error": err.Error()})
 		return
 	}
 }
@@ -322,7 +331,7 @@ func (h *Handler) SendReports(c *gin.Context) {
 	var req *SendReportRequest
 	var err error
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 		return
 	}
 
@@ -331,14 +340,14 @@ func (h *Handler) SendReports(c *gin.Context) {
 	if req.Start != nil {
 		startTime, err = time.Parse("2006-01-02", *req.Start)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 			return
 		}
 	}
 	if req.End != nil {
 		endTime, err = time.Parse("2006-01-02", *req.End)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 			return
 		}
 	}
@@ -347,7 +356,7 @@ func (h *Handler) SendReports(c *gin.Context) {
 		req.TopN = &topN
 	}
 	if *req.TopN < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Count must be greater than 0"})
+		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": "Count must be greater than 0"})
 		return
 	}
 

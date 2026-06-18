@@ -15,6 +15,57 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/agent/metrics": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingest metrics from agent upload",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Metrics",
+                "parameters": [
+                    {
+                        "description": "Server's metrics",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/agent.MetricMessage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "Authenticate user and return JWT",
@@ -193,6 +244,24 @@ const docTemplate = `{
                                 "$ref": "#/definitions/server.GetServerResponse"
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -228,7 +297,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Server"
+                            "$ref": "#/definitions/server.CreateServerResponse"
                         }
                     },
                     "400": {
@@ -396,6 +465,24 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/server.Report"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -430,6 +517,33 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/server.GetServerResponse"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -459,6 +573,33 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -502,6 +643,33 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.Server"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -571,6 +739,82 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "agent.MetricMessage": {
+            "type": "object",
+            "properties": {
+                "@timestamp": {
+                    "type": "string"
+                },
+                "container_name": {
+                    "type": "string"
+                },
+                "cpu": {
+                    "type": "object",
+                    "properties": {
+                        "pressure": {
+                            "type": "number"
+                        },
+                        "throttling": {
+                            "type": "number"
+                        },
+                        "usage": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "io": {
+                    "type": "object",
+                    "properties": {
+                        "pressure": {
+                            "type": "number"
+                        },
+                        "read_bps": {
+                            "type": "number"
+                        },
+                        "write_bps": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "memory": {
+                    "type": "object",
+                    "properties": {
+                        "pressure": {
+                            "type": "number"
+                        },
+                        "rss": {
+                            "type": "number"
+                        },
+                        "usage": {
+                            "type": "number"
+                        },
+                        "working_set": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "oom": {
+                    "type": "object",
+                    "properties": {
+                        "events": {
+                            "type": "integer"
+                        },
+                        "kills": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "pids": {
+                    "type": "integer"
+                },
+                "server_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "boolean"
+                }
+            }
+        },
         "auth.LoginRequest": {
             "type": "object",
             "properties": {
@@ -614,6 +858,26 @@ const docTemplate = `{
                 },
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "model.Agent": {
+            "type": "object",
+            "properties": {
+                "apikeyHash": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "server": {
+                    "$ref": "#/definitions/model.Server"
+                },
+                "serverID": {
+                    "type": "integer"
                 }
             }
         },
@@ -746,6 +1010,20 @@ const docTemplate = `{
                 }
             }
         },
+        "server.CreateServerResponse": {
+            "type": "object",
+            "properties": {
+                "agent_api_key": {
+                    "type": "string"
+                },
+                "created_agent": {
+                    "$ref": "#/definitions/model.Agent"
+                },
+                "created_server": {
+                    "$ref": "#/definitions/model.Server"
+                }
+            }
+        },
         "server.GetServerResponse": {
             "type": "object",
             "properties": {
@@ -841,10 +1119,6 @@ const docTemplate = `{
         },
         "server.SendReportRequest": {
             "type": "object",
-            "required": [
-                "end",
-                "start"
-            ],
             "properties": {
                 "count": {
                     "description": "The number of top N worst servers you want to show in the report",

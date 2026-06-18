@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
+	"github.com/HenryNg101/server-management-system/internal/shared/auth"
 )
 
 type Service interface {
@@ -26,6 +27,9 @@ type Service interface {
 
 	// Reporting
 	SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error)
+
+	// Monitoring agent
+	CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error)
 }
 
 type serverService struct {
@@ -67,6 +71,22 @@ func (s *serverService) CreateServer(ctx context.Context, req CreateServerReques
 		Protocol:    req.Protocol,
 	}
 	return s.repo.Create(ctx, &server)
+}
+
+// TODO: Use this in server's creation
+func (s *serverService) CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error) {
+	rawKey, hash, err := auth.GenerateAPIKey()
+	if err != nil {
+		return nil, "", err
+	}
+
+	agent := model.Agent{
+		ServerID: serverID,
+		APIKey:   hash,
+	}
+	createdAgent, err := s.repo.CreateAgent(ctx, &agent)
+
+	return createdAgent, rawKey, err
 }
 
 func (s *serverService) GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error) {

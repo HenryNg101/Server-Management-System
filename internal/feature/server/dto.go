@@ -52,6 +52,12 @@ type CreateServerRequest struct {
 	Protocol    string `json:"protocol"`
 }
 
+type CreateServerResponse struct {
+	CreatedServer model.Server `json:"created_server"`
+	CreatedAgent  model.Agent  `json:"created_agent"`
+	ApiKey        string       `json:"agent_api_key"`
+}
+
 type ImportServersResponse struct {
 	SuccessCount int             `json:"success_count"`
 	FailedCount  int             `json:"failed_count"`

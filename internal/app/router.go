@@ -22,7 +22,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	//
 	// Agent's APIs
 	agentGroup := rg.Group("/api/v1/agent")
-	agentGroup.Use(internalAuth.AgentAuthMiddleware(db, *application.AgentService))
+	agentGroup.Use(internalAuth.AgentAuthMiddleware(*application.AgentService))
 	{
 		agentGroup.POST("/metrics", agentHandler.IngestMetrics)
 	}

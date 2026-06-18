@@ -14,6 +14,7 @@ import (
 type Repository interface {
 	FindAll(ctx context.Context, q GetServersQuery) ([]model.Server, int64, error)
 	Create(ctx context.Context, server *model.Server) (*model.Server, error)
+	CreateAgent(ctx context.Context, agent *model.Agent) (*model.Agent, error)
 	FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	Update(ctx context.Context, server *model.Server) (*model.Server, error)
 	ExistsByID(ctx context.Context, id uint) (bool, error)
@@ -100,6 +101,11 @@ func (r *serverRepository) Create(ctx context.Context, server *model.Server) (*m
 		return nil, errors.New("The server with this name is already existed")
 	}
 	return server, nil
+}
+
+func (r *serverRepository) CreateAgent(ctx context.Context, agent *model.Agent) (*model.Agent, error) {
+	err := r.db.WithContext(ctx).Create(&agent).Error
+	return agent, err
 }
 
 func (r *serverRepository) FindByID(ctx context.Context, id uint, server *model.Server) (*model.Server, error) {

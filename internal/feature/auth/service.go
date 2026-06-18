@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
-	internalAuth "github.com/HenryNg101/server-management-system/internal/middleware/auth"
 	"github.com/HenryNg101/server-management-system/internal/model"
+	internalAuth "github.com/HenryNg101/server-management-system/internal/shared/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
