@@ -28,7 +28,7 @@ func (r *agentRepository) Create(ctx context.Context, agent *model.Agent) (*mode
 func (r *agentRepository) FindByKey(ctx context.Context, key string) (*model.Agent, error) {
 	var result model.Agent
 	err := r.db.WithContext(ctx).
-		Where("api_key_hash = ?", key).
+		Where("api_key = ?", key).
 		First(&result).
 		Error
 	return &result, err

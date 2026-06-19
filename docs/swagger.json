@@ -13,7 +13,7 @@
             "post": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "Ingest metrics from agent upload",
@@ -34,7 +34,10 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/agent.MetricMessage"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/agent.MetricMessage"
+                            }
                         }
                     }
                 ],
@@ -803,9 +806,6 @@
                 },
                 "server_id": {
                     "type": "integer"
-                },
-                "status": {
-                    "type": "boolean"
                 }
             }
         },
@@ -858,7 +858,7 @@
         "model.Agent": {
             "type": "object",
             "properties": {
-                "apikeyHash": {
+                "apikey": {
                     "type": "string"
                 },
                 "createdAt": {
@@ -1172,6 +1172,12 @@
         }
     },
     "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "API Key for external automated systems.",
+            "type": "apiKey",
+            "name": "X-Agent-API-Key",
+            "in": "header"
+        },
         "BearerAuth": {
             "description": "Type 'Bearer ' followed by your JWT token.",
             "type": "apiKey",

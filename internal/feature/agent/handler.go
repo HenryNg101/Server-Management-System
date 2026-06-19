@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,29 +15,34 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
-// Help people log in, and generate tokens for them
+// Ingest metrics from agents upload
 // Metrics godoc
 // @Summary Metrics
 // @Description Ingest metrics from agent upload
 // @Tags agents
-// @Security BearerAuth
+// @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Param request body MetricMessage true "Server's metrics"
+// @Param request body []MetricMessage true "Server's metrics"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Router /agent/metrics [post]
 func (h *Handler) IngestMetrics(c *gin.Context) {
-	var msg MetricMessage
+	var msgs []MetricMessage
 
-	if err := c.ShouldBindJSON(&msg); err != nil {
+	if err := c.ShouldBindJSON(&msgs); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
 		return
 	}
 
-	// TODO: override server_id
 	serverID := c.GetUint("server_id")
-	msg.ServerID = int(serverID)
+
+	for i := range msgs {
+		msgs[i].ServerID = int(serverID)
+	}
+
+	// TODO: push msgs to Kafka
+	fmt.Printf("Received %d metrics\n", len(msgs))
 
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

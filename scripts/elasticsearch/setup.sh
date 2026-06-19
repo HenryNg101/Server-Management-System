@@ -38,13 +38,13 @@ curl -s $AUTH -X PUT $ES_URL/_index_template/$INDEX_TEMPLATE \
 
 # Create another template
 
-INDEX_TEMPLATE="server-metric-template"
+INDEX_TEMPLATE="server-metrics-template"
 
 echo -e "\nCreating index template: $INDEX_TEMPLATE"
 
 curl -s $AUTH -X PUT $ES_URL/_index_template/$INDEX_TEMPLATE \
   -H "Content-Type: application/json" \
-  -d @/scripts/elasticsearch/server-metric-template-v1.json
+  -d @/scripts/elasticsearch/server-metrics-template-v1.json
 
 # Add more templates here later
 # curl ... another-template.json

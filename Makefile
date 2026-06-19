@@ -8,7 +8,7 @@ dev.up:
 	docker compose --env-file .env.docker $(INFRA) $(DEV) up -d
 
 dev.down:
-	docker compose $(INFRA) $(DEV) down -v
+	docker compose $(INFRA) $(DEV) down
 
 # For Docker and actual deployment
 prod.up:
@@ -25,4 +25,4 @@ client.up:
 	docker compose $(CLIENT) up -d
 
 client.down:
-	docker compose $(CLIENT) down -v
+	docker compose $(CLIENT) down

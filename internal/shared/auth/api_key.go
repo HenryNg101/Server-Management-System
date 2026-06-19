@@ -9,17 +9,13 @@ import (
 // Generate a secure random API key
 func GenerateAPIKey() (string, string, error) {
 	keyBytes := make([]byte, 32) // 256-bit
-	_, err := rand.Read(keyBytes)
-	if err != nil {
+	if _, err := rand.Read(keyBytes); err != nil {
 		return "", "", err
 	}
 
 	rawKey := hex.EncodeToString(keyBytes)
 
-	hash := sha256.Sum256([]byte(rawKey))
-	hashStr := hex.EncodeToString(hash[:])
-
-	return rawKey, hashStr, nil
+	return rawKey, HashAPIKey(rawKey), nil
 }
 
 // Hash incoming key (for comparison)

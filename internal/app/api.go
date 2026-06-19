@@ -21,6 +21,10 @@ import (
 // @in header
 // @name Authorization
 // @description Type 'Bearer ' followed by your JWT token.
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-Agent-API-Key
+// @description API Key for external automated systems.
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Application) *gin.Engine {
 	r := gin.Default()
 

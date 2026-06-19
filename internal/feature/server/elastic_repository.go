@@ -25,6 +25,7 @@ func NewServerESRepository(es *elasticsearch.Client) ElasticServerRepository {
 	return &elasticServerRepository{es: es}
 }
 
+// TODO: Finish this function
 func (r *elasticServerRepository) BulkInsertStatus(ctx context.Context, results []*model.Server) error {
 	var buf bytes.Buffer
 

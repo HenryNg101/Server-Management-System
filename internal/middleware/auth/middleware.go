@@ -39,23 +39,15 @@ func UserAuthMiddleware() gin.HandlerFunc {
 
 func AgentAuthMiddleware(agentService agent.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+		apiKey := c.GetHeader("X-Agent-API-Key")
 
-		if authHeader == "" {
+		if apiKey == "" {
 			c.AbortWithStatusJSON(401, gin.H{"error": "missing auth header"})
 			return
 		}
 
-		// Expect: Bearer <API_KEY>
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(401, gin.H{"error": "invalid auth format"})
-			return
-		}
-
-		rawKey := parts[1]
 		var agent model.Agent
-		if err := agentService.AgentExist(c, rawKey, &agent); err != nil {
+		if err := agentService.AgentExist(c, apiKey, &agent); err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid api key"})
 			return
 		}

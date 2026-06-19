@@ -15,13 +15,13 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/monitoring/metrics"
 )
 
-// TODO: Add API usage here, and claiming API key through config somehow
 // --------------------
 // MAIN
 // --------------------
 func main() {
 	serverIDStr := os.Getenv("SERVER_ID")
 	apiURL := os.Getenv("API_URL")
+	apiKey := os.Getenv("API_KEY")
 
 	serverID, err := strconv.Atoi(serverIDStr)
 	if err != nil {
@@ -38,7 +38,7 @@ func main() {
 			continue
 		}
 
-		var containerMetrics []agent.ContainerMetric
+		var messages []agent.MetricMessage
 		cpuTrackers := make(map[string]*metrics.CPUTracker)
 		ioTrackers := make(map[string]*metrics.IOTracker)
 
@@ -57,54 +57,72 @@ func main() {
 			cpuTracker := metrics.AddCPUTracker(cpuTrackers, c.ID)
 			ioTracker := metrics.AddIOTracker(ioTrackers, c.ID)
 
-			// ---- simple health check (best effort)
-			status := false
-			if len(c.Ports) > 0 {
-				port := strconv.Itoa(int(c.Ports[0].PrivatePort))
-				addr := name + ":" + port
-				status = isPortOpen(addr)
-			}
-
 			// Dealing with metrics
 			oomEvents, oomKills := metrics.GetOOMEvents(cgroupPath)
 			readBPS, writeBPS := ioTracker.GetIO(cgroupPath)
-			containerMetrics = append(containerMetrics, agent.ContainerMetric{
-				Name:   name,
-				Status: status,
+			msg := agent.MetricMessage{
+				Timestamp:     time.Now().UTC(),
+				ServerID:      serverID,
+				ContainerName: name,
 
-				CPUUsage:      cpuTracker.GetCPUPercent(cgroupPath),
-				CPUThrottling: metrics.GetCPUThrottling(cgroupPath),
-				CPUPressure:   metrics.GetCPUPressure(cgroupPath),
+				PIDs: int(metrics.GetPIDs(cgroupPath)),
 
-				MemoryUsage:      metrics.GetContainerMemory(cgroupPath),
-				MemoryWorkingSet: metrics.GetMemoryWorkingSet(cgroupPath),
-				MemoryRSS:        metrics.GetMemoryRSS(cgroupPath),
-				MemoryPressure:   metrics.GetMemoryPressure(cgroupPath),
+				CPU: struct {
+					Usage      float64 `json:"usage"`
+					Throttling float64 `json:"throttling"`
+					Pressure   float64 `json:"pressure"`
+				}{
+					Usage:      cpuTracker.GetCPUPercent(cgroupPath),
+					Throttling: metrics.GetCPUThrottling(cgroupPath),
+					Pressure:   metrics.GetCPUPressure(cgroupPath),
+				},
 
-				OOMEvents: oomEvents,
-				OOMKills:  oomKills,
+				Memory: struct {
+					Usage      float64 `json:"usage"`
+					WorkingSet float64 `json:"working_set"`
+					RSS        float64 `json:"rss"`
+					Pressure   float64 `json:"pressure"`
+				}{
+					Usage:      metrics.GetContainerMemory(cgroupPath),
+					WorkingSet: metrics.GetMemoryWorkingSet(cgroupPath),
+					RSS:        metrics.GetMemoryRSS(cgroupPath),
+					Pressure:   metrics.GetMemoryPressure(cgroupPath),
+				},
 
-				PIDs: metrics.GetPIDs(cgroupPath),
+				IO: struct {
+					ReadBPS  float64 `json:"read_bps"`
+					WriteBPS float64 `json:"write_bps"`
+					Pressure float64 `json:"pressure"`
+				}{
+					ReadBPS:  readBPS,
+					WriteBPS: writeBPS,
+					Pressure: metrics.GetIOPressure(cgroupPath),
+				},
 
-				ReadBPS:    readBPS,
-				WriteBPS:   writeBPS,
-				IOPressure: metrics.GetIOPressure(cgroupPath),
-			})
+				OOM: struct {
+					Events int `json:"events"`
+					Kills  int `json:"kills"`
+				}{
+					Events: int(oomEvents),
+					Kills:  int(oomKills),
+				},
+			}
+			messages = append(messages, msg)
 		}
 
 		//
 		// Sending metrics to HTTP server
-		payload := agent.Payload{
-			ServerID:  serverID,
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Metrics:   containerMetrics,
-		}
-
-		body, _ := json.Marshal(payload)
+		body, _ := json.Marshal(messages)
 
 		fmt.Println("Sending:", string(body))
 
-		resp, err := clientHTTP.Post(apiURL, "application/json", bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewBuffer(body))
+		if err != nil {
+			log.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("X-Agent-API-Key", apiKey)
+
+		resp, err := clientHTTP.Do(req)
 		if err != nil {
 			log.Println("failed:", err)
 		} else {

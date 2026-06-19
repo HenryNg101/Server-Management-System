@@ -46,8 +46,6 @@ definitions:
         type: integer
       server_id:
         type: integer
-      status:
-        type: boolean
     type: object
   auth.LoginRequest:
     properties:
@@ -81,7 +79,7 @@ definitions:
     type: object
   model.Agent:
     properties:
-      apikeyHash:
+      apikey:
         type: string
       createdAt:
         type: string
@@ -312,7 +310,9 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/agent.MetricMessage'
+          items:
+            $ref: '#/definitions/agent.MetricMessage'
+          type: array
       produces:
       - application/json
       responses:
@@ -329,7 +329,7 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
       summary: Metrics
       tags:
       - agents
@@ -765,6 +765,11 @@ paths:
       tags:
       - users
 securityDefinitions:
+  ApiKeyAuth:
+    description: API Key for external automated systems.
+    in: header
+    name: X-Agent-API-Key
+    type: apiKey
   BearerAuth:
     description: Type 'Bearer ' followed by your JWT token.
     in: header
