@@ -8,8 +8,6 @@
         "server_id": { "type": "long" },
         "container_name": { "type": "keyword" },
 
-        "status": { "type": "boolean" },
-
         "cpu": {
           "properties": {
             "usage": { "type": "float" },
