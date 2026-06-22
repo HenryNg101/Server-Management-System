@@ -81,7 +81,8 @@ func NewApp() (*Application, error) {
 	authService := auth.NewService(userRepo, authRedisRepo)
 
 	agentRepo := agent.NewRepository(postgresSession)
-	agentService := agent.NewService(agentRepo)
+	elasticAgentRepo := agent.NewAgentESRepository(esSession)
+	agentService := agent.NewService(agentRepo, elasticAgentRepo)
 
 	return &Application{
 		PostgresSession: postgresSession,

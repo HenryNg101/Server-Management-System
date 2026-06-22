@@ -33,3 +33,23 @@ type MetricMessage struct {
 		Kills  int `json:"kills"`
 	} `json:"oom"`
 }
+
+type ServerStats struct {
+	CPUUsageAvg      float64
+	CPUThrottlingAvg float64
+	CPUPressureAvg   float64
+
+	MemoryUsageAvg      float64
+	MemoryWorkingSetAvg float64
+	MemoryRSSAvg        float64
+	MemoryPressureAvg   float64
+
+	ReadBPSAvg    float64
+	WriteBPSAvg   float64
+	IOPressureAvg float64
+
+	PIDsAvg float64
+
+	OOMEventsTotal float64
+	OOMKillsTotal  float64
+}

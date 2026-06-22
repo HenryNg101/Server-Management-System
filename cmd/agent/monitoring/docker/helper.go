@@ -9,7 +9,7 @@ import (
 )
 
 // --------------------
-// Discover only containers that needs monitoring
+// Discover only containers that needs monitoring and running
 // --------------------
 func listContainers() ([]container.Summary, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -22,5 +22,6 @@ func listContainers() ([]container.Summary, error) {
 
 	return cli.ContainerList(context.Background(), container.ListOptions{
 		Filters: f,
+		All:     false,
 	})
 }

@@ -9,7 +9,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o agent ./cmd/agent/monitoring/docker
+RUN --mount=type=cache,target=/root/.cache/go-build \ 
+    go build -o agent ./cmd/agent/monitoring/docker
 
 # ---- runtime ----
 FROM alpine:latest

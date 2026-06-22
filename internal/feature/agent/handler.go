@@ -41,7 +41,8 @@ func (h *Handler) IngestMetrics(c *gin.Context) {
 		msgs[i].ServerID = int(serverID)
 	}
 
-	// TODO: push msgs to Kafka
+	h.service.PushMetrics(c, msgs)
+
 	fmt.Printf("Received %d metrics\n", len(msgs))
 
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
