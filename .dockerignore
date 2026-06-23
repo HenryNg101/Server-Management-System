@@ -1,7 +1,11 @@
 .git
 node_modules
-tmp
+tmp/
 *.log
 coverage.out
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
+.idea
+.vscode
+vendor/
+bin/

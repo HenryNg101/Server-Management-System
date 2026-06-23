@@ -11,8 +11,11 @@ COPY . .
 # Build argument to choose which cmd to build
 ARG CMD_PATH
 
+# Cache the build files and downloaded modules
+# Limit the number of processors to be used by compiler, otherwise it would occupy the entire Docker
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -o app ${CMD_PATH}
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -p=1 -o app ${CMD_PATH}
 
 # --- Runtime stage ---
 FROM alpine:latest

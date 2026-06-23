@@ -9,8 +9,11 @@ RUN go mod download
 
 COPY . .
 
-RUN --mount=type=cache,target=/root/.cache/go-build \ 
-    go build -o agent ./cmd/agent/monitoring/docker
+# Cache the build files and downloaded modules
+# Limit the number of processors to be used by compiler, otherwise it would occupy the entire Docker
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -p=2 -o agent ./cmd/agent/monitoring/docker
 
 # ---- runtime ----
 FROM alpine:latest
