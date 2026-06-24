@@ -63,8 +63,8 @@ func getEnv(key, fallback string) string {
 
 func LoadAppConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Host: getEnv("APP_HOST", "localhost"),
-		Port: getEnv("APP_PORT", "8080"),
+		Host: getEnv("HOST", "localhost"),
+		Port: getEnv("PORT", "8080"),
 	}
 }
 

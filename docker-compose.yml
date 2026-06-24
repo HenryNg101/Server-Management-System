@@ -23,7 +23,7 @@ services:
       args:
         CMD_PATH: ./cmd/api
     ports:
-      - "8080:8080"
+      - "${HOST}:8080:8080"
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:

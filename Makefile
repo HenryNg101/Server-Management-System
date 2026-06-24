@@ -5,23 +5,37 @@ CLIENT = -f docker-compose.client.yml
 
 .PHONY: dev.build dev.up dev.down prod.build prod.up prod.down prod.logs client.build client.up client.down
 
-# Reusable macro to build cleanly without crashing resources
-# It works by building a single service first, then build all others later
-# Why needs to do that ? Because each service spans across the entire codebase, which if is built simultaneously by Docker compose build, it would consume every resources of the Linux VM/host for Docker
-# Usage: $(call safe_build, <compose_files>)
+# Detect if the OS is Windows or Linux/WSL
+ifeq ($(OS),Windows_NT)
+    # If running on Windows PowerShell/CMD, reach inside WSL to get the exact Linux IP
+    HOST := $(shell wsl -e bash -c 'hostname -I | awk "{print $$1}"')
+else
+    # If running natively inside Linux bash
+    HOST := $(shell hostname -I | awk '{print $$1}')
+endif
+
+# Safe default fallback if the above evaluation returns empty
+HOST ?= 127.0.0.1
+
+# Reusable macro to build cleanly without crashing resources.
+# Note: Variables in a Makefile target recipe must be prefixed natively on the same line.
 define safe_build
-	docker compose --env-file .env.docker $(1) build api
-	docker compose --env-file .env.docker $(1) build
+	HOST=$(HOST) docker compose --env-file .env.docker $(1) build api
+	HOST=$(HOST) docker compose --env-file .env.docker $(1) build
 endef
 
 # ==========================================
 # DEVELOPMENT PURPOSES
 # ==========================================
 dev.build:
-	$(call safe_build, $(INFRA) $(DEV))
+#	$(call safe_build, $(INFRA) $(DEV))
+	HOST=$(HOST) docker compose --env-file .env.docker $(INFRA) $(DEV) build
 
 dev.up: dev.build
-	docker compose --env-file .env.docker $(INFRA) $(DEV) up -d --no-build
+	HOST=$(HOST) docker compose --env-file .env.docker $(INFRA) $(DEV) up -d --no-build
+	@echo "========================================="
+	@echo "🚀 Dev services are available! Access them through: http://$(HOST):<port>"
+	@echo "========================================="
 
 dev.down:
 	docker compose $(INFRA) $(DEV) down
@@ -33,7 +47,10 @@ prod.build:
 	$(call safe_build, $(APP) $(INFRA))
 
 prod.up: prod.build
-	docker compose --env-file .env.docker $(APP) $(INFRA) up -d --no-build
+	HOST=$(HOST) docker compose --env-file .env.docker $(APP) $(INFRA) up -d --no-build
+	@echo "========================================="
+	@echo "🚀 Prod services are available! Access them through: http://$(HOST):<port>"
+	@echo "========================================="
 
 prod.down:
 	docker compose $(APP) $(INFRA) down -v
@@ -45,10 +62,13 @@ prod.logs:
 # CLIENT TESTING PURPOSES
 # ==========================================
 client.build:
-	docker compose --env-file .env.docker $(CLIENT) build
+	HOST=$(HOST) docker compose --env-file .env.docker $(CLIENT) build
 
 client.up: client.build
-	docker compose --env-file .env.docker $(CLIENT) up -d --no-build
+	HOST=$(HOST) docker compose --env-file .env.docker $(CLIENT) up -d --no-build
+	@echo "========================================="
+	@echo "🚀 Client services are available! Access them through: http://$(HOST):<port>"
+	@echo "========================================="
 
 client.down:
 	docker compose $(CLIENT) down
