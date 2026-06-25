@@ -9,9 +9,12 @@ CLIENT = -f docker-compose.client.yml
 ifeq ($(OS),Windows_NT)
     # If running on Windows PowerShell/CMD, reach inside WSL to get the exact Linux IP
     HOST := $(shell wsl -e bash -c 'hostname -I | awk "{print $$1}"')
+else ifeq ($(shell uname -s),Linux)
+	# If running natively inside Linux bash
+	HOST := $(shell hostname -I | awk '{print $$1}')
 else
-    # If running natively inside Linux bash
-    HOST := $(shell hostname -I | awk '{print $$1}')
+    # If running natively inside MacOS cmdline, use the hostname command to get the IP address
+    HOST := $(shell hostname)
 endif
 
 # Safe default fallback if the above evaluation returns empty
