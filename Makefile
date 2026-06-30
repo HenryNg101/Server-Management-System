@@ -1,13 +1,14 @@
-INFRA  = -f docker-compose.infra.yml
-APP    = -f docker-compose.yml
-DEV	   = -f docker-compose.dev.yml
-CLIENT = -f docker-compose.client.yml
+COMPOSE_INFRA  = -f docker-compose.infra.yml
+COMPOSE_APP    = -f docker-compose.yml
+COMPOSE_DEV	   = -f docker-compose.dev.yml
+COMPOSE_CLIENT = -f docker-compose.client.yml
+ENV_FILE       = .env.docker
 
-.PHONY: dev.build dev.up dev.down prod.build prod.up prod.down prod.logs client.build client.up client.down
+.PHONY: env_init dev.build dev.up dev.down prod.build prod.up prod.down prod.logs client.build client.up client.down
 
-# Detect if the OS is Windows or Linux/WSL
+# Detect if the OS is Windows or Linux/WSL, then grab the IP address of the Linux WSL instance dynamically. 
+# This is to bypass the weird networking issues from Windows Hyper-V, where they randomly reserve ports (Even if not use) on localhost
 ifeq ($(OS),Windows_NT)
-    # If running on Windows PowerShell/CMD, reach inside WSL to get the exact Linux IP
     HOST := $(shell wsl -e bash -c 'hostname -I | awk "{print $$1}"')
 else ifeq ($(shell uname -s),Linux)
 	# If running natively inside Linux bash
@@ -20,58 +21,64 @@ endif
 # Safe default fallback if the above evaluation returns empty
 HOST ?= 127.0.0.1
 
-# Reusable macro to build cleanly without crashing resources.
-# Note: Variables in a Makefile target recipe must be prefixed natively on the same line.
-define safe_build
-	HOST=$(HOST) docker compose --env-file .env.docker $(1) build api
-	HOST=$(HOST) docker compose --env-file .env.docker $(1) build
-endef
+# Clean up old HOST definitions on env files and append the fresh current IP into the file
+env_init:
+	@echo "Updating $(ENV_FILE) with active WSL IP: $(HOST)"
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (Test-Path $(ENV_FILE)) { (Get-Content $(ENV_FILE)) -notmatch '^ *HOST=' | Set-Content $(ENV_FILE) }"
+	@powershell -Command "Add-Content $(ENV_FILE) 'HOST=$(HOST)'"
+else
+	@sed -i '/^ *HOST=/d' $(ENV_FILE) 2>/dev/null || true
+	@echo "HOST=$(HOST)" >> $(ENV_FILE)
+endif
 
 # ==========================================
-# DEVELOPMENT PURPOSES
+# For actual deployment
 # ==========================================
-dev.build:
-#	$(call safe_build, $(INFRA) $(DEV))
-	HOST=$(HOST) docker compose --env-file .env.docker $(INFRA) $(DEV) build
-
-dev.up: dev.build
-	HOST=$(HOST) docker compose --env-file .env.docker $(INFRA) $(DEV) up -d --no-build
-	@echo "========================================="
-	@echo "🚀 Dev services are available! Access them through: http://$(HOST):<port>"
-	@echo "========================================="
-
-dev.down:
-	docker compose $(INFRA) $(DEV) down
-
-# ==========================================
-# PRODUCTION / ACTUAL DEPLOYMENT
-# ==========================================
-prod.build:
-	$(call safe_build, $(APP) $(INFRA))
+prod.build: env_init
+#	Build cleanly without crashing resources, using sequential cache-warming by building one service first, to allow Docker caching even working at all
+#	This is to avoid the issue of Docker caching not working properly when building multiple services at once, as Docker builds services in parallel and cache is not utilized effectively right in the first build, which can lead to unnecessary rebuilds of GBs of data, longer build times, and in worst cases, thrashings.
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build api
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build
 
 prod.up: prod.build
-	HOST=$(HOST) docker compose --env-file .env.docker $(APP) $(INFRA) up -d --no-build
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) up -d --no-build
 	@echo "========================================="
-	@echo "🚀 Prod services are available! Access them through: http://$(HOST):<port>"
+	@echo "Compose services are available! Access them through: http://$(HOST):<port>"
 	@echo "========================================="
 
 prod.down:
-	docker compose $(APP) $(INFRA) down -v
+	docker compose $(COMPOSE_INFRA) $(COMPOSE_APP) down -v
 
 prod.logs:
-	docker compose $(APP) $(INFRA) logs -f $(SERVICE)
+	docker compose $(COMPOSE_INFRA) $(COMPOSE_APP) logs -f $(SERVICE)
 
 # ==========================================
-# CLIENT TESTING PURPOSES
+# For development. The only difference from this to production is that, in this one, ports are exposed for debugging purposes. In production, ports for infrastructure are not exposed to the outside world for security reasons.
 # ==========================================
-client.build:
-	HOST=$(HOST) docker compose --env-file .env.docker $(CLIENT) build
+dev.build: env_init
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build
+
+dev.up: dev.build
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) up -d --no-build
+	@echo "========================================="
+	@echo "Compose services are available! Access them through: http://$(HOST):<port>"
+	@echo "========================================="
+
+dev.down:
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) down
+
+# ==========================================
+# For testing monitoring agent purposes
+# ==========================================
+client.build: env_init
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_CLIENT) build
 
 client.up: client.build
-	HOST=$(HOST) docker compose --env-file .env.docker $(CLIENT) up -d --no-build
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_CLIENT) up -d --no-build
 	@echo "========================================="
-	@echo "🚀 Client services are available! Access them through: http://$(HOST):<port>"
+	@echo "Docker compose services are available! Access them through: http://$(HOST):<port>"
 	@echo "========================================="
 
 client.down:
-	docker compose $(CLIENT) down
+	docker compose $(COMPOSE_CLIENT) down

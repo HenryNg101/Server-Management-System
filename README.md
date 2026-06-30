@@ -1,6 +1,6 @@
 # SMS-X (Server Management System)
 
-SMS-X is a backend system for managing and monitoring up to 10,000 servers.
+SMS-X is a system used for managing and monitoring up to 10,000 servers.
 
 It allows users to:
 - Register and manage servers (IP + port)
@@ -9,7 +9,7 @@ It allows users to:
 - Generate uptime reports
 - Receive email notifications
 
----
+
 
 # Features
 
@@ -20,8 +20,9 @@ It allows users to:
 - Role-based access (admin / user)
 - Elasticsearch-based uptime analytics
 - Email reporting
+- Agent-based monitoring to collect metrics from client's servers
 
----
+
 
 # Tech Stack
 
@@ -32,33 +33,34 @@ It allows users to:
 - **Docker Compose** (infrastructure)
 - **Swaggo** (OpenAPI documentation)
 
----
+
 
 # Setup
 
 ## 1. Environment Variables
 
-Create a `.env` file in the root directory (Name it `.env.docker` if you want to run the whole app in docker):
+Create an environment variable file in the root directory:
 
 ```
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=secret
+POSTGRES_PASSWORD=...
 POSTGRES_DB=postgres
-POSTGRES_HOST=localhost
+POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 
 ELASTIC_USER=elastic
-ELASTIC_PASSWORD=elastic123
-KIBANA_PASSWORD=kibana123
-ELASTIC_HOST=[http://127.0.0.1](http://127.0.0.1)
+ELASTIC_PASSWORD=...
+KIBANA_PASSWORD=...
+ELASTIC_HOST=http://elasticsearch
 ELASTIC_PORT=9200
 ELASTIC_STATUS_DATA_STREAM_SOURCE=server-status
 ELASTIC_METRICS_DATA_STREAM_SOURCE=server-metric
 
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=redis123
+REDIS_PASSWORD=...
 
+# Information to setup mail server
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
@@ -66,17 +68,22 @@ MAIL_PASSWORD=your_app_password
 MAIL_FROM_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
 
 JWT_SECRET=your_secret
-````
 
----
+# Client stuff. For testing monitoring agent on sample server
+CLIENT_AGENT_SERVER_ID=1
+CLIENT_AGENT_API_SERVER = http://host.docker.internal:8080
+
+# Generated API key when you 
+CLIENT_AGENT_API_KEY = ...
+````
 
 ## 2. How to run
 
-### For dev environment (To setup infrastructure)
+### For dev environment
 
 Setup:
 ```bash
-make dev.up
+make dev.up ENV_FILE="Your env file's path"
 ````
 
 Tear down:
@@ -90,14 +97,19 @@ Services:
 * Redis
 * Elasticsearch
 * Kibana
+* API Server: Gin application to expose all APIs for usage
+* Server Checker Worker: A worker that runs every 5 seconds to checks server's reachability using ping, then updates information to Elasticsearch, and logs to Elasticsearch for append-only logs
+* Email worker: Sends daily reports via email
 
 **Note**: Elasticsearch may take some time to fully start.
 
 ### For prod simulation
 
+Prod has quite similar settings, with the exception of exposing minimal service ports and disable debugging information for security purposes
+
 Start up:
 ```bash
-make prod.up
+make prod.up ENV_FILE="Your env file's path"
 ```
 
 Tear down:
@@ -112,41 +124,10 @@ make prod.logs
 
 Check logs of specific services:
 ```bash
-make prod.logs SERVICE=<service-name>
+make prod.logs SERVICE="service name to check logs"
 ```
 
----
-
-## 3. Run Applications (For dev mode)
-
-### API Server
-
-```bash
-go run ./cmd/api
-```
-
-### Server Checker Worker
-
-```bash
-go run ./cmd/worker/servers_checker
-```
-
-* Runs every 5 seconds
-* Checks server health
-* Updates PostgreSQL
-* Logs to Elasticsearch
-
-### Email Worker
-
-```bash
-go run ./cmd/worker/emailer
-```
-
-* Sends daily reports via email
-
----
-
-## 4. (Optional) Simulation
+## 3. (Optional) Simulation
 
 ```bash
 go run ./cmd/simulation
@@ -155,14 +136,12 @@ go run ./cmd/simulation
 * Simulates opening 10k services on 10k ports on localhost
 * For testing only (not production)
 
----
-
 # Authentication
 
 ## Login
 
 ```http
-POST /auth/login
+POST /api/v1/login
 ```
 
 Body:
@@ -179,39 +158,35 @@ Response:
 * Access token
 * Refresh token
 
----
-
 ## Refresh Token
 
 ```http
-POST /auth/refresh
+POST /api/v1/refresh
 ```
-
----
 
 ## Logout
 
 ```http
-POST /auth/logout
+POST /api/v1/logout
 ```
-
----
 
 # API Overview
 
+You can see all documented APIs through Swagger OpenAPI docs by accessing `/swagger/index.html` after the application is up
+
 ## Public APIs
 
-* `POST /auth/login`
-* `POST /auth/refresh`
-* `POST /auth/logout`
+* `POST /api/v1/login`
+* `POST /api/v1/refresh`
+* `POST /api/v1/logout`
 
----
+
 
 ## Authenticated APIs
 
-* `GET /servers`
-* `GET /servers/{id}`
-* `GET /users`
+* `GET /api/v1/servers`
+* `GET /api/v1/servers/{id}`
+* `GET /api/v1/users`
 
 Supports:
 
@@ -219,30 +194,30 @@ Supports:
 * Pagination (offset-based)
 * Sorting
 
----
+
 
 ## Admin APIs
 
-* `POST /servers`
+* `POST /api/v1/servers`
 
-* `PATCH /servers/{id}`
+* `PATCH /api/v1/servers/{id}`
 
-* `DELETE /servers/{id}`
+* `DELETE /api/v1/servers/{id}`
 
-* `POST /servers/import` (CSV)
+* `POST /api/v1/servers/import` (CSV)
 
-* `GET /servers/export` (CSV)
+* `GET /api/v1/servers/export` (CSV)
 
-* `POST /servers/report`
+* `POST /api/v1/servers/report`
 
----
+
 
 # Reporting
 
 ## Generate Report
 
 ```http
-POST /servers/report
+POST /api/v1/servers/report
 ```
 
 Body:
@@ -264,7 +239,7 @@ Returns:
 
 Optionally sends email report.
 
----
+
 
 # OpenAPI Docs
 
@@ -276,15 +251,13 @@ swag init -g ./internal/app/api.go
 
 Docs available in `/docs`, and can be viewed and tested at http://localhost:8080/swagger/index.html when running in local
 
----
+
 
 # Notes
 
-* Elasticsearch must be fully started before use
-* Running in WSL may cause high disk usage issues
-* Recommended to run on native OS
+* Elasticsearch must be fully started (healthy status) before testing
 
----
+
 
 # Testing
 
@@ -296,7 +269,7 @@ The codebase is structured to support testing with clear separation of:
 * service
 * repository
 
----
+
 
 # Future Improvements
 
@@ -306,7 +279,7 @@ The codebase is structured to support testing with clear separation of:
 * Improved test coverage
 * Horizontal scaling
 
----
+
 
 # Project Structure
 

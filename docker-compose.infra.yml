@@ -17,8 +17,6 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-    # ports:
-    #   - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
@@ -57,8 +55,6 @@ services:
       - ELASTICSEARCH_HOSTS=${ELASTIC_HOST}:${ELASTIC_PORT}
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-    # ports:
-    #   - "5601:5601"
     logging: *default-logging
   
   # PostgreSQL DB setup
@@ -68,8 +64,6 @@ services:
     restart: always
     env_file:
       - .env.docker
-    # ports:
-    #   - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -105,9 +99,6 @@ services:
       - .env.docker
     environment:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
-    # ports:
-    #   - "6379:6379"
-    #   - "8001:8001"
     volumes:
       - redis_data:/data
     healthcheck:
