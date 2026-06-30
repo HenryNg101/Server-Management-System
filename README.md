@@ -67,13 +67,13 @@ MAIL_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
 MAIL_PASSWORD=your_app_password
 MAIL_FROM_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
 
-JWT_SECRET=your_secret
+JWT_SECRET=...
 
 # Client stuff. For testing monitoring agent on sample server
 CLIENT_AGENT_SERVER_ID=1
 CLIENT_AGENT_API_SERVER = http://host.docker.internal:8080
 
-# Generated API key when you 
+# Generated API key that's given to youwhen you register a server to the system
 CLIENT_AGENT_API_KEY = ...
 ````
 
