@@ -243,13 +243,19 @@ Optionally sends email report.
 
 # OpenAPI Docs
 
-Generate docs:
+Generate docs (Runs this on WSL if you are using Windows):
 
-```bash
-swag init -g ./internal/app/api.go
-```
+- If you haven't got swag-go command line tool available (Skip this if it's available on your terminal):
+  ```bash
+  go install github.com/swaggo/swag/cmd/swag@latest
+  ```
 
-Docs available in `/docs`, and can be viewed and tested at http://localhost:8080/swagger/index.html when running in local
+- Then: 
+  ```bash
+  swag init -g ./internal/app/api.go
+  ```
+
+Docs available in `/docs`, and can be viewed and tested at http://<host>:8080/swagger/index.html when running in local
 
 
 
