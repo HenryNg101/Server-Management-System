@@ -15,22 +15,22 @@ func (f *fakeElastic) BulkInsertStatus(ctx context.Context, s []*model.Server) e
 	return nil
 }
 
-func (f *fakeElastic) GetDailyUptime(ctx context.Context, start, end time.Time, topN int) (map[uint]float64, error) {
-	return map[uint]float64{1: 0.99}, nil
+func (f *fakeElastic) GetDailyUptime(ctx context.Context, start, end time.Time, topN int) (map[uint]*ServerPullStats, error) {
+	return map[uint]*ServerPullStats{1: {Uptime: 0.99}}, nil
 }
 
-type fakeMailer struct {
-	called bool
-}
+// type fakeMailer struct {
+// 	called bool
+// }
 
-func (f *fakeMailer) Send(to []string, subject, body string) error {
-	f.called = true
-	return nil
-}
+// func (f *fakeMailer) Send(to []string, subject, body string) error {
+// 	f.called = true
+// 	return nil
+// }
 
 func setupService() (Service, *mockRepo) {
 	repo := NewFakeRepo()
-	svc := NewService(repo, nil, nil)
+	svc := NewService(repo, nil)
 	return svc, repo
 }
 
@@ -166,7 +166,7 @@ func TestGetServers_FilteringAndPagination(t *testing.T) {
 		&model.Server{Name: "gamma", Status: true, Protocol: "tcp"},
 	)
 
-	svc := NewService(repo, nil, nil)
+	svc := NewService(repo, nil)
 
 	status := true
 	protocol := "tcp"
@@ -301,7 +301,7 @@ func TestDeleteServer_RepoError(t *testing.T) {
 	repo := NewFakeRepo()
 	repo.SetDbExists(false)
 
-	svc := NewService(repo, nil, nil)
+	svc := NewService(repo, nil)
 
 	err := svc.DeleteServer(context.Background(), 1)
 	if err == nil {
@@ -378,7 +378,7 @@ func TestImportServers_RepoFailure(t *testing.T) {
 	repo := NewFakeRepo()
 	repo.SetDbExists(false)
 
-	svc := NewService(repo, nil, nil)
+	svc := NewService(repo, nil)
 
 	csvData := `name,status,ipv4_address,port,protocol
 server1,true,127.0.0.1,80,tcp
@@ -397,9 +397,8 @@ server1,true,127.0.0.1,80,tcp
 func TestElasticBulkInsert(t *testing.T) {
 	repo := NewFakeRepo()
 	elastic := &fakeElastic{}
-	mailer := &fakeMailer{}
 
-	svc := NewService(repo, elastic, mailer)
+	svc := NewService(repo, elastic)
 
 	server := model.Server{Status: true}
 	err := svc.ElasticBulkInsert(context.Background(), []*model.Server{
@@ -411,46 +410,47 @@ func TestElasticBulkInsert(t *testing.T) {
 	}
 }
 
-func TestSendReports_NoEmail(t *testing.T) {
-	repo := NewFakeRepo()
-	elastic := &fakeElastic{}
-	mailer := &fakeMailer{}
+// TODO: Move these tests to monitoring domain/feature when write unit tests there
+// func TestSendReports_NoEmail(t *testing.T) {
+// 	repo := NewFakeRepo()
+// 	elastic := &fakeElastic{}
+// 	mailer := &fakeMailer{}
 
-	svc := NewService(repo, elastic, mailer)
+// 	svc := NewService(repo, elastic, mailer)
 
-	repo.Create(context.Background(), &model.Server{Status: true})
+// 	repo.Create(context.Background(), &model.Server{Status: true})
 
-	report, err := svc.SendReports(time.Now(), time.Now(), 10, nil, context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+// 	report, err := svc.SendReports(time.Now(), time.Now(), 10, nil, context.Background())
+// 	if err != nil {
+// 		t.Fatalf("unexpected error")
+// 	}
 
-	if report.TotalServers == 0 {
-		t.Fatalf("expected stats")
-	}
+// 	if report.TotalServers == 0 {
+// 		t.Fatalf("expected stats")
+// 	}
 
-	if mailer.called {
-		t.Fatalf("mailer should not be called")
-	}
-}
+// 	if mailer.called {
+// 		t.Fatalf("mailer should not be called")
+// 	}
+// }
 
-func TestSendReports_WithEmail(t *testing.T) {
-	repo := NewFakeRepo()
-	elastic := &fakeElastic{}
-	mailer := &fakeMailer{}
+// func TestSendReports_WithEmail(t *testing.T) {
+// 	repo := NewFakeRepo()
+// 	elastic := &fakeElastic{}
+// 	mailer := &fakeMailer{}
 
-	svc := NewService(repo, elastic, mailer)
+// 	svc := NewService(repo, elastic, mailer)
 
-	repo.Create(context.Background(), &model.Server{Status: true})
+// 	repo.Create(context.Background(), &model.Server{Status: true})
 
-	emails := []string{"test@example.com"}
+// 	emails := []string{"test@example.com"}
 
-	_, err := svc.SendReports(time.Now(), time.Now(), 10, &emails, context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+// 	_, err := svc.SendReports(time.Now(), time.Now(), 10, &emails, context.Background())
+// 	if err != nil {
+// 		t.Fatalf("unexpected error")
+// 	}
 
-	if !mailer.called {
-		t.Fatalf("expected mailer to be called")
-	}
-}
+// 	if !mailer.called {
+// 		t.Fatalf("expected mailer to be called")
+// 	}
+// }

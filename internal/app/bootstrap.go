@@ -6,10 +6,12 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/config"
 	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	"github.com/HenryNg101/server-management-system/internal/feature/auth"
+	"github.com/HenryNg101/server-management-system/internal/feature/monitoring"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	"github.com/HenryNg101/server-management-system/internal/logger"
 	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
+	"github.com/HenryNg101/server-management-system/internal/platform/mailer"
 	"github.com/HenryNg101/server-management-system/internal/platform/postgres"
 	redisServer "github.com/HenryNg101/server-management-system/internal/platform/redis"
 	"github.com/elastic/go-elasticsearch/v9"
@@ -19,13 +21,14 @@ import (
 
 // TODO: Add Kafka dependency here somehow
 type Application struct {
-	PostgresSession *gorm.DB
-	ElasticSession  *elasticsearch.Client
-	RedisSession    *redis.Client
-	ServerService   *server.Service
-	UserService     *user.Service
-	AuthService     *auth.Service
-	AgentService    *agent.Service
+	PostgresSession   *gorm.DB
+	ElasticSession    *elasticsearch.Client
+	RedisSession      *redis.Client
+	ServerService     *server.Service
+	UserService       *user.Service
+	AuthService       *auth.Service
+	AgentService      *agent.Service
+	MonitoringService *monitoring.Service
 }
 
 // Create a new app with services to be used
@@ -57,22 +60,23 @@ func NewApp() (*Application, error) {
 	}
 	redisSession := redisServer.NewPostgresSession(redisConfig)
 
-	//
-	// Create services
-	serverRepo := server.NewRepository(postgresSession)
-	elasticServerRepo := server.NewServerESRepository(esSession)
 	mailerConfig := config.LoadMailer()
 	if len(mailerConfig.Password) == 0 {
 		return nil, errors.New("Password for email server is not set. You have to set it in .env file in root folder using MAIL_PASSWORD variable")
 	}
-	mailerUtility := server.NewMailer(
+	mailerUtility := mailer.NewMailer(
 		mailerConfig.Server,
 		mailerConfig.Port,
 		mailerConfig.UserName,
 		mailerConfig.Password,
 		mailerConfig.FromEmail,
 	)
-	serverService := server.NewService(serverRepo, elasticServerRepo, mailerUtility)
+
+	//
+	// Create services
+	serverRepo := server.NewRepository(postgresSession)
+	elasticServerRepo := server.NewServerESRepository(esSession)
+	serverService := server.NewService(serverRepo, elasticServerRepo)
 
 	userRepo := user.NewRepository(postgresSession)
 	userService := user.NewService(userRepo)
@@ -84,13 +88,16 @@ func NewApp() (*Application, error) {
 	elasticAgentRepo := agent.NewAgentESRepository(esSession)
 	agentService := agent.NewService(agentRepo, elasticAgentRepo)
 
+	monitoringService := monitoring.NewService(elasticAgentRepo, elasticServerRepo, serverRepo, mailerUtility)
+
 	return &Application{
-		PostgresSession: postgresSession,
-		ElasticSession:  esSession,
-		RedisSession:    redisSession,
-		ServerService:   &serverService,
-		UserService:     &userService,
-		AuthService:     &authService,
-		AgentService:    &agentService,
+		PostgresSession:   postgresSession,
+		ElasticSession:    esSession,
+		RedisSession:      redisSession,
+		ServerService:     &serverService,
+		UserService:       &userService,
+		AuthService:       &authService,
+		AgentService:      &agentService,
+		MonitoringService: &monitoringService,
 	}, nil
 }

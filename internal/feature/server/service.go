@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"time"
@@ -25,9 +24,6 @@ type Service interface {
 	// Elastic services
 	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
 
-	// Reporting
-	SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error)
-
 	// Monitoring agent
 	CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error)
 }
@@ -35,11 +31,10 @@ type Service interface {
 type serverService struct {
 	repo        Repository
 	elasticRepo ElasticServerRepository
-	mailUtility MailingUtility
 }
 
-func NewService(r Repository, elastic ElasticServerRepository, mailer MailingUtility) Service {
-	return &serverService{repo: r, elasticRepo: elastic, mailUtility: mailer}
+func NewService(r Repository, elastic ElasticServerRepository) Service {
+	return &serverService{repo: r, elasticRepo: elastic}
 }
 
 func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
@@ -228,42 +223,4 @@ func (s *serverService) ImportServers(ctx context.Context, r io.Reader) (*Import
 
 func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error {
 	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
-}
-
-func (s *serverService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error) {
-	total, up, down, err := s.repo.GetStats(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	uptime, err := s.elasticRepo.GetDailyUptime(ctx, startTime, endTime, topN)
-	if err != nil {
-		return nil, err
-	}
-
-	serversReport := &Report{
-		TotalServers: total,
-		ServersUp:    up,
-		ServersDown:  down,
-		Uptime:       uptime,
-	}
-
-	if emailsList == nil || len(*emailsList) == 0 {
-		return serversReport, nil
-	}
-
-	mailHtmlContent := buildReportHTML(serversReport, startTime, endTime)
-
-	subject := fmt.Sprintf(
-		"Server Report (%s → %s)",
-		startTime.Format("2006-01-02"),
-		endTime.Add(-24*time.Hour).Format("2006-01-02"),
-	)
-
-	// TODO: Make this async -> No blocking of waiting for sending all emails
-	err = s.mailUtility.Send(*emailsList, subject, mailHtmlContent)
-	if err != nil {
-		return nil, err
-	}
-	return serversReport, nil
 }

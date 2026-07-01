@@ -14,7 +14,7 @@ import (
 
 type ElasticServerRepository interface {
 	BulkInsertStatus(ctx context.Context, results []*model.Server) error
-	GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]float64, error)
+	GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPullStats, error)
 }
 
 type elasticServerRepository struct {
@@ -56,7 +56,7 @@ func (r *elasticServerRepository) BulkInsertStatus(ctx context.Context, results 
 	return nil
 }
 
-func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]float64, error) {
+func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPullStats, error) {
 	query := fmt.Sprintf(`{
 	  "size": 0,
 	  "query": {
@@ -108,7 +108,7 @@ func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime 
 		return nil, err
 	}
 
-	result := make(map[uint]float64)
+	result := make(map[uint]*ServerPullStats)
 
 	aggs, ok := parsed["aggregations"].(map[string]interface{})
 	if !ok {
@@ -123,7 +123,9 @@ func (r *elasticServerRepository) GetDailyUptime(ctx context.Context, startTime 
 		serverID := uint(bucket["key"].(float64))
 		uptime := bucket["uptime"].(map[string]interface{})["value"].(float64)
 
-		result[serverID] = uptime
+		result[serverID] = &ServerPullStats{
+			Uptime: uptime,
+		}
 	}
 
 	return result, nil

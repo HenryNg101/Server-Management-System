@@ -48,7 +48,7 @@ func main() {
 			// Send emails
 			endReportTime := time.Now()
 			startReportTime := endReportTime.Add(-24 * time.Hour)
-			_, err = (*newApplication.ServerService).SendReports(
+			_, err = (*newApplication.MonitoringService).SendReports(
 				startReportTime, endReportTime, 10, emailAddresses, ctx,
 			)
 			if err != nil {

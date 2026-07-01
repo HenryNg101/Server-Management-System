@@ -162,6 +162,67 @@ definitions:
     x-enum-varnames:
     - RoleAdmin
     - RoleUser
+  monitoring.Report:
+    properties:
+      servers_down:
+        type: integer
+      servers_stats:
+        items:
+          $ref: '#/definitions/monitoring.ServerOverview'
+        type: array
+      servers_up:
+        type: integer
+      total_servers:
+        type: integer
+    type: object
+  monitoring.SendReportRequest:
+    properties:
+      count:
+        description: The number of top N worst servers you want to show in the report
+        type: integer
+      emails:
+        description: Optional. It might sends emails or nah
+        items:
+          type: string
+        type: array
+      end:
+        type: string
+      start:
+        type: string
+    type: object
+  monitoring.ServerOverview:
+    properties:
+      cpu_pressure_avg:
+        type: number
+      cpu_throttling_avg:
+        type: number
+      cpu_usage_avg:
+        type: number
+      io_pressure_avg:
+        type: number
+      memory_pressure_avg:
+        type: number
+      memory_rss_avg:
+        type: number
+      memory_usage_avg:
+        type: number
+      memory_working_set_avg:
+        type: number
+      oom_events_total:
+        type: number
+      oom_kills_total:
+        type: number
+      pids_avg:
+        type: number
+      read_bps_avg:
+        type: number
+      serverID:
+        type: integer
+      uptime:
+        type: number
+      write_bps_avg:
+        type: number
+    type: object
   server.CreateServerRequest:
     properties:
       ipv4_address:
@@ -238,35 +299,6 @@ definitions:
         items:
           $ref: '#/definitions/model.Server'
         type: array
-    type: object
-  server.Report:
-    properties:
-      servers_down:
-        type: integer
-      servers_up:
-        type: integer
-      total_servers:
-        type: integer
-      uptime_per_server:
-        additionalProperties:
-          format: float64
-          type: number
-        type: object
-    type: object
-  server.SendReportRequest:
-    properties:
-      count:
-        description: The number of top N worst servers you want to show in the report
-        type: integer
-      emails:
-        description: Optional. It might sends emails or nah
-        items:
-          type: string
-        type: array
-      end:
-        type: string
-      start:
-        type: string
     type: object
   server.UpdateServerRequest:
     properties:
@@ -701,14 +733,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/server.SendReportRequest'
+          $ref: '#/definitions/monitoring.SendReportRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.Report'
+            $ref: '#/definitions/monitoring.Report'
         "400":
           description: Bad Request
           schema:

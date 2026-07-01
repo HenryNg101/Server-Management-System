@@ -71,16 +71,9 @@ type ImportFailure struct {
 	Record map[string]string `json:"record"`
 }
 
-type Report struct {
-	TotalServers int64            `json:"total_servers"`
-	ServersUp    int64            `json:"servers_up"`
-	ServersDown  int64            `json:"servers_down"`
-	Uptime       map[uint]float64 `json:"uptime_per_server"`
-}
+type ServerPullStats struct {
+	Uptime float64 `json:"uptime"`
 
-type SendReportRequest struct {
-	Start  *string   `json:"start"`
-	End    *string   `json:"end"`
-	TopN   *int      `json:"count"`            // The number of top N worst servers you want to show in the report
-	Emails *[]string `json:"emails,omitempty"` // Optional. It might sends emails or nah
+	// TODO: Add this later
+	// LatencyP95 float64
 }

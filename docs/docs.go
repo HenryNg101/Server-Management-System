@@ -458,7 +458,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.SendReportRequest"
+                            "$ref": "#/definitions/monitoring.SendReportRequest"
                         }
                     }
                 ],
@@ -466,7 +466,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.Report"
+                            "$ref": "#/definitions/monitoring.Report"
                         }
                     },
                     "400": {
@@ -984,6 +984,98 @@ const docTemplate = `{
                 "RoleUser"
             ]
         },
+        "monitoring.Report": {
+            "type": "object",
+            "properties": {
+                "servers_down": {
+                    "type": "integer"
+                },
+                "servers_stats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/monitoring.ServerOverview"
+                    }
+                },
+                "servers_up": {
+                    "type": "integer"
+                },
+                "total_servers": {
+                    "type": "integer"
+                }
+            }
+        },
+        "monitoring.SendReportRequest": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of top N worst servers you want to show in the report",
+                    "type": "integer"
+                },
+                "emails": {
+                    "description": "Optional. It might sends emails or nah",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        },
+        "monitoring.ServerOverview": {
+            "type": "object",
+            "properties": {
+                "cpu_pressure_avg": {
+                    "type": "number"
+                },
+                "cpu_throttling_avg": {
+                    "type": "number"
+                },
+                "cpu_usage_avg": {
+                    "type": "number"
+                },
+                "io_pressure_avg": {
+                    "type": "number"
+                },
+                "memory_pressure_avg": {
+                    "type": "number"
+                },
+                "memory_rss_avg": {
+                    "type": "number"
+                },
+                "memory_usage_avg": {
+                    "type": "number"
+                },
+                "memory_working_set_avg": {
+                    "type": "number"
+                },
+                "oom_events_total": {
+                    "type": "number"
+                },
+                "oom_kills_total": {
+                    "type": "number"
+                },
+                "pids_avg": {
+                    "type": "number"
+                },
+                "read_bps_avg": {
+                    "type": "number"
+                },
+                "serverID": {
+                    "type": "integer"
+                },
+                "uptime": {
+                    "type": "number"
+                },
+                "write_bps_avg": {
+                    "type": "number"
+                }
+            }
+        },
         "server.CreateServerRequest": {
             "type": "object",
             "required": [
@@ -1093,49 +1185,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.Server"
                     }
-                }
-            }
-        },
-        "server.Report": {
-            "type": "object",
-            "properties": {
-                "servers_down": {
-                    "type": "integer"
-                },
-                "servers_up": {
-                    "type": "integer"
-                },
-                "total_servers": {
-                    "type": "integer"
-                },
-                "uptime_per_server": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                }
-            }
-        },
-        "server.SendReportRequest": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "description": "The number of top N worst servers you want to show in the report",
-                    "type": "integer"
-                },
-                "emails": {
-                    "description": "Optional. It might sends emails or nah",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "end": {
-                    "type": "string"
-                },
-                "start": {
-                    "type": "string"
                 }
             }
         },

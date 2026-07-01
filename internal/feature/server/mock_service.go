@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
@@ -16,7 +15,7 @@ type MockServerService struct {
 	updateFn      func(context.Context, uint, UpdateServerRequest) (*model.Server, error)
 	deleteFn      func(context.Context, uint) error
 	importFn      func(context.Context, io.Reader) (*ImportServersResponse, error)
-	reportFn      func(time.Time, time.Time, int, *[]string, context.Context) (*Report, error)
+	// reportFn      func(time.Time, time.Time, int, *[]string, context.Context) (*Report, error)
 }
 
 func (m *MockServerService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
@@ -55,6 +54,6 @@ func (m *MockServerService) ElasticBulkInsert(ctx context.Context, serversResult
 	return nil
 }
 
-func (m *MockServerService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error) {
-	return m.reportFn(startTime, endTime, topN, emailsList, ctx)
-}
+// func (m *MockServerService) SendReports(startTime time.Time, endTime time.Time, topN int, emailsList *[]string, ctx context.Context) (*Report, error) {
+// 	return m.reportFn(startTime, endTime, topN, emailsList, ctx)
+// }

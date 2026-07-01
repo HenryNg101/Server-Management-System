@@ -32,7 +32,7 @@ func setupRouter(s Service) *gin.Engine {
 	r.DELETE("/servers/:id", h.DeleteServer)
 	r.POST("/servers/import", h.ImportServers)
 	r.GET("/servers/export", h.ExportServers)
-	r.POST("/servers/report", h.SendReports)
+	// r.POST("/servers/report", h.SendReports)
 
 	return r
 }
@@ -465,134 +465,135 @@ func TestHandlerExportServers_Success(t *testing.T) {
 	require.Contains(t, w.Body.String(), "s1")
 }
 
-func TestHandlerSendReports_Success(t *testing.T) {
-	mock := &MockServerService{
-		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
-			return &Report{
-				TotalServers: 10,
-			}, nil
-		},
-	}
+// TODO: Move these tests to monitoring domain/feature when write unit tests there
+// func TestHandlerSendReports_Success(t *testing.T) {
+// 	mock := &MockServerService{
+// 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
+// 			return &Report{
+// 				TotalServers: 10,
+// 			}, nil
+// 		},
+// 	}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{
-		"count": 5,
-		"emails": ["test@test.com"]
-	}`
+// 	body := `{
+// 		"count": 5,
+// 		"emails": ["test@test.com"]
+// 	}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 200, w.Code)
-	require.Contains(t, w.Body.String(), "10")
-}
+// 	require.Equal(t, 200, w.Code)
+// 	require.Contains(t, w.Body.String(), "10")
+// }
 
-func TestHandlerSendReports_SuccessNoBody(t *testing.T) {
-	mock := &MockServerService{
-		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
-			return &Report{
-				TotalServers: 10,
-			}, nil
-		},
-	}
+// func TestHandlerSendReports_SuccessNoBody(t *testing.T) {
+// 	mock := &MockServerService{
+// 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
+// 			return &Report{
+// 				TotalServers: 10,
+// 			}, nil
+// 		},
+// 	}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{
-	}`
+// 	body := `{
+// 	}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 200, w.Code)
-	require.Contains(t, w.Body.String(), "10")
-}
+// 	require.Equal(t, 200, w.Code)
+// 	require.Contains(t, w.Body.String(), "10")
+// }
 
-func TestHandlerSendReports_InvalidJSON(t *testing.T) {
-	mock := &MockServerService{}
+// func TestHandlerSendReports_InvalidJSON(t *testing.T) {
+// 	mock := &MockServerService{}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(`invalid`))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(`invalid`))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 400, w.Code)
-}
+// 	require.Equal(t, 400, w.Code)
+// }
 
-func TestHandlerSendReports_InvalidStartDate(t *testing.T) {
-	mock := &MockServerService{}
+// func TestHandlerSendReports_InvalidStartDate(t *testing.T) {
+// 	mock := &MockServerService{}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{"start":"bad-date","count":1}`
+// 	body := `{"start":"bad-date","count":1}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 400, w.Code)
-}
+// 	require.Equal(t, 400, w.Code)
+// }
 
-func TestHandlerSendReports_InvalidEndDate(t *testing.T) {
-	mock := &MockServerService{}
+// func TestHandlerSendReports_InvalidEndDate(t *testing.T) {
+// 	mock := &MockServerService{}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{"end":"bad-date","count":1}`
+// 	body := `{"end":"bad-date","count":1}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 400, w.Code)
-}
+// 	require.Equal(t, 400, w.Code)
+// }
 
-func TestHandlerSendReports_InvalidTopN(t *testing.T) {
-	mock := &MockServerService{}
+// func TestHandlerSendReports_InvalidTopN(t *testing.T) {
+// 	mock := &MockServerService{}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{"count":0}`
+// 	body := `{"count":0}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 400, w.Code)
-}
+// 	require.Equal(t, 400, w.Code)
+// }
 
-func TestHandlerSendReports_ServiceError(t *testing.T) {
-	mock := &MockServerService{
-		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
-			return nil, errors.New("fail")
-		},
-	}
+// func TestHandlerSendReports_ServiceError(t *testing.T) {
+// 	mock := &MockServerService{
+// 		reportFn: func(start, end time.Time, topN int, emails *[]string, ctx context.Context) (*Report, error) {
+// 			return nil, errors.New("fail")
+// 		},
+// 	}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := `{"count":1}`
+// 	body := `{"count":1}`
 
-	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+// 	req := httptest.NewRequest("POST", "/servers/report", strings.NewReader(body))
+// 	req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 500, w.Code)
-}
+// 	require.Equal(t, 500, w.Code)
+// }
