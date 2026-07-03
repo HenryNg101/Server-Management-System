@@ -59,6 +59,7 @@ type KafkaConfig struct {
 	Brokers                   []string
 	AgentMetricsTopic         string
 	AgentMetricsConsumerGroup string
+	AgentMetricsDLQTopic      string
 }
 
 func getEnv(key, fallback string) string {
@@ -123,5 +124,6 @@ func LoadKafka() *KafkaConfig {
 		Brokers:                   strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
 		AgentMetricsTopic:         getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
 		AgentMetricsConsumerGroup: getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
+		AgentMetricsDLQTopic:      getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
 	}
 }

@@ -22,6 +22,14 @@ func NewConsumer(brokers []string, topic, groupID string) *Consumer {
 	}
 }
 
-func (c *Consumer) Read(ctx context.Context) (kgo.Message, error) {
-	return c.reader.ReadMessage(ctx)
+// func (c *Consumer) Read(ctx context.Context) (kgo.Message, error) {
+// 	return c.reader.ReadMessage(ctx)
+// }
+
+func (c *Consumer) Fetch(ctx context.Context) (kgo.Message, error) {
+	return c.reader.FetchMessage(ctx) // No auto-commit
+}
+
+func (c *Consumer) Commit(ctx context.Context, msgs ...kgo.Message) error {
+	return c.reader.CommitMessages(ctx, msgs...)
 }
