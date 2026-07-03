@@ -17,8 +17,8 @@ type MetricsConsumer struct {
 	dlqProducer *kafkaClient.Producer
 	service     agent.Service
 
-	buffer   []agent.MetricMessage
-	messages []kgo.Message
+	buffer   []agent.MetricMessage // Contains documents data for ES bulk insert
+	messages []kgo.Message         // Track Kafka messages for offset commitment + DLQ
 }
 
 func NewMetricsConsumer(consumer *kafkaClient.Consumer, dlq *kafkaClient.Producer, service agent.Service) *MetricsConsumer {
@@ -38,6 +38,9 @@ func (c *MetricsConsumer) Run(ctx context.Context) {
 
 	log.Println("metrics consumer started")
 
+	// We use two checks for flushes (i.e retry, commit and reset buffer): Time and buffer size
+	// So, if the write throughput is too high, the batch size of the buffer will trigger flushes, and if the write throughput is too low, the flush timeout will trigger flushes
+	// Either way, we ensure that the buffer is flushed in a timely manner, and we don't block on waiting for the timer to fire if we have enough messages to flush, or waiting too long without flushing
 	for {
 		select {
 		case <-ticker.C:
@@ -49,7 +52,7 @@ func (c *MetricsConsumer) Run(ctx context.Context) {
 	}
 }
 
-// consumeOne fetches a single message and appends to buffer
+// Fetches a single message and appends to buffer
 func (c *MetricsConsumer) consumeOne(ctx context.Context) {
 	msg, err := c.consumer.Fetch(ctx)
 	if err != nil {
@@ -61,7 +64,7 @@ func (c *MetricsConsumer) consumeOne(ctx context.Context) {
 	if err := json.Unmarshal(msg.Value, &metric); err != nil {
 		log.Printf("invalid message: %v", err)
 
-		// Commit invalid message to avoid blocking the partition
+		// Commit invalid message to avoid blocking the partition by skipping the poison messages
 		_ = c.consumer.Commit(ctx, msg)
 		return
 	}
@@ -74,7 +77,7 @@ func (c *MetricsConsumer) consumeOne(ctx context.Context) {
 	}
 }
 
-// flush handles:
+// Flush handles:
 // 1. retrying ES insert
 // 2. sending to DLQ if failed
 // 3. committing offsets only on final outcome
@@ -95,57 +98,19 @@ func (c *MetricsConsumer) flush(ctx context.Context) {
 			log.Printf("commit after DLQ failed: %v", commitErr)
 		}
 
-		c.reset()
+		c.buffer = c.buffer[:0]
+		c.messages = c.messages[:0]
 		return
 	}
 
 	// Commit only after successful insert
+	// This is committed after documents are inserted to ES, however, this can fail -> Potential duplicate insert of document to Elasticsearch
 	if err := c.consumer.Commit(ctx, c.messages...); err != nil {
 		log.Printf("commit failed: %v", err)
 		return
 	}
 
 	log.Printf("flushed %d messages", len(c.buffer))
-	c.reset()
-}
-
-// retryInsert retries ES bulk insert
-func (c *MetricsConsumer) retryInsert(ctx context.Context) error {
-	var err error
-
-	for i := 0; i < maxRetries; i++ {
-		err = c.service.PushMetricsToElastic(ctx, c.buffer)
-		if err == nil {
-			return nil
-		}
-
-		log.Printf("retry %d failed: %v", i+1, err)
-		time.Sleep(time.Duration(i+1) * time.Second)
-	}
-
-	return err
-}
-
-// sendToDLQ pushes failed messages to DLQ topic
-func (c *MetricsConsumer) sendToDLQ(ctx context.Context, reason string) {
-	for _, m := range c.messages {
-		dlqMsg := kgo.Message{
-			Key:   m.Key,
-			Value: m.Value,
-			Time:  time.Now(),
-			Headers: []kgo.Header{
-				{Key: "error", Value: []byte(reason)},
-			},
-		}
-
-		if err := c.dlqProducer.WriteOne(ctx, dlqMsg); err != nil {
-			log.Printf("failed to write DLQ: %v", err)
-		}
-	}
-}
-
-// reset clears buffer after flush
-func (c *MetricsConsumer) reset() {
 	c.buffer = c.buffer[:0]
 	c.messages = c.messages[:0]
 }

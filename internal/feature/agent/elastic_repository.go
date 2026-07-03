@@ -29,7 +29,13 @@ func (r *elasticAgentRepository) BulkInsertStatus(ctx context.Context, messages 
 	var buf bytes.Buffer
 
 	for _, m := range messages {
-		meta := `{"create":{"_index":"server-metrics"}}` + "\n"
+		// Deterministic document IDs, to prevent duplicates in case of Kafka retries. Format: serverID-containerName-timestamp
+		docID := fmt.Sprintf("%d-%s-%d",
+			m.ServerID,
+			m.ContainerName,
+			m.Timestamp.UnixNano(),
+		)
+		meta := fmt.Sprintf(`{"index":{"_index":"server-metrics","_id":"%s"}}`, docID) + "\n"
 
 		// marshal actual document
 		docBytes, err := json.Marshal(m)

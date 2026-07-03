@@ -25,7 +25,7 @@ func main() {
 	}
 	kafkaCfg := config.LoadKafka()
 
-	// Create Kafka consumer and producer
+	// Create Kafka consumer and producer for dead-letter queue
 	consumer := kafkaClient.NewConsumer(
 		kafkaCfg.Brokers,
 		kafkaCfg.AgentMetricsTopic,
