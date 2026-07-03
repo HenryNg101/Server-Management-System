@@ -10,19 +10,24 @@ import (
 type Service interface {
 	AgentExist(ctx context.Context, key string, server *model.Agent) error
 	PushMetrics(ctx context.Context, messages []MetricMessage) error
+	PushMetricsToElastic(ctx context.Context, messages []MetricMessage) error
 }
 
 type agentService struct {
-	repo        Repository
-	elasticRepo ElasticAgentRepository
+	repo          Repository
+	kafkaProducer KafkaProducer
+	elasticRepo   ElasticAgentRepository
 }
 
-func NewService(r Repository, e ElasticAgentRepository) Service {
-	return &agentService{repo: r, elasticRepo: e}
+func NewService(r Repository, k KafkaProducer, e ElasticAgentRepository) Service {
+	return &agentService{repo: r, kafkaProducer: k, elasticRepo: e}
 }
 
-// TODO: Push to Kafka instead of directly push into Elasticsearch like this
 func (s *agentService) PushMetrics(ctx context.Context, messages []MetricMessage) error {
+	return s.kafkaProducer.PublishMetrics(ctx, messages)
+}
+
+func (s *agentService) PushMetricsToElastic(ctx context.Context, messages []MetricMessage) error {
 	return s.elasticRepo.BulkInsertStatus(ctx, messages)
 }
 

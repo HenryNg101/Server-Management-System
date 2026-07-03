@@ -11,8 +11,7 @@ import (
 )
 
 func fetchServers(application *app.Application, ctx context.Context) ([]model.Server, error) {
-	serverService := *application.ServerService
-	paginatedServers, err := serverService.GetServers(ctx, server.GetServersQuery{})
+	paginatedServers, err := application.ServerService.GetServers(ctx, server.GetServersQuery{})
 	if err != nil {
 		return nil, err
 	}
@@ -20,9 +19,7 @@ func fetchServers(application *app.Application, ctx context.Context) ([]model.Se
 }
 
 func updateServers(application *app.Application, ctx context.Context, resultServers []*model.Server) error {
-	serverService := *application.ServerService
-
-	err := serverService.BulkUpdateServersStatuses(ctx, resultServers)
+	err := application.ServerService.BulkUpdateServersStatuses(ctx, resultServers)
 	if err != nil {
 		return err
 	}
@@ -76,8 +73,7 @@ func main() {
 			//
 			// Bulk insert to Elasticsearch data stream
 			start = time.Now()
-			serverService := *newApplication.ServerService
-			err = serverService.ElasticBulkInsert(ctx, results)
+			err = newApplication.ServerService.ElasticBulkInsert(ctx, results)
 			if err != nil {
 				log.Fatal(err)
 			}

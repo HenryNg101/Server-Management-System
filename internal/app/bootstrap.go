@@ -11,6 +11,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	"github.com/HenryNg101/server-management-system/internal/logger"
 	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
+	kafkaClient "github.com/HenryNg101/server-management-system/internal/platform/kafka"
 	"github.com/HenryNg101/server-management-system/internal/platform/mailer"
 	"github.com/HenryNg101/server-management-system/internal/platform/postgres"
 	redisServer "github.com/HenryNg101/server-management-system/internal/platform/redis"
@@ -24,11 +25,11 @@ type Application struct {
 	PostgresSession   *gorm.DB
 	ElasticSession    *elasticsearch.Client
 	RedisSession      *redis.Client
-	ServerService     *server.Service
-	UserService       *user.Service
-	AuthService       *auth.Service
-	AgentService      *agent.Service
-	MonitoringService *monitoring.Service
+	ServerService     server.Service
+	UserService       user.Service
+	AuthService       auth.Service
+	AgentService      agent.Service
+	MonitoringService monitoring.Service
 }
 
 // Create a new app with services to be used
@@ -60,6 +61,11 @@ func NewApp() (*Application, error) {
 	}
 	redisSession := redisServer.NewPostgresSession(redisConfig)
 
+	kafkaConfig := config.LoadKafka()
+	if len(kafkaConfig.Brokers) == 0 {
+		return nil, errors.New("Kafka brokers not configured. You have to set it in .env file in root folder using KAFKA_BROKERS variable")
+	}
+
 	mailerConfig := config.LoadMailer()
 	if len(mailerConfig.Password) == 0 {
 		return nil, errors.New("Password for email server is not set. You have to set it in .env file in root folder using MAIL_PASSWORD variable")
@@ -86,7 +92,8 @@ func NewApp() (*Application, error) {
 
 	agentRepo := agent.NewRepository(postgresSession)
 	elasticAgentRepo := agent.NewAgentESRepository(esSession)
-	agentService := agent.NewService(agentRepo, elasticAgentRepo)
+	kafkaAgentProducer := agent.NewKafkaProducer(kafkaClient.NewProducer(kafkaConfig.Brokers, kafkaConfig.AgentMetricsTopic))
+	agentService := agent.NewService(agentRepo, kafkaAgentProducer, elasticAgentRepo)
 
 	monitoringService := monitoring.NewService(elasticAgentRepo, elasticServerRepo, serverRepo, mailerUtility)
 
@@ -94,10 +101,10 @@ func NewApp() (*Application, error) {
 		PostgresSession:   postgresSession,
 		ElasticSession:    esSession,
 		RedisSession:      redisSession,
-		ServerService:     &serverService,
-		UserService:       &userService,
-		AuthService:       &authService,
-		AgentService:      &agentService,
-		MonitoringService: &monitoringService,
+		ServerService:     serverService,
+		UserService:       userService,
+		AuthService:       authService,
+		AgentService:      agentService,
+		MonitoringService: monitoringService,
 	}, nil
 }

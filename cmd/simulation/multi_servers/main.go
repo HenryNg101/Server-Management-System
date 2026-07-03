@@ -39,7 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	SeedAdmin(*newApplication.UserService)
+	SeedAdmin(newApplication.UserService)
 
 	for i := 0; i < numServers; i++ {
 		port := startPort + i

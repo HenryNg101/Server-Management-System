@@ -2,42 +2,28 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"log"
-	"time"
 
-	"github.com/segmentio/kafka-go"
+	kgo "github.com/segmentio/kafka-go"
 )
 
 type Producer struct {
-	writer *kafka.Writer
+	writer *kgo.Writer
 }
 
-func NewProducer(broker string, topic string) *Producer {
+func NewProducer(brokers []string, topic string) *Producer {
 	return &Producer{
-		writer: &kafka.Writer{
-			Addr:     kafka.TCP(broker),
+		writer: &kgo.Writer{
+			Addr:     kgo.TCP(brokers...),
 			Topic:    topic,
-			Balancer: &kafka.LeastBytes{},
+			Balancer: &kgo.Hash{},
 		},
 	}
 }
 
-func (p *Producer) Send(msg interface{}) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Println("marshal error:", err)
-		return
-	}
+func (p *Producer) WriteOne(ctx context.Context, msg kgo.Message) error {
+	return p.writer.WriteMessages(ctx, msg)
+}
 
-	err = p.writer.WriteMessages(context.Background(),
-		kafka.Message{
-			Key:   []byte(time.Now().String()),
-			Value: data,
-		},
-	)
-
-	if err != nil {
-		log.Println("kafka write error:", err)
-	}
+func (p *Producer) WriteMany(ctx context.Context, msgs []kgo.Message) error {
+	return p.writer.WriteMessages(ctx, msgs...)
 }

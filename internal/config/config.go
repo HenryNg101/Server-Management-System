@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -54,6 +55,12 @@ type RedisConfig struct {
 	Password string
 }
 
+type KafkaConfig struct {
+	Brokers                   []string
+	AgentMetricsTopic         string
+	AgentMetricsConsumerGroup string
+}
+
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -84,8 +91,8 @@ func LoadElasticsearch() *ElasticSearchConfig {
 		User:                  getEnv("ELASTIC_USER", "elastic"),
 		Password:              getEnv("ELASTIC_PASSWORD", ""),
 		Port:                  getEnv("ELASTIC_PORT", "9200"),
-		StatusDataStreamName:  getEnv("ELASTIC_STATUS_DATA_STREAM_SOURCE", "9200"),
-		MetricsDataStreamName: getEnv("ELASTIC_METRICS_DATA_STREAM_SOURCE", "9200"),
+		StatusDataStreamName:  getEnv("ELASTIC_STATUS_DATA_STREAM_SOURCE", "server-status"),
+		MetricsDataStreamName: getEnv("ELASTIC_METRICS_DATA_STREAM_SOURCE", "server-metrics"),
 	}
 }
 
@@ -105,8 +112,16 @@ func LoadJWTSecret() string {
 
 func LoadRedis() *RedisConfig {
 	return &RedisConfig{
-		Host:     getEnv("REDIS_HOST", "localhost"),
-		Port:     getEnv("REDIS_PORT", "localhost"),
+		Host:     getEnv("REDIS_HOST", "redis"),
+		Port:     getEnv("REDIS_PORT", "6379"),
 		Password: getEnv("REDIS_PASSWORD", ""),
+	}
+}
+
+func LoadKafka() *KafkaConfig {
+	return &KafkaConfig{
+		Brokers:                   strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		AgentMetricsTopic:         getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
+		AgentMetricsConsumerGroup: getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
 	}
 }

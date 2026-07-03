@@ -35,13 +35,23 @@ func (h *Handler) IngestMetrics(c *gin.Context) {
 		return
 	}
 
+	// Limit the request body size to prevent abuse
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1MB
+	if len(msgs) > 500 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "too many metrics"})
+		return
+	}
+
 	serverID := c.GetUint("server_id")
 
 	for i := range msgs {
 		msgs[i].ServerID = int(serverID)
 	}
 
-	h.service.PushMetrics(c, msgs)
+	if err := h.service.PushMetrics(c, msgs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to ingest metrics"})
+		return
+	}
 
 	fmt.Printf("Received %d metrics\n", len(msgs))
 

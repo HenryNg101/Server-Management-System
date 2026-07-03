@@ -23,6 +23,7 @@ HOST ?= 127.0.0.1
 
 # Clean up old HOST definitions on env files and append the fresh current IP into the file
 env_init:
+	$(eval export ENV_FILE=$(ENV_FILE))
 	@echo "Updating $(ENV_FILE) with active WSL IP: $(HOST)"
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "if (Test-Path $(ENV_FILE)) { (Get-Content $(ENV_FILE)) -notmatch '^ *HOST=' | Set-Content $(ENV_FILE) }"

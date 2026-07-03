@@ -9,7 +9,7 @@ import (
 )
 
 func fetchEmails(application *app.Application) (*[]string, error) {
-	users, err := (*application.UserService).GetUsers()
+	users, err := application.UserService.GetUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func main() {
 			// Send emails
 			endReportTime := time.Now()
 			startReportTime := endReportTime.Add(-24 * time.Hour)
-			_, err = (*newApplication.MonitoringService).SendReports(
+			_, err = newApplication.MonitoringService.SendReports(
 				startReportTime, endReportTime, 10, emailAddresses, ctx,
 			)
 			if err != nil {

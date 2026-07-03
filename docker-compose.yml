@@ -12,7 +12,11 @@ x-common-dependency: &common-dependency
     condition: service_healthy
   elasticsearch:
     condition: service_healthy
-  migrate:
+  kafka:
+    condition: service_started
+  postgres-migrate:
+    condition: service_completed_successfully
+  kafka-setup:
     condition: service_completed_successfully
 
 services:
@@ -27,7 +31,7 @@ services:
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     environment:
       - APP_ENV=docker
     logging: *default-logging
@@ -41,7 +45,7 @@ services:
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     environment:
       - APP_ENV=docker
     logging: *default-logging
@@ -55,7 +59,21 @@ services:
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
+
+  metrics_consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/worker/metrics_consumer
+    restart: unless-stopped
+    depends_on: *common-dependency
+    env_file:
+      - ${ENV_FILE}
     environment:
       - APP_ENV=docker
     logging: *default-logging

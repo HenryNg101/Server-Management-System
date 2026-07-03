@@ -13,7 +13,7 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.3.1
     restart: always
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
@@ -38,7 +38,7 @@ services:
     volumes:
       - ./scripts:/scripts
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     restart: no
     logging: *default-logging
 
@@ -63,7 +63,7 @@ services:
     container_name: sqldb
     restart: always
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -74,7 +74,7 @@ services:
     logging: *default-logging
 
   # Postgres schema migration
-  migrate:
+  postgres-migrate:
     image: migrate/migrate
     depends_on:
       postgres:
@@ -82,7 +82,7 @@ services:
     volumes:
       - ./migrations:/migrations
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     command: [
       "-path", "/migrations",
       "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
@@ -96,7 +96,7 @@ services:
     container_name: redis
     restart: always
     env_file:
-      - .env.docker
+      - ${ENV_FILE}
     environment:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
     volumes:
@@ -108,7 +108,53 @@ services:
       retries: 5
     logging: *default-logging
 
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    restart: always
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      
+      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://${HOST}:29092
+      
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1   # Since there's only 1 broker, Kafka can't replicate a partition more than 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: redpanda-kafka-ui
+    restart: always
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKERS: kafka:9092
+
+  kafka-setup:
+    image: apache/kafka:latest
+    depends_on:
+      kafka:
+        condition: service_started
+    entrypoint: ["/bin/sh", "/scripts/kafka/setup.sh"]
+    volumes:
+      - ./scripts:/scripts
+    env_file:
+      - ${ENV_FILE}
+    restart: "no"
+    logging: *default-logging
+
 volumes:
   es_data:
   postgres_data:
   redis_data:
+  kafka_data:
