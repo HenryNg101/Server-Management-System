@@ -13,9 +13,10 @@ ifeq ($(OS),Windows_NT)
 else ifeq ($(shell uname -s),Linux)
 	# If running natively inside Linux bash
 	HOST := $(shell hostname -I | awk '{print $$1}')
-else
-    # If running natively inside MacOS cmdline, use the hostname command to get the IP address
-    HOST := $(shell hostname)
+# Temporarily comment out for Mac, because the port reservation problem doesn't quite exist on MacOS's network virtualization for Docker yet
+# else
+#     # If running natively inside MacOS cmdline, use the hostname command to get the IP address
+#     HOST := $(shell hostname)
 endif
 
 # Safe default fallback if the above evaluation returns empty
@@ -24,7 +25,7 @@ HOST ?= 127.0.0.1
 # Clean up old HOST definitions on env files and append the fresh current IP into the file
 env_init:
 	$(eval export ENV_FILE=$(ENV_FILE))
-	@echo "Updating $(ENV_FILE) with active WSL IP: $(HOST)"
+	@echo "Updating $(ENV_FILE) with active IP: $(HOST)"
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "if (Test-Path $(ENV_FILE)) { (Get-Content $(ENV_FILE)) -notmatch '^ *HOST=' | Set-Content $(ENV_FILE) }"
 	@powershell -Command "Add-Content $(ENV_FILE) 'HOST=$(HOST)'"
@@ -58,6 +59,7 @@ prod.logs:
 # For development. The only difference from this to production is that, in this one, ports are exposed for debugging purposes. In production, ports for infrastructure are not exposed to the outside world for security reasons.
 # ==========================================
 dev.build: env_init
+	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build api
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build
 
 dev.up: dev.build
