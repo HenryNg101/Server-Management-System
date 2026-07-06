@@ -3,10 +3,13 @@ package data_transfer
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
+	"github.com/google/uuid"
 )
 
 const (
@@ -15,18 +18,76 @@ const (
 
 type Service interface {
 	ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
+
+	// Handling jobs
+	CreateImportJob(ctx context.Context, r io.Reader) (string, error)
+	ProcessImportJob(ctx context.Context, msg ImportJobMessage) error
 }
 
 type dataTransferService struct {
-	repo Repository
+	repo          Repository
+	kafkaProducer KafkaProducer
+	blobStorage   BlobStorage
 }
 
-func NewService(r Repository) Service {
-	return &dataTransferService{repo: r}
+func NewService(r Repository, k KafkaProducer, s BlobStorage) Service {
+	return &dataTransferService{repo: r, kafkaProducer: k, blobStorage: s}
+}
+
+// Create new job for CSV file importing
+func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader) (string, error) {
+	jobID := uuid.New().String() // Generate unique ID
+
+	// upload to MinIO
+	objectKey := fmt.Sprintf("imports/%s.csv", jobID)
+	_, err := s.blobStorage.Upload(ctx, objectKey, r, -1)
+	if err != nil {
+		return "", err
+	}
+
+	// Create new job in the DB
+	job := &model.ImportJob{
+		ID:       jobID,
+		FilePath: objectKey,
+		Status:   model.JobStatusPending,
+	}
+	if err := s.repo.CreateJob(ctx, job); err != nil {
+		return "", err
+	}
+
+	// Publish Kafka message
+	msg := ImportJobMessage{
+		JobID:     jobID,
+		ObjectKey: objectKey,
+	}
+	payload, _ := json.Marshal(msg)
+	if err := s.kafkaProducer.WriteOne(ctx, []byte(jobID), payload); err != nil {
+		return "", err
+	}
+	return jobID, nil
+}
+
+// Process a job
+func (s *dataTransferService) ProcessImportJob(ctx context.Context, msg ImportJobMessage) error {
+	_ = s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusProcessing), "")
+
+	reader, err := s.blobStorage.Download(ctx, msg.ObjectKey)
+	if err != nil {
+		s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusFailed), err.Error())
+		return err
+	}
+	defer reader.Close()
+
+	_, err = s.ImportServers(ctx, reader)
+	if err != nil {
+		s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusFailed), err.Error())
+		return err
+	}
+
+	return s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusDone), "")
 }
 
 // TODO: Handle more edge cases of uploading
-// TODO: Improve performance of this API (It took nearly 8 seconds to loaded 10k records)
 func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
 	reader := csv.NewReader(r)
 
@@ -43,6 +104,7 @@ func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*
 		rowIndex     = 1 // header is row 1
 	)
 
+	// Read line by line instead of whole file -> Not make this a blocking operation
 	for {
 		rowIndex++
 
@@ -96,7 +158,7 @@ func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*
 }
 
 func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Server, startRow int) (int, []ImportFailure) {
-	err := s.repo.BulkUpsert(ctx, batch)
+	err := s.repo.BulkUpsertServers(ctx, batch)
 	if err == nil {
 		return len(batch), nil
 	}
@@ -105,11 +167,11 @@ func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Se
 	successCount := 0
 	var failures []ImportFailure
 	for i, srv := range batch {
-		_, e := s.repo.Create(ctx, srv)
-		if e != nil {
+		err := s.repo.CreateServer(ctx, srv)
+		if err != nil {
 			failures = append(failures, ImportFailure{
 				Row:   startRow + i,
-				Error: e.Error(),
+				Error: err.Error(),
 			})
 			continue
 		}

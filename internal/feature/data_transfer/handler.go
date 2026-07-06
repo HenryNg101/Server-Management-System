@@ -34,7 +34,7 @@ func (h *Handler) ImportServers(c *gin.Context) {
 	}
 	defer f.Close()
 
-	result, err := h.service.ImportServers(c.Request.Context(), f)
+	result, err := h.service.CreateImportJob(c.Request.Context(), f)
 	if err != nil {
 		c.JSON(500, gin.H{"Import servers error": err.Error()})
 		return

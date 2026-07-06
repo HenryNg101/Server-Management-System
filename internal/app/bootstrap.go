@@ -11,12 +11,14 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
 	"github.com/HenryNg101/server-management-system/internal/logger"
+	"github.com/HenryNg101/server-management-system/internal/platform/blob_storage"
 	"github.com/HenryNg101/server-management-system/internal/platform/elastic"
 	kafkaClient "github.com/HenryNg101/server-management-system/internal/platform/kafka"
 	"github.com/HenryNg101/server-management-system/internal/platform/mailer"
 	"github.com/HenryNg101/server-management-system/internal/platform/postgres"
 	redisServer "github.com/HenryNg101/server-management-system/internal/platform/redis"
 	"github.com/elastic/go-elasticsearch/v9"
+	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -26,6 +28,7 @@ type Application struct {
 	PostgresSession     *gorm.DB
 	ElasticSession      *elasticsearch.Client
 	RedisSession        *redis.Client
+	MinIOClient         *minio.Client
 	ServerService       server.Service
 	UserService         user.Service
 	AuthService         auth.Service
@@ -68,6 +71,17 @@ func NewApp() (*Application, error) {
 		return nil, errors.New("Kafka brokers not configured. You have to set it in .env file in root folder using KAFKA_BROKERS variable")
 	}
 
+	minIOConfig := config.LoadMinIO()
+	if len(minIOConfig.AccessKey) == 0 {
+		return nil, errors.New("Access key for MinIO is not configured. You have to set it in .env file in root folder using MINIO_ACCESS_KEY variable")
+	}
+	minIOSession := blob_storage.NewMinIOSession(
+		minIOConfig.Endpoint,
+		minIOConfig.AccessKey,
+		minIOConfig.SecretKey,
+		minIOConfig.UseSSL,
+	)
+
 	mailerConfig := config.LoadMailer()
 	if len(mailerConfig.Password) == 0 {
 		return nil, errors.New("Password for email server is not set. You have to set it in .env file in root folder using MAIL_PASSWORD variable")
@@ -100,7 +114,9 @@ func NewApp() (*Application, error) {
 	monitoringService := monitoring.NewService(elasticAgentRepo, elasticServerRepo, serverRepo, mailerUtility)
 
 	dataTransferRepo := data_transfer.NewRepository(postgresSession)
-	dataTransferService := data_transfer.NewService(dataTransferRepo)
+	kafkaImportProducer := data_transfer.NewKafkaProducer(kafkaClient.NewProducer(kafkaConfig.Brokers, kafkaConfig.ServersImportTopic))
+	minIORepo := data_transfer.NewBlobStorage(minIOSession, minIOConfig.Bucket)
+	dataTransferService := data_transfer.NewService(dataTransferRepo, kafkaImportProducer, minIORepo)
 
 	return &Application{
 		PostgresSession:     postgresSession,

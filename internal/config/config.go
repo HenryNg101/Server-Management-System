@@ -56,10 +56,20 @@ type RedisConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers                   []string
-	AgentMetricsTopic         string
-	AgentMetricsConsumerGroup string
-	AgentMetricsDLQTopic      string
+	Brokers                    []string
+	AgentMetricsTopic          string
+	AgentMetricsConsumerGroup  string
+	AgentMetricsDLQTopic       string
+	ServersImportTopic         string
+	ServersImportConsumerGroup string
+}
+
+type MinIOConfig struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
 }
 
 func getEnv(key, fallback string) string {
@@ -121,9 +131,21 @@ func LoadRedis() *RedisConfig {
 
 func LoadKafka() *KafkaConfig {
 	return &KafkaConfig{
-		Brokers:                   strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		AgentMetricsTopic:         getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
-		AgentMetricsConsumerGroup: getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
-		AgentMetricsDLQTopic:      getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
+		Brokers:                    strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		AgentMetricsTopic:          getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
+		AgentMetricsConsumerGroup:  getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
+		AgentMetricsDLQTopic:       getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
+		ServersImportTopic:         getEnv("KAFKA_SERVERS_IMPORT_TOPIC", "agent-metrics-dlq"),
+		ServersImportConsumerGroup: getEnv("KAFKA_SERVERS_IMPORT_GROUP", "agent-metrics-dlq"),
+	}
+}
+
+func LoadMinIO() *MinIOConfig {
+	return &MinIOConfig{
+		Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+		SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
+		Bucket:    getEnv("MINIO_BUCKET", "imports"),
+		UseSSL:    false,
 	}
 }

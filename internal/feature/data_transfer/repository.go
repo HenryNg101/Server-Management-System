@@ -9,8 +9,13 @@ import (
 )
 
 type Repository interface {
-	Create(ctx context.Context, server *model.Server) (*model.Server, error)
-	BulkUpsert(ctx context.Context, servers []*model.Server) error
+	// Servers
+	CreateServer(ctx context.Context, server *model.Server) error
+	BulkUpsertServers(ctx context.Context, servers []*model.Server) error
+
+	// Jobs system
+	CreateJob(ctx context.Context, job *model.ImportJob) error
+	UpdateJobStatus(ctx context.Context, jobID string, status string, errMsg string) error
 }
 
 type dataTransferRepository struct {
@@ -22,26 +27,35 @@ func NewRepository(db *gorm.DB) Repository {
 }
 
 // Create if not exist, otherwise, returns error
-func (r *dataTransferRepository) Create(ctx context.Context, server *model.Server) (*model.Server, error) {
-	result := r.db.WithContext(ctx).
+func (r *dataTransferRepository) CreateServer(ctx context.Context, server *model.Server) error {
+	return r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "name"}},
 			DoNothing: true,
 		}).
-		Create(server)
-
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return server, nil
+		Create(server).Error
 }
 
 // Bulk upsert servers, used for importing servers from CSV file
-func (r *dataTransferRepository) BulkUpsert(ctx context.Context, servers []*model.Server) error {
+func (r *dataTransferRepository) BulkUpsertServers(ctx context.Context, servers []*model.Server) error {
 	return r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "name"}},
 			DoNothing: true,
 		}).
 		Create(&servers).Error
+}
+
+func (r *dataTransferRepository) CreateJob(ctx context.Context, job *model.ImportJob) error {
+	return r.db.WithContext(ctx).Create(job).Error
+}
+
+func (r *dataTransferRepository) UpdateJobStatus(ctx context.Context, jobID string, status string, errMsg string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.ImportJob{}).
+		Where("id = ?", jobID).
+		Updates(map[string]interface{}{
+			"status": status,
+			"error":  errMsg,
+		}).Error
 }
