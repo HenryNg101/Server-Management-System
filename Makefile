@@ -11,8 +11,8 @@ ENV_FILE       = .env.docker
 ifeq ($(OS),Windows_NT)
     HOST := $(shell wsl -e bash -c 'hostname -I | awk "{print $$1}"')
 else ifeq ($(shell uname -s),Linux)
-	# If running natively inside Linux bash
-	HOST := $(shell hostname -I | awk '{print $$1}')
+    # If running natively inside Linux bash
+    HOST := $(shell hostname -I | awk '{print $$1}')
 # Temporarily comment out for Mac, because the port reservation problem doesn't quite exist on MacOS's network virtualization for Docker yet
 # else
 #     # If running natively inside MacOS cmdline, use the hostname command to get the IP address
@@ -38,8 +38,8 @@ endif
 # For actual deployment
 # ==========================================
 prod.build: env_init
-#	Build cleanly without crashing resources, using sequential cache-warming by building one service first, to allow Docker caching even working at all
-#	This is to avoid the issue of Docker caching not working properly when building multiple services at once, as Docker builds services in parallel and cache is not utilized effectively right in the first build, which can lead to unnecessary rebuilds of GBs of data, longer build times, and in worst cases, thrashings.
+    # Build cleanly without crashing resources, using sequential cache-warming by building one service first, to allow Docker caching even working at all
+    # This is to avoid the issue of Docker caching not working properly when building multiple services at once, as Docker builds services in parallel and cache is not utilized effectively right in the first build, which can lead to unnecessary rebuilds of GBs of data, longer build times, and in worst cases, thrashings.
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build api
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build
 
