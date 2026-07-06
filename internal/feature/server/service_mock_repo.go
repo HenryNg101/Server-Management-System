@@ -92,6 +92,18 @@ func (f *mockRepo) Create(ctx context.Context, s *model.Server) (*model.Server, 
 	return s, nil
 }
 
+func (f *mockRepo) BulkUpsert(ctx context.Context, servers []*model.Server) error {
+	for _, s := range servers {
+		if !f.dbExist {
+			return errors.New("db error")
+		}
+		f.nextID++
+		s.ID = f.nextID
+		f.servers[s.ID] = s
+	}
+	return nil
+}
+
 // --------------------
 // CREATE AGENT
 // --------------------

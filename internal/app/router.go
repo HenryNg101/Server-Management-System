@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	authHandler "github.com/HenryNg101/server-management-system/internal/feature/auth"
+	"github.com/HenryNg101/server-management-system/internal/feature/data_transfer"
 	"github.com/HenryNg101/server-management-system/internal/feature/monitoring"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
@@ -20,6 +21,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	userHandler := user.NewHandler(application.UserService)
 	agentHandler := agent.NewHandler(application.AgentService)
 	monitoringHandler := monitoring.NewHandler(application.MonitoringService)
+	dataTransferHandler := data_transfer.NewHandler(application.DataTransferService)
 
 	//
 	// Agent's APIs
@@ -52,7 +54,7 @@ func RegisterRoutes(rg *gin.RouterGroup, db *gorm.DB, application *Application) 
 	admin.POST("/servers", serverHandler.CreateServer)
 	admin.PATCH("/servers/:id", serverHandler.UpdateServer)
 	admin.DELETE("/servers/:id", serverHandler.DeleteServer)
-	admin.POST("/servers/import", serverHandler.ImportServers)
+	admin.POST("/servers/import", dataTransferHandler.ImportServers)
 	admin.POST("/users", userHandler.CreateUser)
 	admin.GET("/servers/export", serverHandler.ExportServers)
 	admin.POST("/servers/report", monitoringHandler.SendReports)

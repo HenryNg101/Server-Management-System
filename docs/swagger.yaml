@@ -77,6 +77,24 @@ definitions:
       refresh_token:
         type: string
     type: object
+  data_transfer.ImportFailure:
+    properties:
+      error:
+        type: string
+      row:
+        type: integer
+    type: object
+  data_transfer.ImportServersResponse:
+    properties:
+      failed_count:
+        type: integer
+      failures:
+        items:
+          $ref: '#/definitions/data_transfer.ImportFailure'
+        type: array
+      success_count:
+        type: integer
+    type: object
   model.Agent:
     properties:
       apikey:
@@ -273,32 +291,6 @@ definitions:
       status:
         description: Server status at the time (Is it on or off)
         type: boolean
-    type: object
-  server.ImportFailure:
-    properties:
-      error:
-        type: string
-      record:
-        additionalProperties:
-          type: string
-        type: object
-      row:
-        type: integer
-    type: object
-  server.ImportServersResponse:
-    properties:
-      failed_count:
-        type: integer
-      failures:
-        items:
-          $ref: '#/definitions/server.ImportFailure'
-        type: array
-      success_count:
-        type: integer
-      successes:
-        items:
-          $ref: '#/definitions/model.Server'
-        type: array
     type: object
   server.UpdateServerRequest:
     properties:
@@ -717,7 +709,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.ImportServersResponse'
+            $ref: '#/definitions/data_transfer.ImportServersResponse'
       security:
       - BearerAuth: []
       summary: Import servers from csv file

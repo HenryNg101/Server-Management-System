@@ -424,7 +424,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.ImportServersResponse"
+                            "$ref": "#/definitions/data_transfer.ImportServersResponse"
                         }
                     }
                 }
@@ -855,6 +855,34 @@
                 }
             }
         },
+        "data_transfer.ImportFailure": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "row": {
+                    "type": "integer"
+                }
+            }
+        },
+        "data_transfer.ImportServersResponse": {
+            "type": "object",
+            "properties": {
+                "failed_count": {
+                    "type": "integer"
+                },
+                "failures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/data_transfer.ImportFailure"
+                    }
+                },
+                "success_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.Agent": {
             "type": "object",
             "properties": {
@@ -1139,46 +1167,6 @@
                 "status": {
                     "description": "Server status at the time (Is it on or off)",
                     "type": "boolean"
-                }
-            }
-        },
-        "server.ImportFailure": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                },
-                "record": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "row": {
-                    "type": "integer"
-                }
-            }
-        },
-        "server.ImportServersResponse": {
-            "type": "object",
-            "properties": {
-                "failed_count": {
-                    "type": "integer"
-                },
-                "failures": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/server.ImportFailure"
-                    }
-                },
-                "success_count": {
-                    "type": "integer"
-                },
-                "successes": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Server"
-                    }
                 }
             }
         },

@@ -124,46 +124,46 @@ func TestParseServersQuery_CustomSorting(t *testing.T) {
 	require.Equal(t, "desc", q.Order)
 }
 
-func TestParseServer_Valid(t *testing.T) {
-	tests := []map[string]string{
-		{"name": "srv", "status": "true", "ipv4_address": "127.0.0.1", "port": "80", "protocol": "tcp"},
-		{"name": "server2", "status": "false", "ipv4_address": "8.8.8.8", "port": "80"},
-	}
+// func TestParseServer_Valid(t *testing.T) {
+// 	tests := []map[string]string{
+// 		{"name": "srv", "status": "true", "ipv4_address": "127.0.0.1", "port": "80", "protocol": "tcp"},
+// 		{"name": "server2", "status": "false", "ipv4_address": "8.8.8.8", "port": "80"},
+// 	}
 
-	for _, tc := range tests {
-		_, err := parseServer(tc)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	}
-}
+// 	for _, tc := range tests {
+// 		_, err := parseServer(tc)
+// 		if err != nil {
+// 			t.Fatalf("unexpected error: %v", err)
+// 		}
+// 	}
+// }
 
-func TestParseServer_InvalidCases(t *testing.T) {
-	tests := []map[string]string{
-		{"status": "true", "ipv4_address": "127.0.0.1", "port": "80"}, // missing name
-		{"name": "a", "status": "bad", "ipv4_address": "127.0.0.1", "port": "80"},
-		{"name": "a", "status": "true", "ipv4_address": "bad_ip", "port": "80"},
-		{"name": "a", "status": "true", "ipv4_address": "127.0.0.1", "port": "99999"},
-	}
+// func TestParseServer_InvalidCases(t *testing.T) {
+// 	tests := []map[string]string{
+// 		{"status": "true", "ipv4_address": "127.0.0.1", "port": "80"}, // missing name
+// 		{"name": "a", "status": "bad", "ipv4_address": "127.0.0.1", "port": "80"},
+// 		{"name": "a", "status": "true", "ipv4_address": "bad_ip", "port": "80"},
+// 		{"name": "a", "status": "true", "ipv4_address": "127.0.0.1", "port": "99999"},
+// 	}
 
-	for _, tc := range tests {
-		_, err := parseServer(tc)
-		if err == nil {
-			t.Fatalf("expected error for %+v", tc)
-		}
-	}
-}
+// 	for _, tc := range tests {
+// 		_, err := parseServer(tc)
+// 		if err == nil {
+// 			t.Fatalf("expected error for %+v", tc)
+// 		}
+// 	}
+// }
 
-func TestMapRow(t *testing.T) {
-	headers := []string{"a", "b"}
-	row := []string{"1", "2"}
+// func TestMapRow(t *testing.T) {
+// 	headers := []string{"a", "b"}
+// 	row := []string{"1", "2"}
 
-	m := mapRow(headers, row)
+// 	m := mapRow(headers, row)
 
-	if m["a"] != "1" || m["b"] != "2" {
-		t.Fatalf("unexpected mapping")
-	}
-}
+// 	if m["a"] != "1" || m["b"] != "2" {
+// 		t.Fatalf("unexpected mapping")
+// 	}
+// }
 
 // TODO: Move these tests to monitoring domain/feature when write unit tests there
 // func TestBuildReportHTML(t *testing.T) {

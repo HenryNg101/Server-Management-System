@@ -58,19 +58,6 @@ type CreateServerResponse struct {
 	ApiKey        string       `json:"agent_api_key"`
 }
 
-type ImportServersResponse struct {
-	SuccessCount int             `json:"success_count"`
-	FailedCount  int             `json:"failed_count"`
-	Successes    []model.Server  `json:"successes"`
-	Failures     []ImportFailure `json:"failures"`
-}
-
-type ImportFailure struct {
-	Row    int               `json:"row"`
-	Error  string            `json:"error"`
-	Record map[string]string `json:"record"`
-}
-
 type ServerPullStats struct {
 	Uptime float64 `json:"uptime"`
 

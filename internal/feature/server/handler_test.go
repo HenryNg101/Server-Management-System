@@ -1,11 +1,8 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +27,7 @@ func setupRouter(s Service) *gin.Engine {
 	r.GET("/servers/:id", h.GetServer)
 	r.PATCH("/servers/:id", h.UpdateServer)
 	r.DELETE("/servers/:id", h.DeleteServer)
-	r.POST("/servers/import", h.ImportServers)
+	// r.POST("/servers/import", h.ImportServers)
 	r.GET("/servers/export", h.ExportServers)
 	// r.POST("/servers/report", h.SendReports)
 
@@ -359,72 +356,72 @@ func TestHandlerDeleteServer_Success(t *testing.T) {
 	require.Equal(t, 204, w.Code)
 }
 
-func TestHandlerImportServers_Success(t *testing.T) {
-	csvData := `name,status,ipv4_address,port,protocol
-server1,true,127.0.0.1,8080,http`
+// func TestHandlerImportServers_Success(t *testing.T) {
+// 	csvData := `name,status,ipv4_address,port,protocol
+// server1,true,127.0.0.1,8080,http`
 
-	mock := &MockServerService{
-		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
-			return &ImportServersResponse{
-				SuccessCount: 1,
-			}, nil
-		},
-	}
+// 	mock := &MockServerService{
+// 		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
+// 			return &ImportServersResponse{
+// 				SuccessCount: 1,
+// 			}, nil
+// 		},
+// 	}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+// 	body := &bytes.Buffer{}
+// 	writer := multipart.NewWriter(body)
 
-	part, _ := writer.CreateFormFile("file", "test.csv")
-	part.Write([]byte(csvData))
-	writer.Close()
+// 	part, _ := writer.CreateFormFile("file", "test.csv")
+// 	part.Write([]byte(csvData))
+// 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/servers/import", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+// 	req := httptest.NewRequest("POST", "/servers/import", body)
+// 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 200, w.Code)
-}
+// 	require.Equal(t, 200, w.Code)
+// }
 
-func TestHandlerImportServers_NoFile(t *testing.T) {
-	mock := &MockServerService{}
+// func TestHandlerImportServers_NoFile(t *testing.T) {
+// 	mock := &MockServerService{}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	req := httptest.NewRequest("POST", "/servers/import", nil)
-	w := httptest.NewRecorder()
+// 	req := httptest.NewRequest("POST", "/servers/import", nil)
+// 	w := httptest.NewRecorder()
 
-	r.ServeHTTP(w, req)
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 400, w.Code)
-}
+// 	require.Equal(t, 400, w.Code)
+// }
 
-func TestHandlerImportServers_ServiceError(t *testing.T) {
-	mock := &MockServerService{
-		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
-			return nil, errors.New("import fail")
-		},
-	}
+// func TestHandlerImportServers_ServiceError(t *testing.T) {
+// 	mock := &MockServerService{
+// 		importFn: func(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
+// 			return nil, errors.New("import fail")
+// 		},
+// 	}
 
-	r := setupRouter(mock)
+// 	r := setupRouter(mock)
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("file", "test.csv")
-	part.Write([]byte("a,b\n1,2"))
-	writer.Close()
+// 	body := &bytes.Buffer{}
+// 	writer := multipart.NewWriter(body)
+// 	part, _ := writer.CreateFormFile("file", "test.csv")
+// 	part.Write([]byte("a,b\n1,2"))
+// 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/servers/import", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+// 	req := httptest.NewRequest("POST", "/servers/import", body)
+// 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	r.ServeHTTP(w, req)
 
-	require.Equal(t, 500, w.Code)
-}
+// 	require.Equal(t, 500, w.Code)
+// }
 
 func TestHandlerExportServers_ServiceError(t *testing.T) {
 	mock := &MockServerService{

@@ -217,39 +217,6 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 	c.Status(204) // No Content
 }
 
-// Import servers from csv
-// @Summary Import servers from csv file
-// @Description User uploads an Excel file with servers info, and the server will try to import valid servers
-// @Tags servers
-// @Security BearerAuth
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Input servers file (CSV)"
-// @Success 200 {object} ImportServersResponse
-// @Router /servers/import [post]
-func (h *Handler) ImportServers(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(400, gin.H{"Input file error": "file is required"})
-		return
-	}
-
-	f, err := file.Open()
-	if err != nil {
-		c.JSON(500, gin.H{"Input file error": "cannot open file"})
-		return
-	}
-	defer f.Close()
-
-	result, err := h.service.ImportServers(c.Request.Context(), f)
-	if err != nil {
-		c.JSON(500, gin.H{"Import servers error": err.Error()})
-		return
-	}
-
-	c.JSON(200, result)
-}
-
 // Export servers to csv file
 // @Summary Export servers info to csv file
 // @Description User ask for all servers info with optional filtering, pagination, and sorting, and the server will export servers info to CSV file

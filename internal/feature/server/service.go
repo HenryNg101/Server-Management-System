@@ -2,9 +2,7 @@ package server
 
 import (
 	"context"
-	"encoding/csv"
 	"errors"
-	"io"
 	"math"
 	"time"
 
@@ -18,7 +16,6 @@ type Service interface {
 	GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error)
 	DeleteServer(ctx context.Context, id uint) error
-	ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
 	BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error
 
 	// Elastic services
@@ -169,56 +166,6 @@ func (s *serverService) DeleteServer(ctx context.Context, id uint) error {
 	}
 
 	return s.repo.Delete(ctx, id)
-}
-
-// TODO: Handle more edge cases of uploading
-// TODO: Improve performance of this API (It took nearly 8 seconds to loaded 10k records)
-func (s *serverService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
-	reader := csv.NewReader(r)
-
-	rows, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	if len(rows) < 2 {
-		return nil, errors.New("empty csv")
-	}
-
-	headers := rows[0]
-
-	var successes []model.Server
-	var failures []ImportFailure
-
-	for i, row := range rows[1:] {
-		record := mapRow(headers, row)
-		server, err := parseServer(record)
-
-		if err != nil {
-			failures = append(failures, ImportFailure{
-				Row: i + 2, Error: err.Error(), Record: record,
-			})
-			continue
-		}
-
-		created, err := s.repo.Create(ctx, server)
-		if err != nil {
-			failures = append(failures, ImportFailure{
-				Row: i + 2, Error: err.Error(), Record: record,
-			})
-			continue
-		}
-
-		if created != nil {
-			successes = append(successes, *created)
-		}
-	}
-
-	return &ImportServersResponse{
-		SuccessCount: len(successes),
-		FailedCount:  len(failures),
-		Successes:    successes,
-		Failures:     failures,
-	}, nil
 }
 
 func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error {

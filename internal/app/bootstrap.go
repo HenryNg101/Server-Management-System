@@ -6,6 +6,7 @@ import (
 	"github.com/HenryNg101/server-management-system/internal/config"
 	"github.com/HenryNg101/server-management-system/internal/feature/agent"
 	"github.com/HenryNg101/server-management-system/internal/feature/auth"
+	"github.com/HenryNg101/server-management-system/internal/feature/data_transfer"
 	"github.com/HenryNg101/server-management-system/internal/feature/monitoring"
 	"github.com/HenryNg101/server-management-system/internal/feature/server"
 	"github.com/HenryNg101/server-management-system/internal/feature/user"
@@ -22,14 +23,15 @@ import (
 
 // TODO: Add Kafka dependency here somehow
 type Application struct {
-	PostgresSession   *gorm.DB
-	ElasticSession    *elasticsearch.Client
-	RedisSession      *redis.Client
-	ServerService     server.Service
-	UserService       user.Service
-	AuthService       auth.Service
-	AgentService      agent.Service
-	MonitoringService monitoring.Service
+	PostgresSession     *gorm.DB
+	ElasticSession      *elasticsearch.Client
+	RedisSession        *redis.Client
+	ServerService       server.Service
+	UserService         user.Service
+	AuthService         auth.Service
+	AgentService        agent.Service
+	MonitoringService   monitoring.Service
+	DataTransferService data_transfer.Service
 }
 
 // Create a new app with services to be used
@@ -97,14 +99,18 @@ func NewApp() (*Application, error) {
 
 	monitoringService := monitoring.NewService(elasticAgentRepo, elasticServerRepo, serverRepo, mailerUtility)
 
+	dataTransferRepo := data_transfer.NewRepository(postgresSession)
+	dataTransferService := data_transfer.NewService(dataTransferRepo)
+
 	return &Application{
-		PostgresSession:   postgresSession,
-		ElasticSession:    esSession,
-		RedisSession:      redisSession,
-		ServerService:     serverService,
-		UserService:       userService,
-		AuthService:       authService,
-		AgentService:      agentService,
-		MonitoringService: monitoringService,
+		PostgresSession:     postgresSession,
+		ElasticSession:      esSession,
+		RedisSession:        redisSession,
+		ServerService:       serverService,
+		UserService:         userService,
+		AuthService:         authService,
+		AgentService:        agentService,
+		MonitoringService:   monitoringService,
+		DataTransferService: dataTransferService,
 	}, nil
 }

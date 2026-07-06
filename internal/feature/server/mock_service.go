@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"io"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 )
@@ -14,7 +13,7 @@ type MockServerService struct {
 	getFn         func(context.Context, uint, *model.Server) (*model.Server, error)
 	updateFn      func(context.Context, uint, UpdateServerRequest) (*model.Server, error)
 	deleteFn      func(context.Context, uint) error
-	importFn      func(context.Context, io.Reader) (*ImportServersResponse, error)
+	// importFn      func(context.Context, io.Reader) (*ImportServersResponse, error)
 	// reportFn      func(time.Time, time.Time, int, *[]string, context.Context) (*Report, error)
 }
 
@@ -42,9 +41,9 @@ func (m *MockServerService) DeleteServer(ctx context.Context, id uint) error {
 	return m.deleteFn(ctx, id)
 }
 
-func (m *MockServerService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
-	return m.importFn(ctx, r)
-}
+// func (m *MockServerService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
+// 	return m.importFn(ctx, r)
+// }
 
 func (m *MockServerService) BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error {
 	return nil
