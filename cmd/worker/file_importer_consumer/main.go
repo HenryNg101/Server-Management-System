@@ -39,6 +39,7 @@ func main() {
 		}
 
 		var jobMsg data_transfer.ImportJobMessage
+		// Skip poison message to not waste time
 		if err := json.Unmarshal(msg.Value, &jobMsg); err != nil {
 			log.Println("invalid message")
 			_ = consumer.Commit(ctx, msg)

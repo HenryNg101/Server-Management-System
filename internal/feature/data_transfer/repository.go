@@ -15,7 +15,9 @@ type Repository interface {
 
 	// Jobs system
 	CreateJob(ctx context.Context, job *model.ImportJob) error
-	UpdateJobStatus(ctx context.Context, jobID string, status string, errMsg string) error
+	GetJob(ctx context.Context, id string) (*model.ImportJob, error)
+	UpdateJobStatus(ctx context.Context, jobID string, status model.JobStatus, errMsg *string, resultPath *string) error
+	UpdateJobProgress(ctx context.Context, id string, processed int, success int, failed int) error
 }
 
 type dataTransferRepository struct {
@@ -50,12 +52,32 @@ func (r *dataTransferRepository) CreateJob(ctx context.Context, job *model.Impor
 	return r.db.WithContext(ctx).Create(job).Error
 }
 
-func (r *dataTransferRepository) UpdateJobStatus(ctx context.Context, jobID string, status string, errMsg string) error {
+func (r *dataTransferRepository) GetJob(ctx context.Context, id string) (*model.ImportJob, error) {
+	var job model.ImportJob
+	if err := r.db.WithContext(ctx).First(&job, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
+func (r *dataTransferRepository) UpdateJobStatus(ctx context.Context, jobID string, status model.JobStatus, errMsg *string, resultPath *string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.ImportJob{}).
 		Where("id = ?", jobID).
 		Updates(map[string]interface{}{
-			"status": status,
-			"error":  errMsg,
+			"status":      status,
+			"error":       errMsg,
+			"result_path": resultPath,
+		}).Error
+}
+
+func (r *dataTransferRepository) UpdateJobProgress(ctx context.Context, id string, processed int, success int, failed int) error {
+	return r.db.WithContext(ctx).
+		Model(&model.ImportJob{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"processed_rows":     processed,
+			"success_rows_count": success,
+			"failed_rows_count":  failed,
 		}).Error
 }

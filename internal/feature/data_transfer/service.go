@@ -1,6 +1,7 @@
 package data_transfer
 
 import (
+	"bytes"
 	"context"
 	"encoding/csv"
 	"encoding/json"
@@ -17,11 +18,13 @@ const (
 )
 
 type Service interface {
-	ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
+	// ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
+	ImportServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error)
 
 	// Handling jobs
-	CreateImportJob(ctx context.Context, r io.Reader) (string, error)
+	CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (string, error)
 	ProcessImportJob(ctx context.Context, msg ImportJobMessage) error
+	GetJob(ctx context.Context, id string) (*model.ImportJob, error)
 }
 
 type dataTransferService struct {
@@ -34,13 +37,17 @@ func NewService(r Repository, k KafkaProducer, s BlobStorage) Service {
 	return &dataTransferService{repo: r, kafkaProducer: k, blobStorage: s}
 }
 
+func (s *dataTransferService) GetJob(ctx context.Context, id string) (*model.ImportJob, error) {
+	return s.repo.GetJob(ctx, id)
+}
+
 // Create new job for CSV file importing
-func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader) (string, error) {
+func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (string, error) {
 	jobID := uuid.New().String() // Generate unique ID
 
 	// upload to MinIO
-	objectKey := fmt.Sprintf("imports/%s.csv", jobID)
-	_, err := s.blobStorage.Upload(ctx, objectKey, r, -1)
+	objectKey := fmt.Sprintf("jobs/%s/input.csv", jobID)
+	_, err := s.blobStorage.Upload(ctx, objectKey, r, fileSize)
 	if err != nil {
 		return "", err
 	}
@@ -56,12 +63,7 @@ func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader) 
 	}
 
 	// Publish Kafka message
-	msg := ImportJobMessage{
-		JobID:     jobID,
-		ObjectKey: objectKey,
-	}
-	payload, _ := json.Marshal(msg)
-	if err := s.kafkaProducer.WriteOne(ctx, []byte(jobID), payload); err != nil {
+	if err := s.kafkaProducer.PublishImportJob(ctx, jobID, objectKey); err != nil {
 		return "", err
 	}
 	return jobID, nil
@@ -69,42 +71,78 @@ func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader) 
 
 // Process a job
 func (s *dataTransferService) ProcessImportJob(ctx context.Context, msg ImportJobMessage) error {
-	_ = s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusProcessing), "")
+	job, err := s.GetJob(ctx, msg.JobID)
+	if err != nil {
+		return fmt.Errorf("failed to get job information: %v", err.Error())
+	}
 
+	// Ensure idempotency, in case where processing is done, but commit isn't done yet, and system crashed mid-way
+	if job.Status == model.JobStatusDone {
+		return nil
+	}
+
+	if err := s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusProcessing, nil, nil); err != nil {
+		// log.Printf("failed to update job status: %v", err)
+		return fmt.Errorf("failed to update job status: %v", err.Error())
+	}
+
+	// Download the file from MinIO and check if it's possible
 	reader, err := s.blobStorage.Download(ctx, msg.ObjectKey)
 	if err != nil {
-		s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusFailed), err.Error())
+		errMsg := err.Error()
+		s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusFailed, &errMsg, nil)
 		return err
 	}
 	defer reader.Close()
 
-	_, err = s.ImportServers(ctx, reader)
+	// Pass progress callback into ImportServers
+	failedRows, err := s.ImportServers(ctx, reader, func(processed, success, failed int) {
+		_ = s.repo.UpdateJobProgress(ctx, msg.JobID, processed, success, failed)
+	})
+
 	if err != nil {
-		s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusFailed), err.Error())
+		errMsg := err.Error()
+		s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusFailed, &errMsg, nil)
 		return err
 	}
 
-	return s.repo.UpdateJobStatus(ctx, msg.JobID, string(model.JobStatusDone), "")
+	// Upload specific info on failed rows into a json ONCE
+	resultPath := fmt.Sprintf("jobs/%s/failures.json", msg.JobID)
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(failedRows); err != nil {
+		errMsg := err.Error()
+		s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusFailed, &errMsg, nil)
+		return err
+	}
+
+	_, err = s.blobStorage.Upload(ctx, resultPath, &buf, int64(buf.Len()))
+	if err != nil {
+		errMsg := err.Error()
+		s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusFailed, &errMsg, nil)
+		return err
+	}
+
+	return s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusDone, nil, &resultPath)
 }
 
-// TODO: Handle more edge cases of uploading
-func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error) {
+func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error) {
 	reader := csv.NewReader(r)
 
-	// Read headers
 	headers, err := reader.Read()
 	if err != nil {
 		return nil, errors.New("failed to read CSV headers")
 	}
 
 	var (
-		batch        []*model.Server
-		successCount int
-		failures     []ImportFailure
-		rowIndex     = 1 // header is row 1
+		batch         []*model.Server
+		failedRows    []ImportFailure
+		rowIndex      = 1
+		processedRows int
+		successCount  int
+		failedCount   int
 	)
 
-	// Read line by line instead of whole file -> Not make this a blocking operation
 	for {
 		rowIndex++
 
@@ -112,11 +150,17 @@ func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*
 		if err == io.EOF {
 			break
 		}
+
+		// Processed rows counts only represents the amount of rows it reads so far, so as long as there's a line that's read (Even if invalid), it's counted
+		processedRows++
+
+		// Validate parsing
 		if err != nil {
-			failures = append(failures, ImportFailure{
+			failedRows = append(failedRows, ImportFailure{
 				Row:   rowIndex,
 				Error: err.Error(),
 			})
+			failedCount++
 			continue
 		}
 
@@ -124,37 +168,45 @@ func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader) (*
 
 		server, err := parseServer(record)
 		if err != nil {
-			failures = append(failures, ImportFailure{
+			failedRows = append(failedRows, ImportFailure{
 				Row:   rowIndex,
 				Error: err.Error(),
 			})
+			failedCount++
 			continue
 		}
 
+		// Push to batch after it's validated, and batch insert each time it reaches the size
 		batch = append(batch, server)
 
-		// Flush batch
 		if len(batch) >= batchSize {
-			inserted, failed := s.insertBatch(ctx, batch, rowIndex-len(batch)+1)
-			successCount += inserted
-			failures = append(failures, failed...)
+			insertedCount, failed := s.insertBatch(ctx, batch, rowIndex-len(batch)+1)
+
+			successCount += insertedCount
+			failedCount += len(failed)
+			failedRows = append(failedRows, failed...)
 
 			batch = batch[:0]
+
+			if progressCallback != nil {
+				progressCallback(processedRows, successCount, failedCount)
+			}
 		}
 	}
 
-	// Final flush
+	// final flush
 	if len(batch) > 0 {
-		inserted, failed := s.insertBatch(ctx, batch, rowIndex-len(batch)+1)
-		successCount += inserted
-		failures = append(failures, failed...)
+		insertedCount, failed := s.insertBatch(ctx, batch, rowIndex-len(batch)+1)
+
+		successCount += insertedCount
+		failedCount += len(failed)
+		failedRows = append(failedRows, failed...)
 	}
 
-	return &ImportServersResponse{
-		SuccessCount: successCount,
-		FailedCount:  len(failures),
-		Failures:     failures,
-	}, nil
+	if progressCallback != nil {
+		progressCallback(processedRows, successCount, failedCount)
+	}
+	return failedRows, nil
 }
 
 func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Server, startRow int) (int, []ImportFailure) {
@@ -165,11 +217,11 @@ func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Se
 
 	// Fallback when there's a failure: try inserting one by one to identify failures
 	successCount := 0
-	var failures []ImportFailure
+	var failedRows []ImportFailure
 	for i, srv := range batch {
 		err := s.repo.CreateServer(ctx, srv)
 		if err != nil {
-			failures = append(failures, ImportFailure{
+			failedRows = append(failedRows, ImportFailure{
 				Row:   startRow + i,
 				Error: err.Error(),
 			})
@@ -177,5 +229,5 @@ func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Se
 		}
 		successCount++
 	}
-	return successCount, failures
+	return successCount, failedRows
 }
