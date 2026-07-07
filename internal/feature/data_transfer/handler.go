@@ -3,6 +3,7 @@ package data_transfer
 import (
 	"net/http"
 
+	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +23,7 @@ func NewHandler(s Service) *Handler {
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "Input servers file (CSV)"
-// @Success 200 {object} ImportServersResponse
+// @Success 200 {object} CreateImportJobResponse
 // @Router /servers/import [post]
 func (h *Handler) ImportServers(c *gin.Context) {
 	file, err := c.FormFile("file")
@@ -47,7 +48,16 @@ func (h *Handler) ImportServers(c *gin.Context) {
 	c.JSON(200, result)
 }
 
-// GET /jobs/:id
+// Get a job's status
+// @Summary Get a job's status
+// @Description After user uploads Excel file(s) with servers info for import, they can take the job's ID and check the status of processing in here
+// @Param id path string true "Job ID"
+// @Tags jobs
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} GetJobResponse
+// @Failure 404 {object} map[string]string
+// @Router /jobs/{id} [get]
 func (h *Handler) GetJob(c *gin.Context) {
 	id := c.Param("id")
 
@@ -57,5 +67,38 @@ func (h *Handler) GetJob(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, job)
+	ctx := c.Request.Context()
+
+	resp := GetJobResponse{
+		ID:               job.ID,
+		Status:           string(job.Status),
+		ProcessedRows:    job.ProcessedRows,
+		SuccessRowsCount: job.SuccessRowsCount,
+		FailedRowsCount:  job.FailedRowsCount,
+		Error:            job.Error,
+	}
+
+	// Always allow download of input file
+	if job.FilePath != "" {
+		url, err := h.service.GenerateFileDownloadURL(ctx, job.FilePath)
+		if err == nil {
+			resp.InputFileURL = &url
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// Only expose failures file when job is done
+	if job.Status == model.JobStatusDone && job.ResultPath != nil {
+		url, err := h.service.GenerateFileDownloadURL(ctx, *job.ResultPath)
+		if err == nil {
+			resp.FailuresFileURL = &url
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/app"
 	"github.com/HenryNg101/server-management-system/internal/config"
@@ -13,8 +12,9 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// defer cancel()
+	ctx := context.Background()
 
 	application, err := app.NewApp()
 	if err != nil {

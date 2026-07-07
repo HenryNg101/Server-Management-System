@@ -65,11 +65,12 @@ type KafkaConfig struct {
 }
 
 type MinIOConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	InternalEndpoint string
+	PublicEndpoint   string
+	AccessKey        string
+	SecretKey        string
+	Bucket           string
+	UseSSL           bool
 }
 
 func getEnv(key, fallback string) string {
@@ -135,17 +136,18 @@ func LoadKafka() *KafkaConfig {
 		AgentMetricsTopic:          getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
 		AgentMetricsConsumerGroup:  getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
 		AgentMetricsDLQTopic:       getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
-		ServersImportTopic:         getEnv("KAFKA_SERVERS_IMPORT_TOPIC", "agent-metrics-dlq"),
-		ServersImportConsumerGroup: getEnv("KAFKA_SERVERS_IMPORT_GROUP", "agent-metrics-dlq"),
+		ServersImportTopic:         getEnv("KAFKA_SERVERS_IMPORT_TOPIC", "servers-import"),
+		ServersImportConsumerGroup: getEnv("KAFKA_SERVERS_IMPORT_GROUP", "servers-import-consumer-group"),
 	}
 }
 
 func LoadMinIO() *MinIOConfig {
 	return &MinIOConfig{
-		Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-		SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
-		Bucket:    getEnv("MINIO_BUCKET", "imports"),
-		UseSSL:    false,
+		InternalEndpoint: getEnv("MINIO_INTERNAL_ENDPOINT", "minio:9000"),
+		PublicEndpoint:   getEnv("MINIO_PUBLIC_ENDPOINT", "host.docker.internal:9000"),
+		AccessKey:        getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+		SecretKey:        getEnv("MINIO_SECRET_KEY", "minioadmin"),
+		Bucket:           getEnv("MINIO_BUCKET", "jobs"),
+		UseSSL:           false,
 	}
 }

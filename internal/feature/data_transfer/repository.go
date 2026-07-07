@@ -2,6 +2,7 @@ package data_transfer
 
 import (
 	"context"
+	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"gorm.io/gorm"
@@ -18,6 +19,9 @@ type Repository interface {
 	GetJob(ctx context.Context, id string) (*model.ImportJob, error)
 	UpdateJobStatus(ctx context.Context, jobID string, status model.JobStatus, errMsg *string, resultPath *string) error
 	UpdateJobProgress(ctx context.Context, id string, processed int, success int, failed int) error
+
+	GetOldJobs(ctx context.Context, olderThan time.Duration) ([]model.ImportJob, error)
+	DeleteJob(ctx context.Context, jobID string) error
 }
 
 type dataTransferRepository struct {
@@ -80,4 +84,21 @@ func (r *dataTransferRepository) UpdateJobProgress(ctx context.Context, id strin
 			"success_rows_count": success,
 			"failed_rows_count":  failed,
 		}).Error
+}
+
+func (r *dataTransferRepository) GetOldJobs(ctx context.Context, olderThan time.Duration) ([]model.ImportJob, error) {
+	var jobs []model.ImportJob
+
+	cutoff := time.Now().Add(-olderThan)
+
+	err := r.db.WithContext(ctx).
+		Where("created_at < ?", cutoff).
+		Find(&jobs).Error
+
+	return jobs, err
+}
+
+func (r *dataTransferRepository) DeleteJob(ctx context.Context, jobID string) error {
+	return r.db.WithContext(ctx).
+		Delete(&model.ImportJob{}, "id = ?", jobID).Error
 }

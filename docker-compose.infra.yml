@@ -152,9 +152,34 @@ services:
       - ${ENV_FILE}
     restart: "no"
     logging: *default-logging
+  
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console UI
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+  
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    env_file:
+      - ${ENV_FILE}
+    entrypoint: ["/bin/sh", "/scripts/minio/setup.sh"]
+    volumes:
+      - ./scripts:/scripts
 
 volumes:
   es_data:
   postgres_data:
   redis_data:
   kafka_data:
+  minio_data:

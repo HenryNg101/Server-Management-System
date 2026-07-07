@@ -75,8 +75,14 @@ func NewApp() (*Application, error) {
 	if len(minIOConfig.AccessKey) == 0 {
 		return nil, errors.New("Access key for MinIO is not configured. You have to set it in .env file in root folder using MINIO_ACCESS_KEY variable")
 	}
-	minIOSession := blob_storage.NewMinIOSession(
-		minIOConfig.Endpoint,
+	minIOInternalSession := blob_storage.NewMinIOSession(
+		minIOConfig.InternalEndpoint,
+		minIOConfig.AccessKey,
+		minIOConfig.SecretKey,
+		minIOConfig.UseSSL,
+	)
+	minIOExternalSession := blob_storage.NewMinIOSession(
+		minIOConfig.PublicEndpoint,
 		minIOConfig.AccessKey,
 		minIOConfig.SecretKey,
 		minIOConfig.UseSSL,
@@ -115,7 +121,7 @@ func NewApp() (*Application, error) {
 
 	dataTransferRepo := data_transfer.NewRepository(postgresSession)
 	kafkaImportProducer := data_transfer.NewKafkaProducer(kafkaClient.NewProducer(kafkaConfig.Brokers, kafkaConfig.ServersImportTopic))
-	minIORepo := data_transfer.NewBlobStorage(minIOSession, minIOConfig.Bucket)
+	minIORepo := data_transfer.NewBlobStorage(minIOInternalSession, minIOExternalSession, minIOConfig.Bucket)
 	dataTransferService := data_transfer.NewService(dataTransferRepo, kafkaImportProducer, minIORepo)
 
 	return &Application{

@@ -77,22 +77,30 @@ definitions:
       refresh_token:
         type: string
     type: object
-  data_transfer.ImportFailure:
+  data_transfer.CreateImportJobResponse:
+    properties:
+      job_id:
+        type: string
+      status:
+        type: string
+    type: object
+  data_transfer.GetJobResponse:
     properties:
       error:
         type: string
-      row:
+      failed_rows_count:
         type: integer
-    type: object
-  data_transfer.ImportServersResponse:
-    properties:
-      failed_count:
+      failures_file_url:
+        type: string
+      id:
+        type: string
+      input_file_url:
+        type: string
+      processed_rows:
         type: integer
-      failures:
-        items:
-          $ref: '#/definitions/data_transfer.ImportFailure'
-        type: array
-      success_count:
+      status:
+        type: string
+      success_rows_count:
         type: integer
     type: object
   model.Agent:
@@ -357,6 +365,34 @@ paths:
       summary: Metrics
       tags:
       - agents
+  /jobs/{id}:
+    get:
+      description: After user uploads Excel file(s) with servers info for import,
+        they can take the job's ID and check the status of processing in here
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/data_transfer.GetJobResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a job's status
+      tags:
+      - jobs
   /login:
     post:
       consumes:
@@ -709,7 +745,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/data_transfer.ImportServersResponse'
+            $ref: '#/definitions/data_transfer.CreateImportJobResponse'
       security:
       - BearerAuth: []
       summary: Import servers from csv file

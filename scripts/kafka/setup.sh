@@ -32,3 +32,14 @@ echo "Topic $KAFKA_AGENT_METRICS_TOPIC created successfully"
   --replication-factor 1
 
 echo "DLQ Topic $KAFKA_AGENT_METRICS_DLQ_TOPIC created successfully"
+
+# Create topic if not exists
+/opt/kafka/bin/kafka-topics.sh \
+  --create \
+  --if-not-exists \
+  --topic "$KAFKA_SERVERS_IMPORT_TOPIC" \
+  --bootstrap-server kafka:9092 \
+  --partitions 3 \
+  --replication-factor 1
+
+echo "Topic $KAFKA_SERVERS_IMPORT_TOPIC created successfully"

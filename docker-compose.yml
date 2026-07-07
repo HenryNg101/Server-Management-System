@@ -50,12 +50,12 @@ services:
       - APP_ENV=docker
     logging: *default-logging
   
-  emailer:
+  cron_scheduler:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        CMD_PATH: ./cmd/worker/emailer
+        CMD_PATH: ./cmd/worker/cron_scheduler
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:
@@ -70,6 +70,20 @@ services:
       dockerfile: Dockerfile
       args:
         CMD_PATH: ./cmd/worker/metrics_consumer
+    restart: unless-stopped
+    depends_on: *common-dependency
+    env_file:
+      - ${ENV_FILE}
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
+  
+  file_importer_consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/worker/file_importer_consumer
     restart: unless-stopped
     depends_on: *common-dependency
     env_file:

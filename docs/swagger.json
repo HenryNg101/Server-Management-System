@@ -63,6 +63,49 @@
                 }
             }
         },
+        "/jobs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "After user uploads Excel file(s) with servers info for import, they can take the job's ID and check the status of processing in here",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Get a job's status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/data_transfer.GetJobResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "Authenticate user and return JWT",
@@ -424,7 +467,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/data_transfer.ImportServersResponse"
+                            "$ref": "#/definitions/data_transfer.CreateImportJobResponse"
                         }
                     }
                 }
@@ -855,30 +898,42 @@
                 }
             }
         },
-        "data_transfer.ImportFailure": {
+        "data_transfer.CreateImportJobResponse": {
+            "type": "object",
+            "properties": {
+                "job_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "data_transfer.GetJobResponse": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "string"
                 },
-                "row": {
-                    "type": "integer"
-                }
-            }
-        },
-        "data_transfer.ImportServersResponse": {
-            "type": "object",
-            "properties": {
-                "failed_count": {
+                "failed_rows_count": {
                     "type": "integer"
                 },
-                "failures": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/data_transfer.ImportFailure"
-                    }
+                "failures_file_url": {
+                    "type": "string"
                 },
-                "success_count": {
+                "id": {
+                    "type": "string"
+                },
+                "input_file_url": {
+                    "type": "string"
+                },
+                "processed_rows": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "success_rows_count": {
                     "type": "integer"
                 }
             }

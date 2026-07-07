@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
 	"github.com/google/uuid"
@@ -22,9 +23,13 @@ type Service interface {
 	ImportServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error)
 
 	// Handling jobs
-	CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (string, error)
+	CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (*CreateImportJobResponse, error)
 	ProcessImportJob(ctx context.Context, msg ImportJobMessage) error
 	GetJob(ctx context.Context, id string) (*model.ImportJob, error)
+	GenerateFileDownloadURL(ctx context.Context, objectKey string) (string, error)
+
+	// For clean up frequently (TTL stuff)
+	CleanupOldImportJobs(ctx context.Context, olderThan time.Duration) error
 }
 
 type dataTransferService struct {
@@ -42,14 +47,14 @@ func (s *dataTransferService) GetJob(ctx context.Context, id string) (*model.Imp
 }
 
 // Create new job for CSV file importing
-func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (string, error) {
+func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (*CreateImportJobResponse, error) {
 	jobID := uuid.New().String() // Generate unique ID
 
 	// upload to MinIO
 	objectKey := fmt.Sprintf("jobs/%s/input.csv", jobID)
 	_, err := s.blobStorage.Upload(ctx, objectKey, r, fileSize)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Create new job in the DB
@@ -59,14 +64,17 @@ func (s *dataTransferService) CreateImportJob(ctx context.Context, r io.Reader, 
 		Status:   model.JobStatusPending,
 	}
 	if err := s.repo.CreateJob(ctx, job); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Publish Kafka message
 	if err := s.kafkaProducer.PublishImportJob(ctx, jobID, objectKey); err != nil {
-		return "", err
+		return nil, err
 	}
-	return jobID, nil
+	return &CreateImportJobResponse{
+		JobID:  jobID,
+		Status: string(model.JobStatusPending),
+	}, nil
 }
 
 // Process a job
@@ -230,4 +238,34 @@ func (s *dataTransferService) insertBatch(ctx context.Context, batch []*model.Se
 		successCount++
 	}
 	return successCount, failedRows
+}
+
+func (s *dataTransferService) CleanupOldImportJobs(ctx context.Context, olderThan time.Duration) error {
+	jobs, err := s.repo.GetOldJobs(ctx, olderThan)
+	if err != nil {
+		return err
+	}
+
+	for _, job := range jobs {
+		// delete input file
+		_ = s.blobStorage.Delete(ctx, job.FilePath)
+
+		// delete result file if exists
+		if job.ResultPath != nil {
+			_ = s.blobStorage.Delete(ctx, *job.ResultPath)
+		}
+
+		// delete DB record
+		if err := s.repo.DeleteJob(ctx, job.ID); err != nil {
+			// Log and continue, without stopping the whole cleanup
+			fmt.Printf("failed to delete job %s: %v\n", job.ID, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *dataTransferService) GenerateFileDownloadURL(ctx context.Context, objectKey string) (string, error) {
+	// e.g. 15 minutes expiry
+	return s.blobStorage.GetPresignedURL(ctx, objectKey, 15*time.Minute)
 }
