@@ -19,8 +19,8 @@ const (
 )
 
 type Service interface {
-	// ImportServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
-	ImportServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error)
+	// importServers(ctx context.Context, r io.Reader) (*ImportServersResponse, error)
+	importServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error)
 
 	// Handling jobs
 	CreateImportJob(ctx context.Context, r io.Reader, fileSize int64) (*CreateImportJobResponse, error)
@@ -103,8 +103,8 @@ func (s *dataTransferService) ProcessImportJob(ctx context.Context, msg ImportJo
 	}
 	defer reader.Close()
 
-	// Pass progress callback into ImportServers
-	failedRows, err := s.ImportServers(ctx, reader, func(processed, success, failed int) {
+	// Pass progress callback into importServers
+	failedRows, err := s.importServers(ctx, reader, func(processed, success, failed int) {
 		_ = s.repo.UpdateJobProgress(ctx, msg.JobID, processed, success, failed)
 	})
 
@@ -134,7 +134,7 @@ func (s *dataTransferService) ProcessImportJob(ctx context.Context, msg ImportJo
 	return s.repo.UpdateJobStatus(ctx, msg.JobID, model.JobStatusDone, nil, &resultPath)
 }
 
-func (s *dataTransferService) ImportServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error) {
+func (s *dataTransferService) importServers(ctx context.Context, r io.Reader, progressCallback func(processed, success, failed int)) ([]ImportFailure, error) {
 	reader := csv.NewReader(r)
 
 	headers, err := reader.Read()

@@ -1,6 +1,7 @@
 package data_transfer
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/HenryNg101/server-management-system/internal/model"
@@ -95,8 +96,7 @@ func (h *Handler) GetJob(c *gin.Context) {
 		if err == nil {
 			resp.FailuresFileURL = &url
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+			log.Printf("Failures file does not exist yet: %v", err.Error())
 		}
 	}
 
