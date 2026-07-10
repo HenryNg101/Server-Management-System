@@ -219,6 +219,31 @@ services:
       - PORT=8085
     logging: *default-logging
 
+  jobs-service:
+    build:
+      context: ./services/jobs-service
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jobs.rule=PathPrefix(`/jobs`)"
+      - "traefik.http.services.jobs.loadbalancer.server.port=8083"
+      - "traefik.http.middlewares.jobs-strip.stripprefix.prefixes=/jobs"
+      - "traefik.http.routers.jobs.middlewares=jobs-strip"
+    environment:
+      - APP_ENV=docker
+      - PORT=8086
+    logging: *default-logging
+
   traefik:
     image: traefik:latest
     command:

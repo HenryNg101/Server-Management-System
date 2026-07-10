@@ -1,0 +1,94 @@
+basePath: /jobs
+definitions:
+  jobs.CreateImportJobResponse:
+    properties:
+      job_id:
+        type: string
+      status:
+        type: string
+    type: object
+  jobs.GetJobResponse:
+    properties:
+      error:
+        type: string
+      failed_rows_count:
+        type: integer
+      failures_file_url:
+        type: string
+      id:
+        type: string
+      input_file_url:
+        type: string
+      processed_rows:
+        type: integer
+      status:
+        type: string
+      success_rows_count:
+        type: integer
+    type: object
+host: localhost
+info:
+  contact: {}
+  description: APIs for creating and managing jobs
+  title: Jobs Service API
+  version: "1.0"
+paths:
+  /jobs/{id}:
+    get:
+      description: After user uploads Excel file(s) with servers info for import,
+        they can take the job's ID and check the status of processing in here
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/jobs.GetJobResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a job's status
+      tags:
+      - jobs
+  /jobs/import-server:
+    post:
+      consumes:
+      - multipart/form-data
+      description: User uploads an Excel file with servers info, and the server will
+        try to import valid servers
+      parameters:
+      - description: Input servers file (CSV)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/jobs.CreateImportJobResponse'
+      security:
+      - BearerAuth: []
+      summary: Import servers from csv file
+      tags:
+      - servers
+securityDefinitions:
+  BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
