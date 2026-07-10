@@ -1,0 +1,169 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "APIs for managing servers",
+        "title": "Server Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost",
+    "basePath": "/monitoring",
+    "paths": {
+        "/monitoring/report": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get status report on the servers, and then send emails to people in the email list",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "servers"
+                ],
+                "summary": "Get statuses of servers and emailing",
+                "parameters": [
+                    {
+                        "description": "Report request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/monitoring.SendReportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/monitoring.Report"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "monitoring.Report": {
+            "type": "object",
+            "properties": {
+                "servers_down": {
+                    "type": "integer"
+                },
+                "servers_stats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/monitoring.ServerOverview"
+                    }
+                },
+                "servers_up": {
+                    "type": "integer"
+                },
+                "total_servers": {
+                    "type": "integer"
+                }
+            }
+        },
+        "monitoring.SendReportRequest": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of top N worst servers you want to show in the report",
+                    "type": "integer"
+                },
+                "emails": {
+                    "description": "Optional. It might sends emails or nah",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        },
+        "monitoring.ServerOverview": {
+            "type": "object",
+            "properties": {
+                "cpu_pressure_avg": {
+                    "type": "number"
+                },
+                "cpu_throttling_avg": {
+                    "type": "number"
+                },
+                "cpu_usage_avg": {
+                    "type": "number"
+                },
+                "io_pressure_avg": {
+                    "type": "number"
+                },
+                "memory_pressure_avg": {
+                    "type": "number"
+                },
+                "memory_rss_avg": {
+                    "type": "number"
+                },
+                "memory_usage_avg": {
+                    "type": "number"
+                },
+                "memory_working_set_avg": {
+                    "type": "number"
+                },
+                "oom_events_total": {
+                    "type": "number"
+                },
+                "oom_kills_total": {
+                    "type": "number"
+                },
+                "pids_avg": {
+                    "type": "number"
+                },
+                "read_bps_avg": {
+                    "type": "number"
+                },
+                "serverID": {
+                    "type": "integer"
+                },
+                "uptime": {
+                    "type": "number"
+                },
+                "write_bps_avg": {
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type 'Bearer ' followed by your JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

@@ -1,0 +1,112 @@
+basePath: /monitoring
+definitions:
+  monitoring.Report:
+    properties:
+      servers_down:
+        type: integer
+      servers_stats:
+        items:
+          $ref: '#/definitions/monitoring.ServerOverview'
+        type: array
+      servers_up:
+        type: integer
+      total_servers:
+        type: integer
+    type: object
+  monitoring.SendReportRequest:
+    properties:
+      count:
+        description: The number of top N worst servers you want to show in the report
+        type: integer
+      emails:
+        description: Optional. It might sends emails or nah
+        items:
+          type: string
+        type: array
+      end:
+        type: string
+      start:
+        type: string
+    type: object
+  monitoring.ServerOverview:
+    properties:
+      cpu_pressure_avg:
+        type: number
+      cpu_throttling_avg:
+        type: number
+      cpu_usage_avg:
+        type: number
+      io_pressure_avg:
+        type: number
+      memory_pressure_avg:
+        type: number
+      memory_rss_avg:
+        type: number
+      memory_usage_avg:
+        type: number
+      memory_working_set_avg:
+        type: number
+      oom_events_total:
+        type: number
+      oom_kills_total:
+        type: number
+      pids_avg:
+        type: number
+      read_bps_avg:
+        type: number
+      serverID:
+        type: integer
+      uptime:
+        type: number
+      write_bps_avg:
+        type: number
+    type: object
+host: localhost
+info:
+  contact: {}
+  description: APIs for managing servers
+  title: Server Service API
+  version: "1.0"
+paths:
+  /monitoring/report:
+    post:
+      description: Get status report on the servers, and then send emails to people
+        in the email list
+      parameters:
+      - description: Report request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/monitoring.SendReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/monitoring.Report'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get statuses of servers and emailing
+      tags:
+      - servers
+securityDefinitions:
+  BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

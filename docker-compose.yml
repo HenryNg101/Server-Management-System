@@ -169,6 +169,31 @@ services:
       - PORT=8083
     logging: *default-logging
 
+  monitoring-service:
+    build:
+      context: ./services/monitoring-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.monitoring.rule=PathPrefix(`/monitoring`)"
+      - "traefik.http.services.monitoring.loadbalancer.server.port=8083"
+      - "traefik.http.middlewares.monitoring-strip.stripprefix.prefixes=/monitoring"
+      - "traefik.http.routers.monitoring.middlewares=monitoring-strip"
+    environment:
+      - APP_ENV=docker
+      - PORT=8084
+    logging: *default-logging
+
   traefik:
     image: traefik:latest
     command:
