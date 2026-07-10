@@ -1,0 +1,88 @@
+basePath: /users
+definitions:
+  model.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/model.UserRole'
+    type: object
+  model.UserRole:
+    enum:
+    - admin
+    - user
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleUser
+  user.GetUsersResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/model.UserRole'
+    type: object
+host: localhost
+info:
+  contact: {}
+  description: APIs for listing/adding users
+  title: User Service API
+  version: "1.0"
+paths:
+  /users:
+    get:
+      description: Retrieve list of users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.GetUsersResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get all users
+      tags:
+      - users
+    post:
+      description: Create a new user, with specifications
+      parameters:
+      - description: User to be created
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+      security:
+      - BearerAuth: []
+      summary: Create a user
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

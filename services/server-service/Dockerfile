@@ -19,6 +19,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -ldflags="-s -w" -o app ./cmd
 
+# RUN go build -p=1 -o app ./cmd
+
 # --- Runtime stage ---
 FROM alpine:latest
 
@@ -26,6 +28,6 @@ WORKDIR /app
 
 COPY --from=builder /app/app .
 
-EXPOSE 8081
+EXPOSE 8083
 
 CMD ["./app"]

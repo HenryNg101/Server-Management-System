@@ -31,12 +31,6 @@ type PostgresConfig struct {
 	Port         string
 }
 
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-}
-
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -46,8 +40,8 @@ func getEnv(key, fallback string) string {
 
 func LoadAppConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Host: getEnv("AUTH_SERVICE_HOST", "localhost"),
-		Port: getEnv("AUTH_SERVICE_PORT", "8081"),
+		Host: getEnv("USER_SERVICE_HOST", "localhost"),
+		Port: getEnv("USER_SERVICE_PORT", "8082"),
 	}
 }
 
@@ -63,12 +57,4 @@ func LoadPostgres() *PostgresConfig {
 
 func LoadJWTSecret() string {
 	return getEnv("JWT_SECRET", "")
-}
-
-func LoadRedis() *RedisConfig {
-	return &RedisConfig{
-		Host:     getEnv("REDIS_HOST", "redis"),
-		Port:     getEnv("REDIS_PORT", "6379"),
-		Password: getEnv("REDIS_PASSWORD", ""),
-	}
 }

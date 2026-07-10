@@ -1,0 +1,382 @@
+basePath: /servers
+definitions:
+  model.Agent:
+    properties:
+      apikey:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      server:
+        $ref: '#/definitions/model.Server'
+      serverID:
+        type: integer
+    type: object
+  model.Server:
+    properties:
+      createdAt:
+        description: Automatically managed by GORM for creation time
+        type: string
+      id:
+        type: integer
+      ipv4Address:
+        description: IPv4 of the server
+        type: string
+      lastUpdated:
+        description: Last time the server got updated
+        type: string
+      name:
+        type: string
+      port:
+        description: Port of the server
+        type: integer
+      protocol:
+        description: Network protocol that the server use, could be TCP, FTP, SSH,
+          etc.
+        type: string
+      status:
+        description: Server status at the time (Is it on or off)
+        type: boolean
+    type: object
+  server.CreateServerRequest:
+    properties:
+      ipv4_address:
+        type: string
+      name:
+        type: string
+      port:
+        type: integer
+      protocol:
+        type: string
+      status:
+        type: boolean
+    required:
+    - ipv4_address
+    - name
+    - port
+    - status
+    type: object
+  server.CreateServerResponse:
+    properties:
+      agent_api_key:
+        type: string
+      created_agent:
+        $ref: '#/definitions/model.Agent'
+      created_server:
+        $ref: '#/definitions/model.Server'
+    type: object
+  server.GetServerResponse:
+    properties:
+      created_at:
+        description: Automatically managed by GORM for creation time
+        type: string
+      ipv4_address:
+        description: IPv4 of the server
+        type: string
+      last_updated:
+        description: Last time the server got updated
+        type: string
+      name:
+        type: string
+      port:
+        description: Port of the server
+        type: integer
+      protocol:
+        description: Network protocol that the server use, could be TCP, FTP, SSH,
+          etc.
+        type: string
+      status:
+        description: Server status at the time (Is it on or off)
+        type: boolean
+    type: object
+  server.UpdateServerRequest:
+    properties:
+      ipv4:
+        type: string
+      name:
+        type: string
+      port:
+        type: integer
+      protocol:
+        type: string
+      status:
+        type: boolean
+    type: object
+host: localhost
+info:
+  contact: {}
+  description: APIs for managing servers
+  title: Server Service API
+  version: "1.0"
+paths:
+  /servers:
+    get:
+      description: Retrieve servers with filtering, pagination, and sorting
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: boolean
+      - description: Filter by protocol
+        in: query
+        name: protocol
+        type: string
+      - description: Search by name
+        in: query
+        name: name
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10, max 100)
+        in: query
+        name: page_size
+        type: integer
+      - description: Sort by field (id, name, created_at)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/server.GetServerResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get servers
+      tags:
+      - servers
+    post:
+      consumes:
+      - application/json
+      description: Create a new server, with specifications
+      parameters:
+      - description: Server payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.CreateServerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/server.CreateServerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a server
+      tags:
+      - servers
+  /servers/{id}:
+    delete:
+      description: Get a server based on ID, and delete that server
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a server
+      tags:
+      - servers
+    get:
+      description: Retrieve a server based on ID
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.GetServerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a server
+      tags:
+      - servers
+    patch:
+      consumes:
+      - application/json
+      description: Get a server based on ID, and then update field(s)
+      parameters:
+      - description: Server ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New server info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.UpdateServerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Server'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a server
+      tags:
+      - servers
+  /servers/export:
+    get:
+      description: User ask for all servers info with optional filtering, pagination,
+        and sorting, and the server will export servers info to CSV file
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: boolean
+      - description: Filter by protocol
+        in: query
+        name: protocol
+        type: string
+      - description: Search by name
+        in: query
+        name: name
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10, max 100)
+        in: query
+        name: page_size
+        type: integer
+      - description: Sort by field (id, name, created_at)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          headers:
+            Content-Disposition:
+              description: attachment; filename=servers.csv
+              type: string
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export servers info to csv file
+      tags:
+      - servers
+securityDefinitions:
+  BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

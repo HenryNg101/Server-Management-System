@@ -31,10 +31,13 @@ type PostgresConfig struct {
 	Port         string
 }
 
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
+type ElasticSearchConfig struct {
+	Host                  string
+	User                  string
+	Password              string
+	Port                  string
+	StatusDataStreamName  string
+	MetricsDataStreamName string
 }
 
 func getEnv(key, fallback string) string {
@@ -46,8 +49,8 @@ func getEnv(key, fallback string) string {
 
 func LoadAppConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Host: getEnv("AUTH_SERVICE_HOST", "localhost"),
-		Port: getEnv("AUTH_SERVICE_PORT", "8081"),
+		Host: getEnv("SERVER_SERVICE_HOST", "localhost"),
+		Port: getEnv("SERVER_SERVICE_PORT", "8083"),
 	}
 }
 
@@ -61,14 +64,17 @@ func LoadPostgres() *PostgresConfig {
 	}
 }
 
-func LoadJWTSecret() string {
-	return getEnv("JWT_SECRET", "")
+func LoadElasticsearch() *ElasticSearchConfig {
+	return &ElasticSearchConfig{
+		Host:                  getEnv("ELASTIC_HOST", "localhost"),
+		User:                  getEnv("ELASTIC_USER", "elastic"),
+		Password:              getEnv("ELASTIC_PASSWORD", ""),
+		Port:                  getEnv("ELASTIC_PORT", "9200"),
+		StatusDataStreamName:  getEnv("ELASTIC_STATUS_DATA_STREAM_SOURCE", "server-status"),
+		MetricsDataStreamName: getEnv("ELASTIC_METRICS_DATA_STREAM_SOURCE", "server-metrics"),
+	}
 }
 
-func LoadRedis() *RedisConfig {
-	return &RedisConfig{
-		Host:     getEnv("REDIS_HOST", "redis"),
-		Port:     getEnv("REDIS_PORT", "6379"),
-		Password: getEnv("REDIS_PASSWORD", ""),
-	}
+func LoadJWTSecret() string {
+	return getEnv("JWT_SECRET", "")
 }

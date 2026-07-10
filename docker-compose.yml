@@ -95,11 +95,11 @@ services:
     environment:
       - APP_ENV=docker
     logging: *default-logging
-  
+
   auth-service:
     build:
-      context: .
-      dockerfile: services/auth-service/Dockerfile
+      context: ./services/auth-service
+      dockerfile: Dockerfile
     ports:
       - "8081:8081"
     restart: unless-stopped
@@ -109,7 +109,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - ${ENV_FILE}
+      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
@@ -119,6 +119,54 @@ services:
     environment:
       - APP_ENV=docker
       - PORT=8081
+    logging: *default-logging
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user.rule=PathPrefix(`/users`)"
+      - "traefik.http.services.user.loadbalancer.server.port=8082"
+      - "traefik.http.middlewares.user-strip.stripprefix.prefixes=/users"
+      - "traefik.http.routers.user.middlewares=user-strip"
+    environment:
+      - APP_ENV=docker
+      - PORT=8082
+    logging: *default-logging
+
+  server-service:
+    build:
+      context: ./services/server-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.servers.rule=PathPrefix(`/servers`)"
+      - "traefik.http.services.servers.loadbalancer.server.port=8083"
+      - "traefik.http.middlewares.servers-strip.stripprefix.prefixes=/servers"
+      - "traefik.http.routers.servers.middlewares=servers-strip"
+    environment:
+      - APP_ENV=docker
+      - PORT=8083
     logging: *default-logging
 
   traefik:

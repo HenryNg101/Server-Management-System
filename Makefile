@@ -40,8 +40,7 @@ endif
 prod.build: env_init
     # Build cleanly without crashing resources, using sequential cache-warming by building one service first, to allow Docker caching even working at all
     # This is to avoid the issue of Docker caching not working properly when building multiple services at once, as Docker builds services in parallel and cache is not utilized effectively right in the first build, which can lead to unnecessary rebuilds of GBs of data, longer build times, and in worst cases, thrashings.
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build api
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build
+	docker compos --parallel 1 --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) build
 
 prod.up: prod.build
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_APP) up -d --no-build
@@ -59,8 +58,7 @@ prod.logs:
 # For development. The only difference from this to production is that, in this one, ports are exposed for debugging purposes. In production, ports for infrastructure are not exposed to the outside world for security reasons.
 # ==========================================
 dev.build: env_init
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build api
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build
+	docker compose --parallel 1 --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) build
 
 dev.up: dev.build
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_INFRA) $(COMPOSE_DEV) $(COMPOSE_APP) up -d --no-build
@@ -75,7 +73,7 @@ dev.down:
 # For testing monitoring agent purposes
 # ==========================================
 client.build: env_init
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_CLIENT) build
+	docker compose --parallel 1 --env-file $(ENV_FILE) $(COMPOSE_CLIENT) build
 
 client.up: client.build
 	docker compose --env-file $(ENV_FILE) $(COMPOSE_CLIENT) up -d --no-build
