@@ -146,10 +146,10 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type 'Bearer ' followed by your JWT token.",
+        "ApiKeyAuth": {
+            "description": "API Key for external automated systems.",
             "type": "apiKey",
-            "name": "Authorization",
+            "name": "X-Agent-API-Key",
             "in": "header"
         }
     }
@@ -161,8 +161,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost",
 	BasePath:         "/agent",
 	Schemes:          []string{},
-	Title:            "Monitoring Service API",
-	Description:      "APIs for getting servers reports",
+	Title:            "Agent Service API",
+	Description:      "APIs for agents to push data to system",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -50,8 +50,8 @@ definitions:
 host: localhost
 info:
   contact: {}
-  description: APIs for getting servers reports
-  title: Monitoring Service API
+  description: APIs for agents to push data to system
+  title: Agent Service API
   version: "1.0"
 paths:
   /agent/metrics:
@@ -89,9 +89,9 @@ paths:
       tags:
       - agents
 securityDefinitions:
-  BearerAuth:
-    description: Type 'Bearer ' followed by your JWT token.
+  ApiKeyAuth:
+    description: API Key for external automated systems.
     in: header
-    name: Authorization
+    name: X-Agent-API-Key
     type: apiKey
 swagger: "2.0"

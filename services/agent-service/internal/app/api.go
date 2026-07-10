@@ -15,15 +15,15 @@ import (
 // @description APIs for agents to push data to system
 // @host localhost
 // @BasePath /agent
-// @securityDefinitions.apikey BearerAuth
+// @securityDefinitions.apikey ApiKeyAuth
 // @in header
-// @name Authorization
-// @description Type 'Bearer ' followed by your JWT token.
+// @name X-Agent-API-Key
+// @description API Key for external automated systems.
 func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Application) *gin.Engine {
 	r := gin.Default()
 
 	// Dynamic Swagger config
-	docs.SwaggerInfo.Host = cfg.Host + ":" + cfg.Port
+	docs.SwaggerInfo.Host = cfg.Host
 	// docs.SwaggerInfo.BasePath = "/api/v1"
 	// docs.SwaggerInfo.Schemes = []string{"http"}
 

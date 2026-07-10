@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "APIs for getting servers reports",
-        "title": "Monitoring Service API",
+        "description": "APIs for agents to push data to system",
+        "title": "Agent Service API",
         "contact": {},
         "version": "1.0"
     },
@@ -140,10 +140,10 @@
         }
     },
     "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type 'Bearer ' followed by your JWT token.",
+        "ApiKeyAuth": {
+            "description": "API Key for external automated systems.",
             "type": "apiKey",
-            "name": "Authorization",
+            "name": "X-Agent-API-Key",
             "in": "header"
         }
     }
