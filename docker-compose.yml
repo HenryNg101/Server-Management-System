@@ -194,6 +194,31 @@ services:
       - PORT=8084
     logging: *default-logging
 
+  agent-service:
+    build:
+      context: ./services/agent-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agent.rule=PathPrefix(`/agent`)"
+      - "traefik.http.services.agent.loadbalancer.server.port=8083"
+      - "traefik.http.middlewares.agent-strip.stripprefix.prefixes=/agent"
+      - "traefik.http.routers.agent.middlewares=agent-strip"
+    environment:
+      - APP_ENV=docker
+      - PORT=8085
+    logging: *default-logging
+
   traefik:
     image: traefik:latest
     command:

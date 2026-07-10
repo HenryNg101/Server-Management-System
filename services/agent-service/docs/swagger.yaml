@@ -1,0 +1,97 @@
+basePath: /agent
+definitions:
+  agent.MetricMessage:
+    properties:
+      '@timestamp':
+        type: string
+      container_name:
+        type: string
+      cpu:
+        properties:
+          pressure:
+            type: number
+          throttling:
+            type: number
+          usage:
+            type: number
+        type: object
+      io:
+        properties:
+          pressure:
+            type: number
+          read_bps:
+            type: number
+          write_bps:
+            type: number
+        type: object
+      memory:
+        properties:
+          pressure:
+            type: number
+          rss:
+            type: number
+          usage:
+            type: number
+          working_set:
+            type: number
+        type: object
+      oom:
+        properties:
+          events:
+            type: integer
+          kills:
+            type: integer
+        type: object
+      pids:
+        type: integer
+      server_id:
+        type: integer
+    type: object
+host: localhost
+info:
+  contact: {}
+  description: APIs for getting servers reports
+  title: Monitoring Service API
+  version: "1.0"
+paths:
+  /agent/metrics:
+    post:
+      consumes:
+      - application/json
+      description: Ingest metrics from agent upload
+      parameters:
+      - description: Server's metrics
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/agent.MetricMessage'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Metrics
+      tags:
+      - agents
+securityDefinitions:
+  BearerAuth:
+    description: Type 'Bearer ' followed by your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

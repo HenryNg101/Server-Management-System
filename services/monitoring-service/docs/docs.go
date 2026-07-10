@@ -27,7 +27,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "servers"
+                    "monitoring"
                 ],
                 "summary": "Get statuses of servers and emailing",
                 "parameters": [

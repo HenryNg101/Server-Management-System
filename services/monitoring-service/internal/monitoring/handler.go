@@ -17,7 +17,7 @@ func NewHandler(s Service) *Handler {
 
 // @Summary Get statuses of servers and emailing
 // @Description Get status report on the servers, and then send emails to people in the email list
-// @Tags servers
+// @Tags monitoring
 // @Security BearerAuth
 // @Produce json
 // @Param request body SendReportRequest true "Report request"
