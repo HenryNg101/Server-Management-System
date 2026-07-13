@@ -20,81 +20,81 @@ x-common-dependency: &common-dependency
     condition: service_completed_successfully
 
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/api
-    ports:
-      - "${HOST}:8080:8080"
-    restart: unless-stopped
-    depends_on: *common-dependency
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=PathPrefix(`/api`)"
-      - "traefik.http.services.api.loadbalancer.server.port=8080"
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       CMD_PATH: ./cmd/api
+  #   ports:
+  #     - "${HOST}:8080:8080"
+  #   restart: unless-stopped
+  #   depends_on: *common-dependency
+  #   env_file:
+  #     - ${ENV_FILE}
+  #   environment:
+  #     - APP_ENV=docker
+  #   logging: *default-logging
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.api.rule=PathPrefix(`/api`)"
+  #     - "traefik.http.services.api.loadbalancer.server.port=8080"
 
-  servers_checker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/worker/servers_checker
-    restart: unless-stopped
-    depends_on: *common-dependency
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
+  # servers_checker:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       CMD_PATH: ./cmd/worker/servers_checker
+  #   restart: unless-stopped
+  #   depends_on: *common-dependency
+  #   env_file:
+  #     - ${ENV_FILE}
+  #   environment:
+  #     - APP_ENV=docker
+  #   logging: *default-logging
   
-  cron_scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/worker/cron_scheduler
-    restart: unless-stopped
-    depends_on: *common-dependency
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
+  # cron_scheduler:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       CMD_PATH: ./cmd/worker/cron_scheduler
+  #   restart: unless-stopped
+  #   depends_on: *common-dependency
+  #   env_file:
+  #     - ${ENV_FILE}
+  #   environment:
+  #     - APP_ENV=docker
+  #   logging: *default-logging
 
-  metrics_consumer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/worker/metrics_consumer
-    restart: unless-stopped
-    depends_on: *common-dependency
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
+  # metrics_consumer:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       CMD_PATH: ./cmd/worker/metrics_consumer
+  #   restart: unless-stopped
+  #   depends_on: *common-dependency
+  #   env_file:
+  #     - ${ENV_FILE}
+  #   environment:
+  #     - APP_ENV=docker
+  #   logging: *default-logging
   
-  file_importer_consumer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/worker/file_importer_consumer
-    restart: unless-stopped
-    depends_on: *common-dependency
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
+  # file_importer_consumer:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       CMD_PATH: ./cmd/worker/file_importer_consumer
+  #   restart: unless-stopped
+  #   depends_on: *common-dependency
+  #   env_file:
+  #     - ${ENV_FILE}
+  #   environment:
+  #     - APP_ENV=docker
+  #   logging: *default-logging
 
   auth-service:
     build:
@@ -206,6 +206,8 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
+      kafka:
+        condition: service_started
     env_file:
       - .env.docker
     labels:
@@ -230,6 +232,8 @@ services:
       postgres:
         condition: service_healthy
       elasticsearch:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     env_file:
       - .env.docker
@@ -264,6 +268,58 @@ services:
     restart: unless-stopped
     depends_on:
       elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    env_file:
+      - .env.docker
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
+  
+  files-import-consumer:
+    build:
+      context: ./workers/files-import-consumer
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
+  
+  servers-ping-checker:
+    build:
+      context: ./workers/servers-ping-checker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
+  
+  cron-scheduler:
+    build:
+      context: ./workers/cron-scheduler
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     env_file:
       - .env.docker

@@ -3,11 +3,10 @@ package app
 import (
 	"errors"
 
-	"github.com/HenryNg101/jobs-service/internal/config"
-	"github.com/HenryNg101/jobs-service/internal/jobs"
-	"github.com/HenryNg101/jobs-service/internal/platform/blob_storage"
-	kafkaClient "github.com/HenryNg101/jobs-service/internal/platform/kafka"
-	"github.com/HenryNg101/jobs-service/internal/platform/postgres"
+	"github.com/HenryNg101/files-import-consumer/internal/config"
+	"github.com/HenryNg101/files-import-consumer/internal/jobs"
+	"github.com/HenryNg101/files-import-consumer/internal/platform/blob_storage"
+	"github.com/HenryNg101/files-import-consumer/internal/platform/postgres"
 	"gorm.io/gorm"
 )
 
@@ -47,9 +46,8 @@ func NewApp() (*Application, error) {
 	)
 
 	jobsRepo := jobs.NewRepository(postgresSession)
-	kafkaImportProducer := jobs.NewKafkaProducer(kafkaClient.NewProducer(kafkaConfig.Brokers, kafkaConfig.ServersImportTopic))
 	minIORepo := jobs.NewBlobStorage(minIOInternalSession, minIOExternalSession, minIOConfig.Bucket)
-	jobsService := jobs.NewService(jobsRepo, kafkaImportProducer, minIORepo)
+	jobsService := jobs.NewService(jobsRepo, minIORepo)
 
 	return &Application{
 		PostgresSession: postgresSession,

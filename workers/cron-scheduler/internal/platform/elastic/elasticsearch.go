@@ -7,7 +7,7 @@ import (
 
 	_ "embed"
 
-	"github.com/HenryNg101/jobs-service/internal/config"
+	"github.com/HenryNg101/cron-scheduler/internal/config"
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v9"
 )

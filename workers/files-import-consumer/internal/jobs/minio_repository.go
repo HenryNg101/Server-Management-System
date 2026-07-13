@@ -11,6 +11,8 @@ import (
 
 type BlobStorage interface {
 	Upload(ctx context.Context, objectName string, r io.Reader, size int64) (string, error)
+	Download(ctx context.Context, objectName string) (io.ReadCloser, error)
+	Delete(ctx context.Context, objectName string) error
 	GetPresignedURL(ctx context.Context, objectName string, expiry time.Duration) (string, error)
 }
 
@@ -37,6 +39,18 @@ func (m *minIORepository) Upload(ctx context.Context, objectName string, r io.Re
 	}
 
 	return objectName, nil
+}
+
+func (m *minIORepository) Download(ctx context.Context, objectName string) (io.ReadCloser, error) {
+	obj, err := m.internalClient.GetObject(ctx, m.bucketName, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (m *minIORepository) Delete(ctx context.Context, objectName string) error {
+	return m.internalClient.RemoveObject(ctx, m.bucketName, objectName, minio.RemoveObjectOptions{})
 }
 
 // Create pre-signed URL for access

@@ -1,11 +1,11 @@
-package jobs
+package data_transfer
 
 import (
 	"errors"
 	"net"
 	"strconv"
 
-	"github.com/HenryNg101/jobs-service/internal/model"
+	"github.com/HenryNg101/cron-scheduler/internal/model"
 )
 
 func mapRow(headers, row []string) map[string]string {

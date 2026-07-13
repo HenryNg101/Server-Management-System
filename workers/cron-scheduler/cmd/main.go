@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/HenryNg101/server-management-system/internal/app"
+	"github.com/HenryNg101/cron-scheduler/internal/app"
 )
 
 func main() {
@@ -17,8 +17,8 @@ func main() {
 	ctx := context.Background()
 
 	// run once on startup (important)
-	// runEmailJob(application, ctx)
-	// runCleanupJob(application, ctx)
+	runEmailJob(application, ctx)
+	runCleanupJob(application, ctx)
 
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
