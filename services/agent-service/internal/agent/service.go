@@ -10,7 +10,6 @@ import (
 type Service interface {
 	AgentExist(ctx context.Context, key string, server *model.Agent) error
 	PushMetrics(ctx context.Context, messages []MetricMessage) error
-	PushMetricsToElastic(ctx context.Context, messages []MetricMessage) error
 }
 
 type agentService struct {
@@ -25,10 +24,6 @@ func NewService(r Repository, k KafkaProducer, e ElasticAgentRepository) Service
 
 func (s *agentService) PushMetrics(ctx context.Context, messages []MetricMessage) error {
 	return s.kafkaProducer.PublishMetrics(ctx, messages)
-}
-
-func (s *agentService) PushMetricsToElastic(ctx context.Context, messages []MetricMessage) error {
-	return s.elasticRepo.BulkInsertStatus(ctx, messages)
 }
 
 func (s *agentService) AgentExist(ctx context.Context, key string, server *model.Agent) error {

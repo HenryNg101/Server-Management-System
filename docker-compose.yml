@@ -256,3 +256,17 @@ services:
       - "8088:8080" # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+  metrics-consumer:
+    build:
+      context: ./workers/metrics-consumer
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      - APP_ENV=docker
+    logging: *default-logging
