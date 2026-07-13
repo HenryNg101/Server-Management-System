@@ -10,7 +10,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// @title Server Service API
+// @title Monitoring Service API
 // @version 1.0
 // @description APIs for managing servers
 // @host localhost
@@ -23,7 +23,7 @@ func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Applic
 	r := gin.Default()
 
 	// Dynamic Swagger config
-	docs.SwaggerInfo.Host = cfg.Host + ":" + cfg.Port
+	docs.SwaggerInfo.Host = cfg.Host
 	// docs.SwaggerInfo.BasePath = "/api/v1"
 	// docs.SwaggerInfo.Schemes = []string{"http"}
 

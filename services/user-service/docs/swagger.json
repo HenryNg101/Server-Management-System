@@ -9,7 +9,7 @@
     "host": "localhost",
     "basePath": "/users",
     "paths": {
-        "/users": {
+        "/": {
             "get": {
                 "security": [
                     {

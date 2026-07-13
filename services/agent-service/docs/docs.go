@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/agent/metrics": {
+        "/metrics": {
             "post": {
                 "security": [
                     {

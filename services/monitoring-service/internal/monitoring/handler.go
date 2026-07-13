@@ -24,7 +24,7 @@ func NewHandler(s Service) *Handler {
 // @Success 200 {object} Report
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /monitoring/report [post]
+// @Router /report [post]
 func (h *Handler) SendReports(c *gin.Context) {
 	var req SendReportRequest
 	var err error

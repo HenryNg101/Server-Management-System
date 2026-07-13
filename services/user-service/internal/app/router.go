@@ -12,10 +12,10 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 	protected := rg.Group("/")
 	protected.Use(auth.UserAuthMiddleware())
 
-	rg.GET("/", userH.GetUsers)
+	protected.GET("/", userH.GetUsers)
 
 	admin := protected.Group("/")
 	admin.Use(auth.RequireRoles("admin"))
 
-	rg.POST("/", userH.CreateUser)
+	admin.POST("/", userH.CreateUser)
 }

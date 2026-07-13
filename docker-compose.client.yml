@@ -28,7 +28,7 @@ services:
       - docker-proxy
     environment:
       - SERVER_ID=${CLIENT_AGENT_SERVER_ID}   # TODO: Put this information in API key instead of having to make user adding extra variable themselves
-      - API_URL=http://${HOST}:8080/agent/metrics 
+      - API_URL=http://${HOST}/agent/metrics 
       - API_KEY=${CLIENT_AGENT_API_KEY}
       - DOCKER_HOST=tcp://docker-proxy:2375
     volumes:

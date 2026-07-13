@@ -26,7 +26,7 @@ func NewHandler(service Service) *Handler {
 // @Param request body []MetricMessage true "Server's metrics"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
-// @Router /agent/metrics [post]
+// @Router /metrics [post]
 func (h *Handler) IngestMetrics(c *gin.Context) {
 	var msgs []MetricMessage
 

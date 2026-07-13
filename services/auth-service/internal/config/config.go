@@ -46,8 +46,8 @@ func getEnv(key, fallback string) string {
 
 func LoadAppConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Host: getEnv("AUTH_SERVICE_HOST", "localhost"),
-		Port: getEnv("AUTH_SERVICE_PORT", "8081"),
+		Host: getEnv("HOST", "localhost"),
+		Port: getEnv("AUTH_SERVICE_PORT", "8087"),
 	}
 }
 

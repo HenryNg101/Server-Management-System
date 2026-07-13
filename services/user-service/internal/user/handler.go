@@ -24,7 +24,7 @@ func NewHandler(s Service) *Handler {
 // @Param request body model.User true "User to be created"
 // @Produce json
 // @Success 200 {object} model.User
-// @Router /users [post]
+// @Router / [post]
 func (h *Handler) CreateUser(c *gin.Context) {
 	var user model.User
 
@@ -50,7 +50,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {array} GetUsersResponse
-// @Router /users [get]
+// @Router / [get]
 func (h *Handler) GetUsers(c *gin.Context) {
 	users, err := h.service.GetUsers()
 	if err != nil {

@@ -9,7 +9,7 @@
     "host": "localhost",
     "basePath": "/jobs",
     "paths": {
-        "/jobs/import-server": {
+        "/import-server": {
             "post": {
                 "security": [
                     {
@@ -46,7 +46,7 @@
                 }
             }
         },
-        "/jobs/{id}": {
+        "/{id}": {
             "get": {
                 "security": [
                     {

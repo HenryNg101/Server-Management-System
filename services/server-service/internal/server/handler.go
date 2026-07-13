@@ -31,7 +31,7 @@ func NewHandler(s Service) *Handler {
 // @Success 201 {object} CreateServerResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /servers [post]
+// @Router / [post]
 func (h *Handler) CreateServer(c *gin.Context) {
 	var req CreateServerRequest
 
@@ -72,7 +72,7 @@ func (h *Handler) CreateServer(c *gin.Context) {
 // @Success 200 {array} GetServerResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /servers [get]
+// @Router / [get]
 func (h *Handler) GetServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {
@@ -109,7 +109,7 @@ func (h *Handler) GetServers(c *gin.Context) {
 // @Failure 404 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /servers/{id} [get]
+// @Router /{id} [get]
 func (h *Handler) GetServer(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *Handler) GetServer(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /servers/{id} [patch]
+// @Router /{id} [patch]
 func (h *Handler) UpdateServer(c *gin.Context) {
 	var req UpdateServerRequest
 
@@ -195,7 +195,7 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 400 {object} map[string]string
-// @Router /servers/{id} [delete]
+// @Router /{id} [delete]
 func (h *Handler) DeleteServer(c *gin.Context) {
 	serverId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -232,7 +232,7 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 // @Param order query string false "Sort order (asc, desc)"
 // @Success 200 {file} file "CSV file"
 // @Header 200 {string} Content-Disposition "attachment; filename=servers.csv"
-// @Router /servers/export [get]
+// @Router /export [get]
 func (h *Handler) ExportServers(c *gin.Context) {
 	query, err := ParseServersQuery(c)
 	if err != nil {

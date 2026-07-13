@@ -65,10 +65,10 @@ host: localhost
 info:
   contact: {}
   description: APIs for managing servers
-  title: Server Service API
+  title: Monitoring Service API
   version: "1.0"
 paths:
-  /monitoring/report:
+  /report:
     post:
       description: Get status report on the servers, and then send emails to people
         in the email list

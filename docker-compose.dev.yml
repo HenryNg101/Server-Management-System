@@ -25,6 +25,30 @@ services:
     ports:
       - "${HOST}:8081:8080"
   
+  auth-service:
+    ports:
+      - "${HOST}:8087:8087"
+  
+  user-service:
+    ports:
+      - "${HOST}:8082:8082"
+  
+  server-service:
+    ports:
+      - "${HOST}:8083:8083"
+  
+  monitoring-service:
+    ports:
+      - "${HOST}:8084:8084"
+
+  agent-service:
+    ports:
+      - "${HOST}:8085:8085"
+
+  jobs-service:
+    ports:
+      - "${HOST}:8086:8086"
+
   simulation:
     build:
       context: .
@@ -39,3 +63,9 @@ services:
       - ${ENV_FILE}
     environment:
       - APP_ENV=docker
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

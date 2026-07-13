@@ -33,7 +33,7 @@ info:
   title: Jobs Service API
   version: "1.0"
 paths:
-  /jobs/{id}:
+  /{id}:
     get:
       description: After user uploads Excel file(s) with servers info for import,
         they can take the job's ID and check the status of processing in here
@@ -61,7 +61,7 @@ paths:
       summary: Get a job's status
       tags:
       - jobs
-  /jobs/import-server:
+  /import-server:
     post:
       consumes:
       - multipart/form-data

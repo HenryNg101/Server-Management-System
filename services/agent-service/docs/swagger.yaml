@@ -54,7 +54,7 @@ info:
   title: Agent Service API
   version: "1.0"
 paths:
-  /agent/metrics:
+  /metrics:
     post:
       consumes:
       - application/json

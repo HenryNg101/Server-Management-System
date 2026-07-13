@@ -18,8 +18,8 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 	admin := protected.Group("/")
 	admin.Use(auth.RequireRoles("admin"))
 
-	rg.POST("/", serverH.CreateServer)
-	rg.PATCH("/:id", serverH.UpdateServer)
-	rg.DELETE("/:id", serverH.DeleteServer)
-	rg.GET("/export", serverH.ExportServers)
+	admin.POST("/", serverH.CreateServer)
+	admin.PATCH("/:id", serverH.UpdateServer)
+	admin.DELETE("/:id", serverH.DeleteServer)
+	admin.GET("/export", serverH.ExportServers)
 }

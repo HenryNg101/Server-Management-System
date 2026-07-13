@@ -110,7 +110,7 @@ info:
   title: Server Service API
   version: "1.0"
 paths:
-  /servers:
+  /:
     get:
       description: Retrieve servers with filtering, pagination, and sorting
       parameters:
@@ -203,7 +203,7 @@ paths:
       summary: Create a server
       tags:
       - servers
-  /servers/{id}:
+  /{id}:
     delete:
       description: Get a server based on ID, and delete that server
       parameters:
@@ -324,7 +324,7 @@ paths:
       summary: Update a server
       tags:
       - servers
-  /servers/export:
+  /export:
     get:
       description: User ask for all servers info with optional filtering, pagination,
         and sorting, and the server will export servers info to CSV file

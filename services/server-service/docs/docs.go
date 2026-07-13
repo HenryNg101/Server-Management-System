@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/servers": {
+        "/": {
             "get": {
                 "security": [
                     {
@@ -160,7 +160,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/servers/export": {
+        "/export": {
             "get": {
                 "security": [
                     {
@@ -235,7 +235,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/servers/{id}": {
+        "/{id}": {
             "get": {
                 "security": [
                     {

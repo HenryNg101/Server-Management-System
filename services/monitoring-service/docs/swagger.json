@@ -2,14 +2,14 @@
     "swagger": "2.0",
     "info": {
         "description": "APIs for managing servers",
-        "title": "Server Service API",
+        "title": "Monitoring Service API",
         "contact": {},
         "version": "1.0"
     },
     "host": "localhost",
     "basePath": "/monitoring",
     "paths": {
-        "/monitoring/report": {
+        "/report": {
             "post": {
                 "security": [
                     {

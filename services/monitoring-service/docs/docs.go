@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/monitoring/report": {
+        "/report": {
             "post": {
                 "security": [
                     {
@@ -180,7 +180,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost",
 	BasePath:         "/monitoring",
 	Schemes:          []string{},
-	Title:            "Server Service API",
+	Title:            "Monitoring Service API",
 	Description:      "APIs for managing servers",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

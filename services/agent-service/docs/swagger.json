@@ -9,7 +9,7 @@
     "host": "localhost",
     "basePath": "/agent",
     "paths": {
-        "/agent/metrics": {
+        "/metrics": {
             "post": {
                 "security": [
                     {

@@ -9,7 +9,7 @@
     "host": "localhost",
     "basePath": "/servers",
     "paths": {
-        "/servers": {
+        "/": {
             "get": {
                 "security": [
                     {
@@ -154,7 +154,7 @@
                 }
             }
         },
-        "/servers/export": {
+        "/export": {
             "get": {
                 "security": [
                     {
@@ -229,7 +229,7 @@
                 }
             }
         },
-        "/servers/{id}": {
+        "/{id}": {
             "get": {
                 "security": [
                     {

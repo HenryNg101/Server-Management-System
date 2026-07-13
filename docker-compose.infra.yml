@@ -26,6 +26,8 @@ services:
       retries: 5
       start_period: 1m
     logging: *default-logging
+    networks:
+      - app-network
 
   # Run some commands after Elasticsearch cluster is up. Basically check until service is available to take a HTTP request, 
   # then make a request to change password for ES's service account for Kibana
@@ -41,6 +43,8 @@ services:
       - ${ENV_FILE}
     restart: no
     logging: *default-logging
+    networks:
+      - app-network
 
   kibana:
     image: docker.elastic.co/kibana/kibana-wolfi:9.3.1
@@ -56,6 +60,8 @@ services:
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
     logging: *default-logging
+    networks:
+      - app-network
   
   # PostgreSQL DB setup
   postgres:
@@ -72,6 +78,8 @@ services:
       timeout: 5s
       retries: 5
     logging: *default-logging
+    networks:
+      - app-network
 
   # Postgres schema migration
   postgres-migrate:
@@ -89,6 +97,8 @@ services:
       "up"
     ]
     logging: *default-logging
+    networks:
+      - app-network
   
   # Redis setup
   redis:
@@ -107,6 +117,8 @@ services:
       timeout: 5s
       retries: 5
     logging: *default-logging
+    networks:
+      - app-network
 
   kafka:
     image: apache/kafka:latest
@@ -130,6 +142,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1   # Since there's only 1 broker, Kafka can't replicate a partition more than 1
     volumes:
       - kafka_data:/var/lib/kafka/data
+    networks:
+      - app-network
 
   kafka-ui:
     image: docker.redpanda.com/redpandadata/console:latest
@@ -139,6 +153,8 @@ services:
       - kafka
     environment:
       KAFKA_BROKERS: kafka:9092
+    networks:
+      - app-network
 
   kafka-setup:
     image: apache/kafka:latest
@@ -152,6 +168,8 @@ services:
       - ${ENV_FILE}
     restart: "no"
     logging: *default-logging
+    networks:
+      - app-network
   
   minio:
     image: minio/minio:latest
@@ -172,6 +190,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    networks:
+      - app-network
   
   minio-init:
     image: minio/mc
@@ -182,6 +202,8 @@ services:
     entrypoint: ["/bin/sh", "/scripts/minio/setup.sh"]
     volumes:
       - ./scripts:/scripts
+    networks:
+      - app-network
 
 volumes:
   es_data:
@@ -189,3 +211,7 @@ volumes:
   redis_data:
   kafka_data:
   minio_data:
+
+networks:
+  app-network:
+    driver: bridge

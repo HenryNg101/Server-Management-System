@@ -100,8 +100,6 @@ services:
     build:
       context: ./services/auth-service
       dockerfile: Dockerfile
-    ports:
-      - "8081:8081"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -113,20 +111,21 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
-      - "traefik.http.services.auth.loadbalancer.server.port=8081"
+      - "traefik.http.services.auth.loadbalancer.server.port=8087"
       - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
       - "traefik.http.routers.auth.middlewares=auth-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
-      - PORT=8081
+      - PORT=8087
     logging: *default-logging
+    networks:
+      - app-network
 
   user-service:
     build:
       context: ./services/user-service
       dockerfile: Dockerfile
-    ports:
-      - "8082:8082"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -139,17 +138,18 @@ services:
       - "traefik.http.services.user.loadbalancer.server.port=8082"
       - "traefik.http.middlewares.user-strip.stripprefix.prefixes=/users"
       - "traefik.http.routers.user.middlewares=user-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
       - PORT=8082
     logging: *default-logging
+    networks:
+      - app-network
 
   server-service:
     build:
       context: ./services/server-service
       dockerfile: Dockerfile
-    ports:
-      - "8083:8083"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -164,17 +164,18 @@ services:
       - "traefik.http.services.servers.loadbalancer.server.port=8083"
       - "traefik.http.middlewares.servers-strip.stripprefix.prefixes=/servers"
       - "traefik.http.routers.servers.middlewares=servers-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
       - PORT=8083
     logging: *default-logging
+    networks:
+      - app-network
 
   monitoring-service:
     build:
       context: ./services/monitoring-service
       dockerfile: Dockerfile
-    ports:
-      - "8084:8084"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -186,20 +187,21 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.monitoring.rule=PathPrefix(`/monitoring`)"
-      - "traefik.http.services.monitoring.loadbalancer.server.port=8083"
+      - "traefik.http.services.monitoring.loadbalancer.server.port=8084"
       - "traefik.http.middlewares.monitoring-strip.stripprefix.prefixes=/monitoring"
       - "traefik.http.routers.monitoring.middlewares=monitoring-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
       - PORT=8084
     logging: *default-logging
+    networks:
+      - app-network
 
   agent-service:
     build:
       context: ./services/agent-service
       dockerfile: Dockerfile
-    ports:
-      - "8085:8085"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -213,20 +215,21 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.agent.rule=PathPrefix(`/agent`)"
-      - "traefik.http.services.agent.loadbalancer.server.port=8083"
+      - "traefik.http.services.agent.loadbalancer.server.port=8085"
       - "traefik.http.middlewares.agent-strip.stripprefix.prefixes=/agent"
       - "traefik.http.routers.agent.middlewares=agent-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
       - PORT=8085
     logging: *default-logging
+    networks:
+      - app-network
 
   jobs-service:
     build:
       context: ./services/jobs-service
       dockerfile: Dockerfile
-    ports:
-      - "8086:8086"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -240,13 +243,16 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jobs.rule=PathPrefix(`/jobs`)"
-      - "traefik.http.services.jobs.loadbalancer.server.port=8083"
+      - "traefik.http.services.jobs.loadbalancer.server.port=8086"
       - "traefik.http.middlewares.jobs-strip.stripprefix.prefixes=/jobs"
       - "traefik.http.routers.jobs.middlewares=jobs-strip"
+      - "traefik.docker.network=app-network"
     environment:
       - APP_ENV=docker
       - PORT=8086
     logging: *default-logging
+    networks:
+      - app-network
 
   traefik:
     image: traefik:latest
@@ -256,10 +262,12 @@ services:
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80"
-      - "8088:8080" # Traefik dashboard
+      - "${HOST}:80:80"
+      - "${HOST}:8088:8080" # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app-network
 
   metrics-consumer:
     build:
@@ -276,6 +284,8 @@ services:
     environment:
       - APP_ENV=docker
     logging: *default-logging
+    networks:
+      - app-network
   
   files-import-consumer:
     build:
@@ -294,6 +304,8 @@ services:
     environment:
       - APP_ENV=docker
     logging: *default-logging
+    networks:
+      - app-network
   
   servers-ping-checker:
     build:
@@ -310,6 +322,8 @@ services:
     environment:
       - APP_ENV=docker
     logging: *default-logging
+    networks:
+      - app-network
   
   cron-scheduler:
     build:
@@ -326,3 +340,9 @@ services:
     environment:
       - APP_ENV=docker
     logging: *default-logging
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -23,7 +23,7 @@ func SetupRouter(cfg *config.ApplicationConfig, db *gorm.DB, application *Applic
 	r := gin.Default()
 
 	// Dynamic Swagger config
-	docs.SwaggerInfo.Host = cfg.Host + ":" + cfg.Port
+	docs.SwaggerInfo.Host = cfg.Host
 	// docs.SwaggerInfo.BasePath = "/api/v1"
 	// docs.SwaggerInfo.Schemes = []string{"http"}
 

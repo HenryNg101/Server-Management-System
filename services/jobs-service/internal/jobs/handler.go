@@ -25,7 +25,7 @@ func NewHandler(s Service) *Handler {
 // @Produce json
 // @Param file formData file true "Input servers file (CSV)"
 // @Success 200 {object} CreateImportJobResponse
-// @Router /jobs/import-server [post]
+// @Router /import-server [post]
 func (h *Handler) ImportServers(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -58,7 +58,7 @@ func (h *Handler) ImportServers(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} GetJobResponse
 // @Failure 404 {object} map[string]string
-// @Router /jobs/{id} [get]
+// @Router /{id} [get]
 func (h *Handler) GetJob(c *gin.Context) {
 	id := c.Param("id")
 
