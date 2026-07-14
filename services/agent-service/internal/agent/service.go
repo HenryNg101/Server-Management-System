@@ -15,11 +15,10 @@ type Service interface {
 type agentService struct {
 	repo          Repository
 	kafkaProducer KafkaProducer
-	elasticRepo   ElasticAgentRepository
 }
 
-func NewService(r Repository, k KafkaProducer, e ElasticAgentRepository) Service {
-	return &agentService{repo: r, kafkaProducer: k, elasticRepo: e}
+func NewService(r Repository, k KafkaProducer) Service {
+	return &agentService{repo: r, kafkaProducer: k}
 }
 
 func (s *agentService) PushMetrics(ctx context.Context, messages []MetricMessage) error {

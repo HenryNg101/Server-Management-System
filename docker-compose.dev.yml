@@ -48,6 +48,10 @@ services:
   jobs-service:
     ports:
       - "${HOST}:8086:8086"
+  
+  traefik:
+    ports:
+      - "${HOST}:8088:8080" # Traefik dashboard
 
   simulation:
     build:

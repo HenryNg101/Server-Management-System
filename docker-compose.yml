@@ -12,102 +12,37 @@ x-common-dependency: &common-dependency
     condition: service_healthy
   elasticsearch:
     condition: service_healthy
-  kafka:
+  kibana:
     condition: service_started
+  kafka:
+    condition: service_healthy
+  minio:
+    condition: service_healthy
   postgres-migrate:
     condition: service_completed_successfully
   kafka-setup:
     condition: service_completed_successfully
+  elasticsearch-setup:
+    condition: service_completed_successfully
+  minio-init:
+    condition: service_completed_successfully
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  env_file:
+    - .env.docker
+  environment:
+    - APP_ENV=docker
+  logging: *default-logging
+  networks:
+    - app-network
 
 services:
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       CMD_PATH: ./cmd/api
-  #   ports:
-  #     - "${HOST}:8080:8080"
-  #   restart: unless-stopped
-  #   depends_on: *common-dependency
-  #   env_file:
-  #     - ${ENV_FILE}
-  #   environment:
-  #     - APP_ENV=docker
-  #   logging: *default-logging
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.api.rule=PathPrefix(`/api`)"
-  #     - "traefik.http.services.api.loadbalancer.server.port=8080"
-
-  # servers_checker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       CMD_PATH: ./cmd/worker/servers_checker
-  #   restart: unless-stopped
-  #   depends_on: *common-dependency
-  #   env_file:
-  #     - ${ENV_FILE}
-  #   environment:
-  #     - APP_ENV=docker
-  #   logging: *default-logging
-  
-  # cron_scheduler:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       CMD_PATH: ./cmd/worker/cron_scheduler
-  #   restart: unless-stopped
-  #   depends_on: *common-dependency
-  #   env_file:
-  #     - ${ENV_FILE}
-  #   environment:
-  #     - APP_ENV=docker
-  #   logging: *default-logging
-
-  # metrics_consumer:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       CMD_PATH: ./cmd/worker/metrics_consumer
-  #   restart: unless-stopped
-  #   depends_on: *common-dependency
-  #   env_file:
-  #     - ${ENV_FILE}
-  #   environment:
-  #     - APP_ENV=docker
-  #   logging: *default-logging
-  
-  # file_importer_consumer:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       CMD_PATH: ./cmd/worker/file_importer_consumer
-  #   restart: unless-stopped
-  #   depends_on: *common-dependency
-  #   env_file:
-  #     - ${ENV_FILE}
-  #   environment:
-  #     - APP_ENV=docker
-  #   logging: *default-logging
-
   auth-service:
+    <<: *service-defaults
     build:
       context: ./services/auth-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
@@ -115,23 +50,17 @@ services:
       - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
       - "traefik.http.routers.auth.middlewares=auth-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8087
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
   user-service:
+    <<: *service-defaults
     build:
       context: ./services/user-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.user.rule=PathPrefix(`/users`)"
@@ -139,25 +68,15 @@ services:
       - "traefik.http.middlewares.user-strip.stripprefix.prefixes=/users"
       - "traefik.http.routers.user.middlewares=user-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8082
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
 
   server-service:
+    <<: *service-defaults
     build:
       context: ./services/server-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.servers.rule=PathPrefix(`/servers`)"
@@ -165,25 +84,17 @@ services:
       - "traefik.http.middlewares.servers-strip.stripprefix.prefixes=/servers"
       - "traefik.http.routers.servers.middlewares=servers-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8083
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+      elasticsearch-setup:
+        condition: service_completed_successfully
 
   monitoring-service:
+    <<: *service-defaults
     build:
       context: ./services/monitoring-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.monitoring.rule=PathPrefix(`/monitoring`)"
@@ -191,27 +102,17 @@ services:
       - "traefik.http.middlewares.monitoring-strip.stripprefix.prefixes=/monitoring"
       - "traefik.http.routers.monitoring.middlewares=monitoring-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8084
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+      elasticsearch-setup:
+        condition: service_completed_successfully
 
   agent-service:
+    <<: *service-defaults
     build:
       context: ./services/agent-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.agent.rule=PathPrefix(`/agent`)"
@@ -219,27 +120,17 @@ services:
       - "traefik.http.middlewares.agent-strip.stripprefix.prefixes=/agent"
       - "traefik.http.routers.agent.middlewares=agent-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8085
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+      kafka-setup:
+        condition: service_completed_successfully
 
   jobs-service:
+    <<: *service-defaults
     build:
       context: ./services/jobs-service
       dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    env_file:
-      - .env.docker
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jobs.rule=PathPrefix(`/jobs`)"
@@ -247,12 +138,13 @@ services:
       - "traefik.http.middlewares.jobs-strip.stripprefix.prefixes=/jobs"
       - "traefik.http.routers.jobs.middlewares=jobs-strip"
       - "traefik.docker.network=app-network"
-    environment:
-      - APP_ENV=docker
-      - PORT=8086
-    logging: *default-logging
-    networks:
-      - app-network
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+      kafka-setup:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
 
   traefik:
     image: traefik:latest
@@ -263,85 +155,58 @@ services:
       - "--entrypoints.web.address=:80"
     ports:
       - "${HOST}:80:80"
-      - "${HOST}:8088:8080" # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app-network
 
   metrics-consumer:
+    <<: *service-defaults
     build:
       context: ./workers/metrics-consumer
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    env_file:
-      - .env.docker
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
-    networks:
-      - app-network
+      kafka-setup:
+        condition: service_completed_successfully
+      elasticsearch-setup:
+        condition: service_completed_successfully
   
   files-import-consumer:
+    <<: *service-defaults
     build:
       context: ./workers/files-import-consumer
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    env_file:
-      - .env.docker
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
-    networks:
-      - app-network
+      postgres-migrate:
+        condition: service_completed_successfully
+      kafka-setup:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
   
   servers-ping-checker:
+    <<: *service-defaults
     build:
       context: ./workers/servers-ping-checker
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env.docker
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
-    networks:
-      - app-network
+      postgres-migrate:
+        condition: service_completed_successfully
+      elasticsearch-setup:
+        condition: service_completed_successfully
   
   cron-scheduler:
+    <<: *service-defaults
     build:
       context: ./workers/cron-scheduler
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env.docker
-    environment:
-      - APP_ENV=docker
-    logging: *default-logging
-    networks:
-      - app-network
+      postgres-migrate:
+        condition: service_completed_successfully
+      elasticsearch-setup:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
 
 networks:
   app-network:

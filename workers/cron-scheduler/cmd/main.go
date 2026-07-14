@@ -17,8 +17,8 @@ func main() {
 	ctx := context.Background()
 
 	// run once on startup (important)
-	runEmailJob(application, ctx)
-	runCleanupJob(application, ctx)
+	// runEmailJob(application, ctx)
+	// runCleanupJob(application, ctx)
 
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
