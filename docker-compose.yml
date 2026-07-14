@@ -5,28 +5,6 @@ x-logging: &default-logging
     max-size: "50m"
     max-file: "5"
 
-x-common-dependency: &common-dependency
-  postgres:
-    condition: service_healthy
-  redis:
-    condition: service_healthy
-  elasticsearch:
-    condition: service_healthy
-  kibana:
-    condition: service_started
-  kafka:
-    condition: service_healthy
-  minio:
-    condition: service_healthy
-  postgres-migrate:
-    condition: service_completed_successfully
-  kafka-setup:
-    condition: service_completed_successfully
-  elasticsearch-setup:
-    condition: service_completed_successfully
-  minio-init:
-    condition: service_completed_successfully
-
 x-service-defaults: &service-defaults
   restart: unless-stopped
   env_file:
@@ -55,6 +33,13 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    
+    # For Swarm mode later
+    # image: server-management-system-auth-service:latest 
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
 
   user-service:
     <<: *service-defaults
@@ -71,6 +56,13 @@ services:
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
+
+    # For Swarm mode later
+    # image: server-management-system-user-service:latest 
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
 
   server-service:
     <<: *service-defaults
@@ -90,6 +82,13 @@ services:
       elasticsearch-setup:
         condition: service_completed_successfully
 
+    # For Swarm mode later
+    # image: server-management-system-server-service:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+
   monitoring-service:
     <<: *service-defaults
     build:
@@ -108,6 +107,13 @@ services:
       elasticsearch-setup:
         condition: service_completed_successfully
 
+    # For Swarm mode later
+    # image: server-management-system-monitoring-service:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+
   agent-service:
     <<: *service-defaults
     build:
@@ -125,6 +131,13 @@ services:
         condition: service_completed_successfully
       kafka-setup:
         condition: service_completed_successfully
+    
+    # For Swarm mode later
+    # image: server-management-system-agent-service:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
 
   jobs-service:
     <<: *service-defaults
@@ -145,20 +158,32 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+    
+    # For Swarm mode later
+    # image: server-management-system-jobs-service:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
 
   traefik:
     image: traefik:latest
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
+      # - "--providers.docker.swarmMode=true"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--entrypoints.web.address=:80"
     ports:
-      - "${HOST}:80:80"
+      - "80:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app-network
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
 
   metrics-consumer:
     <<: *service-defaults
@@ -170,6 +195,13 @@ services:
         condition: service_completed_successfully
       elasticsearch-setup:
         condition: service_completed_successfully
+
+    # For Swarm mode later
+    # image: server-management-system-metrics-consumer:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
   
   files-import-consumer:
     <<: *service-defaults
@@ -183,6 +215,13 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+
+    # For Swarm mode later
+    # image: server-management-files-import-consumer:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
   
   servers-ping-checker:
     <<: *service-defaults
@@ -194,6 +233,13 @@ services:
         condition: service_completed_successfully
       elasticsearch-setup:
         condition: service_completed_successfully
+
+    # For Swarm mode later
+    # image: server-management-servers-ping-checker:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
   
   cron-scheduler:
     <<: *service-defaults
@@ -207,6 +253,13 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+
+    # For Swarm mode later
+    # image: server-management-system-cron-scheduler:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
 networks:
   app-network:

@@ -28,6 +28,10 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   # Run some commands after Elasticsearch cluster is up. Basically check until service is available to take a HTTP request, 
   # then make a request to change password for ES's service account for Kibana
@@ -45,10 +49,13 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
 
   kibana:
     image: docker.elastic.co/kibana/kibana-wolfi:9.3.1
-    container_name: kibana
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -62,16 +69,19 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
   
   # PostgreSQL DB setup
   postgres:
     image: postgres:latest
-    container_name: sqldb
     restart: always
     env_file:
       - ${ENV_FILE}
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h localhost"]
       interval: 10s
@@ -80,6 +90,10 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   # Postgres schema migration
   postgres-migrate:
@@ -99,11 +113,14 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
   
   # Redis setup
   redis:
     image: redis/redis-stack:latest
-    container_name: redis
     restart: always
     env_file:
       - ${ENV_FILE}
@@ -119,10 +136,13 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   kafka:
     image: apache/kafka:latest
-    container_name: kafka
     restart: always
     environment:
       KAFKA_PROCESS_ROLES: broker,controller
@@ -134,7 +154,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://${HOST}:29092
       
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      
+
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       
@@ -150,10 +170,13 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   kafka-ui:
     image: docker.redpanda.com/redpandadata/console:latest
-    container_name: redpanda-kafka-ui
     restart: always
     depends_on:
       kafka:
@@ -162,6 +185,10 @@ services:
       KAFKA_BROKERS: kafka:9092
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   kafka-setup:
     image: apache/kafka:latest
@@ -177,10 +204,13 @@ services:
     logging: *default-logging
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
   
   minio:
     image: minio/minio:latest
-    container_name: minio
     ports:
       - "${HOST}:9000:9000"   # API
       - "${HOST}:9001:9001"   # Console UI
@@ -199,6 +229,10 @@ services:
       start_period: 5s
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
   
   minio-init:
     image: minio/mc
@@ -212,6 +246,10 @@ services:
       - ./scripts:/scripts
     networks:
       - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
 
 volumes:
   es_data:
