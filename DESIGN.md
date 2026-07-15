@@ -11,9 +11,9 @@ Instead of manually checking server health, users interact with SMS-X via APIs t
 - Monitor server health status
 - Query server information
 - Generate uptime reports
-- Receive automated email notifications
+- Receive automated email notifications (Or can send manually)
 
-The system is designed as a **modular monolith**, separating concerns into multiple components while remaining deployable as a single system. This allows for future evolution into a distributed microservices architecture.
+The system is designed as a **microservice-based architecture system**, separating concerns into multiple services as independent, deployable applications.
 
 ---
 
@@ -36,12 +36,12 @@ The system is designed as a **modular monolith**, separating concerns into multi
 ## 2.2 Non-Functional Requirements
 
 - Handle up to 10,000 servers
-- Support high-frequency health checks (every 5 seconds)
+- Support high-frequency health checks (every few seconds)
 - Ensure secure authentication using JWT
 - Use appropriate storage technologies:
-  - PostgreSQL (primary data)
-  - Elasticsearch (logs & analytics)
-  - Redis (token storage)
+  - PostgreSQL
+  - Elasticsearch
+  - Redis
 - Provide OpenAPI documentation
 - Maintain modular and scalable architecture
 
@@ -49,25 +49,115 @@ The system is designed as a **modular monolith**, separating concerns into multi
 
 # 3. High-Level Architecture
 
-![Architecture diagram](https://www.plantuml.com/plantuml/png/XPJ1Rjim38RlUWeYbtL0Wvvs6R2XMHki0x8XZLjqLzLcRA6ob8bK1cFOku-oQgF9sZWNM-97ykSlEPV4Ed1ihMB35g7uNin_mesfc_aAzsXX4Sh6C9OS0ohr3bQwyv6LnIq3UmX2CbGc266yIyIYP1z8wVI0AslGSTekEc9iuT57L-dGgPIXNMqHPhbf1cRmHoc0qhSxxoGLPelrDoWmx4s9Cz04iZu4KX2bLOFbapmVV917GeUjGtpPQcDVKlr6NgVMbMRzg4bqhJrn7R2uNVNSzPU3wD9gObCIQh4e5ohwJjPcCmXc6wmCzR7-JQc_IfNMnoeDVRU6BBq7qZhvzEcjdyIocs0SOz2vnycCPtu-_mp9nOzmSoTDD_Wh8Z6SNMtkhyzbkVE1ps4HkNcl4YVyq6fC8R6FS4fWogvmXwv2LneygMve9RvAcmtgwk8X64QWtfJUwP5P5iBSHWmTM5yJdCKTcnOXzE97sTbcGGls0U42zjeQAPJ0RK1gWFqJEfgQuzKh1LlhVvzC7FY3gOPvh27-dxZV9Na3GwmvqaYDasTZSZGPC3d0oqi-hNly0jxIJh5jTUYEmInkKTS1wpH5FfHySiTekjy25-Wgm5vTFhl9KNvudhX8JeZdVoA_7J_wJNG4AEex-024fNSLgJM6hGyjGOFQSWDbWaabKQcAEger3Z7KgsJTgQ_eC6X66cSO2rpAMspjFm00)
+```mermaid
+flowchart LR
+
+    %% CLIENT
+    Client([Client])
+
+    %% GATEWAY
+    Gateway["API Gateway (Traefik)"]
+
+    Client --> Gateway
+
+    %% SERVICES
+    subgraph Services
+        Auth[Authentication Service]
+        User[User Service]
+        Server[Server Service]
+        Monitoring[Monitoring Service]
+        Jobs[Jobs Service]
+        Agent[Agent Service]
+    end
+
+    Gateway --> Auth
+    Gateway --> User
+    Gateway --> Server
+    Gateway --> Monitoring
+    Gateway --> Jobs
+    Gateway --> Agent
+
+    %% WORKERS
+    subgraph Workers
+        Cron[Cron Scheduler]
+        ImportWorker[Files Import Consumer]
+        MetricsWorker[Metrics Consumer]
+        Checker[Server Ping Checker]
+    end
+
+    %% INFRASTRUCTURE
+    subgraph Infrastructure
+        DB[(PostgreSQL)]
+        Redis[(Redis)]
+        Kafka[(Kafka)]
+        MinIO[(MinIO)]
+        ES[(Elasticsearch)]
+        Kibana[(Kibana)]
+    end
+
+    %% SERVICE DEPENDENCIES
+    Auth --> DB
+    Auth --> Redis
+
+    User --> DB
+
+    Server --> DB
+
+    Monitoring --> ES
+    Monitoring --> DB
+
+    Jobs --> DB
+    Jobs --> MinIO
+    Jobs --> Kafka
+
+    Agent --> Kafka
+
+    %% WORKER DEPENDENCIES
+    ImportWorker --> Kafka
+    ImportWorker --> DB
+    ImportWorker --> MinIO
+
+    MetricsWorker --> Kafka
+    MetricsWorker --> ES
+
+    Checker --> DB
+    Checker --> ES
+
+    Cron --> DB
+    Cron --> MinIO
+
+    %% OBSERVABILITY
+    ES --> Kibana
+```
 
 The system consists of the following components:
 
-## 3.1 API Service
-- Handles all client requests
-- Implements business logic
-- Provides REST APIs
-- Communicates with PostgreSQL, Redis, and Elasticsearch
+1. API Gateway: Handling all clients requests
 
-## 3.2 Server Checker Worker
-- Runs continuously (every 5 seconds)
-- Performs health checks on all servers
-- Updates server status
-- Writes logs to Elasticsearch
+   - Route user requests, acting as a reverse proxy and load balancer
+   - Requests are forwarded to the appropriate services
 
-## 3.3 Email Worker
-- Sends periodic reports (daily)
-- Uses aggregated data from PostgreSQL and Elasticsearch
+2. Server service: Deals with the management of all servers, including:
+
+   - CRUD operations
+   - Search for servers with pagination
+   - File exporting (For now, will be moved to Jobs Service after, as it is a long-running task)
+
+3. User service: Deals with the management of all user, including CRUD operations, and search by email
+
+4. Auth service: Deals with operations relating to authentication/authorization, including login/logout, and refresh JWT tokens
+
+5. Jobs service: Manage all long-running tasks. Currently used for file uploading workflow, but in the future, it will be used to manage more workflows
+
+6. Monitoring service: Centralize the data aggregation of server's statuses. Right now it's just used for push and pull model of servers with metrics only, but in the future, it would be expanded for more things like collecting logs and traces
+
+7. Agent service: Manage all registered services and their operations, by allowing the registration of agents, and metrics ingestions from agents
+
+8. Cron scheduler: A worker to be ran periodically (Daily for now), dealing with tasks of sending emails, cleaning up DBs, etc.
+
+9. Kafka consumer workers: Kafka consumers to consume messages from async workflows, and keep processing and commit messages manually
+
+10. Ping checker: The pull model of the system. Being ran continuously for every X seconds, it performs checks on all servers through pings, then update statuses and write logs to Elasticsearch
 
 ---
 
@@ -75,154 +165,131 @@ The system consists of the following components:
 
 ## 4.1 Auth
 
-- `POST /login`: Help user log in
+- `POST /auth/login`: Help user log in
    ```mermaid
    sequenceDiagram
 
-      actor Client
-      participant Handler as Gin Handler
-      participant Service as Auth Service
-      participant UserRepo as User Repository
-      participant RedisRepo as Redis Repository
-      participant DB as PostgreSQL
-      participant Redis as Redis
+    actor Client
+    participant Gateway as API Gateway
+    participant AuthSvc as Auth Service
+    participant UserSvc as User Service
+    participant DB as PostgreSQL
+    participant Redis
 
-      %% =========================
-      %% LOGIN WORKFLOW
-      %% =========================
+    %% =========================
+    %% LOGIN WORKFLOW
+    %% =========================
 
-      Client->>Handler: POST /login (email, password)
+    Client->>Gateway: POST /auth/login (email, password)
+    Gateway->>AuthSvc: Forward request
 
-      alt Invalid request body
-         Handler-->>Client: 400 Bad Request
-      else Valid request
-         Handler->>Service: ValidateUser(email, password)
+    AuthSvc->>AuthSvc: Validate request
 
-         Service->>UserRepo: FindByEmail(email)
-         UserRepo->>DB: SELECT user
-         DB-->>UserRepo: User record
-         UserRepo-->>Service: User
+    alt Invalid request body
+        AuthSvc-->>Gateway: 400 Bad Request
+        Gateway-->>Client: Error
+    else Valid request
 
-         Note right of Service: Password verified using bcrypt
+        %% =========================
+        %% USER VALIDATION
+        %% =========================
+        AuthSvc->>UserSvc: GET /user (Using email)
 
-         alt Invalid credentials
-               Service-->>Handler: error
-               Handler-->>Client: 401 Unauthorized
-         else Valid credentials
-               Service-->>Handler: user
+        Note right of UserSvc: Query user from database
 
-               Handler->>Handler: Generate Access Token (15m expiration time)
+        UserSvc-->>AuthSvc: User data
 
-               Note right of Handler: JWT (HS256)<br>user_id, role, exp, iat
+        AuthSvc->>AuthSvc: Verify password (bcrypt)
 
-               Handler->>Service: GenerateRefreshToken(userID, role)
+        alt Invalid credentials
+            AuthSvc-->>Gateway: 401 Unauthorized
+            Gateway-->>Client: Error
+        else Valid credentials
 
-               Service->>Service: Generate Refresh Token (7d expiration time)
+            %% =========================
+            %% TOKEN GENERATION
+            %% =========================
+            AuthSvc->>AuthSvc: Generate Access Token (15m)
 
-               Note right of Service: Refresh token for session continuation
+            Note right of AuthSvc: JWT (HS256)<br>user_id, role, exp, iat
 
-               Service->>RedisRepo: StoreToken(refresh:<token>)
-               RedisRepo->>Redis: SET with TTL (7d)
+            AuthSvc->>AuthSvc: Generate Refresh Token (7d)
 
-               Note right of Redis: key = refresh:<token><br>value = user info
+            %% =========================
+            %% STORE REFRESH TOKEN
+            %% =========================
+            AuthSvc->>Redis: SET refresh:<token> (TTL 7d)
 
-               Redis-->>RedisRepo: OK
-               RedisRepo-->>Service: OK
+            Note right of Redis: value = user info<br>Used for session validation
 
-               Service-->>Handler: refresh token
-               Handler-->>Client: 200 OK (access + refresh)
-         end
-      end
-   ```
+            Redis-->>AuthSvc: OK
 
-- `POST /logout`: Log out an existing user
-   ```mermaid
-   sequenceDiagram
-
-   actor Client
-   participant Handler as Gin Handler
-   participant Service as Auth Service
-   participant UserRepo as User Repository
-   participant RedisRepo as Redis Repository
-   participant DB as PostgreSQL
-   participant Redis as Redis
-
-   %% =========================
-   %% LOGOUT WORKFLOW
-   %% =========================
-
-   Client->>Handler: POST /logout (refreshToken)
-
-   alt Invalid request
-      Handler-->>Client: 400 Bad Request
-   else Valid request
-      Handler->>Service: DeleteOldRefreshToken(token)
-      Service->>RedisRepo: DEL refresh:<token>
-      RedisRepo->>Redis: DEL key
-
-      Note right of Redis: Logout = token invalidation<br>(stateless JWT + stateful refresh)
-
-      alt Deletion error
-         Service-->>Handler: error
-         Handler-->>Client: 500 Internal Server Error
-      else Success
-         Service-->>Handler: OK
-         Handler-->>Client: 200 OK
-      end
-   end
+            %% =========================
+            %% RESPONSE
+            %% =========================
+            AuthSvc-->>Gateway: access + refresh tokens
+            Gateway-->>Client: 200 OK
+        end
+    end
    ```
 
 - `POST /refresh`: Help user refresh their access token, using their refresh token, to help users in case of losing access token, or access token expired
    ```mermaid
    sequenceDiagram
 
-   actor Client
-   participant Handler as Gin Handler
-   participant Service as Auth Service
-   participant UserRepo as User Repository
-   participant RedisRepo as Redis Repository
-   participant DB as PostgreSQL
-   participant Redis as Redis
+    actor Client
+    participant Gateway as API Gateway
+    participant AuthSvc as Auth Service
+    participant Redis
 
-   %% =========================
-   %% REFRESH WORKFLOW
-   %% =========================
+    %% =========================
+    %% REFRESH WORKFLOW
+    %% =========================
 
-   Client->>Handler: POST /refresh (refreshToken)
+    Client->>Gateway: POST /refresh (refreshToken)
+    Gateway->>AuthSvc: Forward request
 
-   alt Missing/invalid body
-      Handler-->>Client: 400 Bad Request
-   else Valid request
-      Handler->>Service: GetUserFromRefreshToken(token)
+    AuthSvc->>AuthSvc: Validate request
 
-      Service->>RedisRepo: GET refresh:<token>
-      RedisRepo->>Redis: GET key
+    alt Missing or invalid body
+        AuthSvc-->>Gateway: 400 Bad Request
+        Gateway-->>Client: Error
+    else Valid request
 
-      alt Token not found
-         Redis-->>RedisRepo: nil
-         RedisRepo-->>Service: error
-         Service-->>Handler: error
-         Handler-->>Client: 401 Unauthorized
-      else Token valid
-         Redis-->>RedisRepo: user data
-         RedisRepo-->>Service: user data
-         Service-->>Handler: userInfo
+        %% =========================
+        %% VALIDATE REFRESH TOKEN
+        %% =========================
+        AuthSvc->>Redis: GET refresh:<token>
 
-         Handler->>Service: DeleteOldRefreshToken(token)
-         Service->>RedisRepo: DEL refresh:<token>
-         RedisRepo->>Redis: DEL key
+        alt Token not found or expired
+            Redis-->>AuthSvc: nil
+            AuthSvc-->>Gateway: 401 Unauthorized
+            Gateway-->>Client: Error
+        else Token valid
+            Redis-->>AuthSvc: user data
 
-         Note right of Handler: Refresh token rotation<br>(prevents replay attacks)
+            %% =========================
+            %% TOKEN ROTATION
+            %% =========================
+            AuthSvc->>Redis: DEL refresh:<token>
 
-         Handler->>Handler: Generate Access Token (15m)
+            Note right of AuthSvc: Refresh token rotation\nPrevents replay attacks
 
-         Handler->>Service: GenerateRefreshToken(userID, role)
-         Service->>RedisRepo: StoreToken(new token)
-         RedisRepo->>Redis: SET with TTL
+            %% =========================
+            %% ISSUE NEW TOKENS
+            %% =========================
+            AuthSvc->>AuthSvc: Generate Access Token (15m)
+            AuthSvc->>AuthSvc: Generate Refresh Token (7d)
 
-         Handler-->>Client: 200 OK (new access + refresh)
-      end
-   end
+            AuthSvc->>Redis: SET refresh:<new_token> (TTL 7d)
+
+            %% =========================
+            %% RESPONSE
+            %% =========================
+            AuthSvc-->>Gateway: new access + refresh tokens
+            Gateway-->>Client: 200 OK
+        end
+    end
    ```
 
 Note: 
@@ -244,6 +311,56 @@ Note:
 - `POST /servers`: Create a server
    - User send the request with body content for server creation. The system checks if all necessary info (name, status, IP address, port, protocol) are provided, if not provided or invalid data -> Returns 400
    - The system try to create a record of this server. If the server already exist or some other error happens -> Returns 500, alongside with reason message (E.g.: Server already existed)
+   - After creating the server successfully, the server service will create a record of a registered agent's info in DB (which includes the associated server ID, and the API key, hashed already using SHA256 checksum, of course), then return the plain API key back in the response. Of course, like all other API keys, it only appears once in the response for security purpose
+
+      ```mermaid
+      sequenceDiagram
+
+      actor User
+      participant Gateway as API Gateway
+      participant ServerSvc as Server Service
+      participant AgentSvc as Agent Service
+      participant DB as PostgreSQL
+
+      Note over User,Gateway: Create new server
+
+      User->>Gateway: POST /servers
+      Gateway->>ServerSvc: Forward request
+
+      ServerSvc->>ServerSvc: Validate request
+
+      alt Invalid request
+         ServerSvc-->>Gateway: 400 Bad Request
+         Gateway-->>User: Error response
+      else Valid request
+
+         %% Create server
+         ServerSvc->>DB: Insert server record
+         DB-->>ServerSvc: server_id
+
+         %% Generate API key
+         ServerSvc->>ServerSvc: Generate API Key (plain)
+
+         %% Delegate to Agent Service
+         ServerSvc->>AgentSvc: RegisterAgent(server_id, api_key)
+
+         AgentSvc->>AgentSvc: Hash API key (SHA256)
+
+         AgentSvc->>DB: Store agent record\n(server_id, hashed_key)
+
+         DB-->>AgentSvc: OK
+         AgentSvc-->>ServerSvc: OK
+
+         %% Response
+         ServerSvc-->>Gateway: 201 Created (server + API key)
+         Gateway-->>User: Response (API key shown once)
+
+      end
+
+      Note over AgentSvc,DB: API key is stored hashed\nPlain key is never persisted
+
+      Note over User: User configures agent\nwith API key on their server
+      ```
 
 - `DELETE /servers/:id`: Delete a server
    - Check if given id is valid -> Returns 400 if invalid or negative number
@@ -256,6 +373,7 @@ Note:
    - Update the fields in the record in Postgres, then returns 200 with the newly updated record in the response's body
 
 - `GET /servers/export`:
+
    ```mermaid
    sequenceDiagram
 
@@ -315,190 +433,329 @@ Note:
    Note over Handler: Large exports are memory-bound<br>Future: stream from DB or async export job
    ```
 
-- `POST /servers/import`: Import servers from a csv file
-   ```mermaid
-   sequenceDiagram
+## 4.3 Jobs
 
-   actor Client
-   participant Middleware as Auth Middleware
-   participant Handler as Gin Handler
-   participant Service as Server Service
-   participant Repo as Server Repository
-   participant DB as PostgreSQL
+- `POST /jobs/import-server`: Import servers from a csv file
+   - Create a job:
+      ```mermaid
+      sequenceDiagram
 
-   Client->>Middleware: POST /servers/import (CSV, JWT)
+      actor User
+      participant API as Jobs Service
+      participant DB as PostgreSQL
+      participant MinIO
+      participant Kafka
 
-   alt Invalid / missing JWT
-      Middleware-->>Client: 401 Unauthorized
-   else Authenticated
-      Middleware->>Handler: Forward request
+      Note over User,API: POST /jobs/import-server
 
-      Handler->>Handler: Extract file from form-data
+      User->>API: Upload CSV file
 
-      alt File missing
-         Handler-->>Client: 400 Bad Request
-      else File present
-         Handler->>Handler: Open file stream
+      API->>API: Generate Job ID (UUID)
 
-         alt Cannot open file
-               Handler-->>Client: 500 Internal Server Error
-         else File opened
+      API->>MinIO: Upload file\njobs/<job-id>/input.csv
 
-               Handler->>Service: ImportServers(fileReader)
+      API->>DB: Insert job record (status = pending)
 
-               Service->>Service: csv.ReadAll()
-               Note right of Service: Reads entire file into memory<br>Not optimal for large files
+      API->>Kafka: Publish job message
 
-               alt Invalid / empty CSV
-                  Service-->>Handler: error
-                  Handler-->>Client: 500 Internal Server Error
-               else Valid CSV
+      API-->>User: Return job_id
+      ```
+   - Processing (In consumer worker):
+      ```mermaid
+         sequenceDiagram
 
-                  Service->>Service: Extract headers
+         participant Kafka
+         participant Worker as Files import consumer
+         participant DB as PostgreSQL
+         participant MinIO
 
-                  loop For each row
-                     Service->>Service: mapRow(headers, row)
-                     Service->>Service: parseServer(record)
+         Note over Kafka,Worker: Async job processing
 
-                     Note right of Service: Validation:<br>- name required<br>- status (bool)<br>- IPv4 format<br>- port (0–65535)<br>- default protocol = tcp
+         Worker->>Kafka: Consume message
 
-                     alt Validation failed
-                           Service->>Service: Append to failures[]
-                     else Valid record
-                           Service->>Repo: Create(server)
+         alt Invalid message (poison)
+            Worker->>Worker: Skip message
+         else Valid message
 
-                           Repo->>DB: INSERT (ON CONFLICT DO NOTHING)
-                           Note right of Repo: Prevent duplicate server names
+            Worker->>DB: Check job status
 
-                           alt Insert error
-                              Repo-->>Service: error
-                              Service->>Service: Append to failures[]
-                           else Duplicate
-                              Repo-->>Service: conflict
-                              Service->>Service: Append to failures[]
-                           else Success
-                              Repo-->>Service: created server
-                              Service->>Service: Append to successes[]
-                           end
+            alt Job already done
+                  Worker->>Kafka: Commit message
+            else Not processed
+
+                  Worker->>DB: Update status = processing
+
+                  Worker->>MinIO: Download input file
+
+                  loop Process CSV rows
+                     Worker->>Worker: Parse row
+
+                     alt Invalid row
+                        Worker->>Worker: Record failure
+                     else Valid row
+                        Worker->>Worker: Add to batch
+
+                        alt Batch full OR EOF
+                              Worker->>DB: Batch upsert
+
+                              alt Batch error
+                                 Worker->>Worker: Fallback to single insert
+                                 Worker->>DB: Insert one-by-one
+                              end
+                        end
                      end
                   end
 
-                  Service-->>Handler: ImportServersResponse
+                  Worker->>DB: Update job result (success/failed counts)
 
-                  Note right of Service: Response includes:<br>- success count<br>- failure count<br>- success list<br>- failure list
+                  Worker->>MinIO: Upload failed rows JSON\njobs/<job-id>/output.json
 
-                  Handler-->>Client: 200 OK (JSON result)
-               end
+                  Worker->>DB: Update status = done
+
+                  Worker->>Kafka: Commit message
+            end
          end
-      end
-   end
 
-   Note over Service,Repo: Current limitations:<br>- csv.ReadAll() is memory-heavy<br>- Sequential inserts<br><br>Future improvements:<br>- Stream parsing<br>- Batch inserts<br>- Async processing
-   ```
+         Note over Worker,DB: Idempotency via job status check
 
-- `POST /servers/report`: Get servers statuses, then send emails to the emails in email list
-   - By default, this API will take all servers information within the last 1 day, then take top 10 servers with worst uptime to report in the output, and no email will be sent. However, users can tweak this by adding optional parameters in the body for start and end time for the report, top N servers they want to be shown up in the response/email, and the emails to be sent to
-   - If any of the above extra body parameter is provided, checks will be done to validate input data -> Returns 400 if invalid
-   - The number of servers that are up and down are retrieved from Postgres, to get the current amount of servers that are up or down (Which probably could be customized for more flexibility in the future)
-   - For the uptime calculation, a range query to Elasticsearch is applied to get status log data from `start` to `end` time, then a bucket aggregation is done to calculate uptime for each server, where inside, uptime is calculated by the average of status field (Since it's 0 and 1 for up and down, you can calculate just with avg, for example, is server is up and down 1 time -> Uptime is (0 + 1) / 2 = 0.5 -> 50% uptime), then the buckets are sorted based on uptime, from lowest to highest, then output is limited to top N buckets only
-   - A HTML report then is built from the above results, then they are sent to the emails in the given emails list using SMTP. Specifically, I use SMTP's PLAIN auth for authentication, by using a testing gmail account with a Google's app password for the account, send to the mailing server, then the mail server directs those messages to the emails in the email list (Currently I'm using server `smtp.gmail.com:587` for testing, but in the future, I could try for more)
+         Note over Worker: Batch processing improves performance\nFallback ensures correctness
+      ```
+
+- `GET /jobs/:id`: Get a job's status
+
    ```mermaid
    sequenceDiagram
 
-   actor Client
-   participant Middleware as Auth Middleware
-   participant Handler as Gin Handler
-   participant Service as Server Service
-   participant Repo as Server Repository
-   participant ESRepo as Elasticsearch Repo
-   participant DB as PostgreSQL
-   participant ES as Elasticsearch
-   participant Mailer as Email Utility
-   participant SMTP as SMTP Server
+    actor User
+    participant API as Jobs Service
+    participant DB as PostgreSQL
+    participant MinIO
 
-   %% =========================
-   %% REQUEST
-   %% =========================
+    Note over User,API: GET /job/:id
 
-   Client->>Middleware: POST /servers/report (filters, emails)
+    User->>API: Request job status
 
-   alt Invalid / missing JWT
-   Middleware-->>Client: 401 Unauthorized
-   else Authenticated
-      Middleware->>Handler: Forward request
+    API->>DB: Fetch job
 
-      alt Invalid request body / params
-         Handler-->>Client: 400 Bad Request
-      else Valid request
+    alt Job not found
+        API-->>User: Not found
+    else Found
 
-         Handler->>Handler: Parse time range (default last 24h)
-         Handler->>Handler: Validate TopN
+        API->>MinIO: Generate presigned URL (input file)
 
-         Handler->>Service: SendReports(start, end, topN, emails)
+        API->>MinIO: Generate presigned URL (output file)
 
-         %% =========================
-         %% POSTGRES STATS
-         %% =========================
-         Service->>Repo: GetStats()
-         Repo->>DB: COUNT total servers
-         Repo->>DB: COUNT where status = up
-         DB-->>Repo: total, up
-         Repo-->>Service: total, up, down
+        alt Output not ready
+            API->>API: Omit output URL
+        end
 
-         %% =========================
-         %% ELASTICSEARCH AGGREGATION
-         %% =========================
-         Service->>ESRepo: GetDailyUptime(start, end, topN)
+        API-->>User: Job status + URLs
+    end
 
-         ESRepo->>ES: Query logs (time range + aggregation)
-
-         Note right of ESRepo: Aggregation per server<br>Average status field<br>Top N lowest uptime
-
-         ES-->>ESRepo: Aggregated buckets
-         ESRepo-->>Service: uptime map
-
-         %% =========================
-         %% BUILD REPORT
-         %% =========================
-         Service->>Service: Build Report object
-
-         alt No email provided
-               Service-->>Handler: Report
-               Handler-->>Client: 200 OK (report only)
-
-         else Emails provided
-
-               Service->>Service: Build HTML content
-
-               Note right of Service: HTML report with stats<br>and uptime summary
-
-               Service->>Mailer: Send(to, subject, html)
-
-               Mailer->>SMTP: Send email
-
-               alt Email sending failed
-                  Mailer-->>Service: error
-                  Service-->>Handler: error
-                  Handler-->>Client: 500 Internal Server Error
-               else Success
-                  SMTP-->>Mailer: OK
-                  Mailer-->>Service: OK
-                  Service-->>Handler: Report
-                  Handler-->>Client: 200 OK (report + email sent)
-               end
-         end
-      end
-   end
-
-   %% =========================
-   %% GLOBAL NOTES
-   %% =========================
-   Note over Service,Mailer: Email sending is synchronous<br>Future improvement: async via queue
-
-   Note over ESRepo,ES: Uses aggregation query<br>Efficient for large log datasets
+    Note over API,MinIO: Uses public endpoint for presigned URLs\nPrivate endpoint for internal ops
    ```
 
-## 4.3 Users
+Later clean up in cron scheduler:
+
+```mermaid
+sequenceDiagram
+
+    participant Cron as Cron scheduler
+    participant DB as PostgreSQL
+    participant MinIO
+
+    Note over Cron: Runs every 24 hours
+
+    Cron->>DB: Query jobs older than 7 days
+
+    loop For each job
+        Cron->>MinIO: Delete input file
+        Cron->>MinIO: Delete output file
+        Cron->>DB: Delete job record
+    end
+```
+
+## 4.4 Agents
+
+- `POST /agent/metrics`: API for registered agents to push metrics
+
+   1. Agent calls API POST /agent/metrics: Push metric message to Kafka 
+   
+   2. Metrics consumer: Consumer keep fetching messages, until it either reaches the limit of a batch size (So that, batch insert to Elasticsearch will be possible and reduce latency by saving API calls to ES), or after X seconds, it will be flushed anyway. The process of consuming message is simple: It will try pushing to Elasticsearch for an amount of times, and if after some N retries it still fails to push to Elasticsearch, the message will be pushed to a DLQ
+
+   ```mermaid
+   sequenceDiagram
+
+    actor Agent
+    participant Gateway as API Gateway
+    participant AgentSvc as Agent Service
+    participant Kafka
+    participant Consumer as Metrics Consumer
+    participant ES as Elasticsearch
+    participant DLQ as Kafka DLQ
+
+    %% =========================
+    %% INGESTION API
+    %% =========================
+    Note over Agent,Gateway: POST /agent/metrics
+
+    Agent->>Gateway: Send metrics (API key)
+    Gateway->>AgentSvc: Forward request
+
+    AgentSvc->>AgentSvc: Validate API key
+
+    alt Invalid API key
+        AgentSvc-->>Gateway: 401 Unauthorized
+        Gateway-->>Agent: Reject request
+    else Valid API key
+
+        AgentSvc->>Kafka: Publish metric event
+        AgentSvc-->>Gateway: 202 Accepted
+        Gateway-->>Agent: Accepted
+    end
+
+    %% =========================
+    %% CONSUMER PROCESSING
+    %% =========================
+    Note over Consumer,Kafka: Async batch processing
+
+    Consumer->>Kafka: Poll messages
+
+    loop Until batch full OR timeout
+        Consumer->>Consumer: Accumulate messages
+    end
+
+    Consumer->>ES: Bulk insert metrics
+
+    alt Success
+        ES-->>Consumer: OK
+        Consumer->>Kafka: Commit offsets
+    else Failure
+
+        loop Retry N times
+            Consumer->>ES: Retry bulk insert
+        end
+
+        alt Still failing
+            Consumer->>DLQ: Publish failed batch
+            Consumer->>Kafka: Commit offsets
+        end
+    end
+
+    %% =========================
+    %% NOTES
+    %% =========================
+    Note over Consumer: Batch improves throughput. Timeout prevents delay on low traffic
+
+    Note over Consumer,DLQ: DLQ enables later reprocessing and failure analysis
+   ```
+
+## 4.5 Monitoring
+
+- `POST /monitoring/report`: Get servers statuses, then send emails to the emails in email list
+
+   1. Call DB to servers table to get all metadata of those servers. Specifically: Number of servers, number of servers that are up/down at the moment 
+   2. This queries 2 data streams, one is from the data stream that the metrics consumer has uploaded to, and the other is from the data stream that the servers checker uploaded to. This is done by calling to two services: Agent Service, and Server Service. Then it combines results from both sources together 
+   3. A HTML string content is built based on the above info (i.e. the metadatas, and the servers aggregated informations like average CPU usage, total read/write bps, average uptime, etc.) 
+   4. This HTML content is sent to each email in the given email list for reporting, while those info are also returned in the response
+
+   ```mermaid
+   sequenceDiagram
+
+    actor User
+    participant Gateway as API Gateway
+    participant MonitoringSvc as Monitoring Service
+    participant ServerSvc as Server Service
+    participant AgentSvc as Agent Service
+    participant DB as PostgreSQL
+    participant ES as Elasticsearch
+    participant SMTP as SMTP Server
+
+    %% =========================
+    %% REQUEST
+    %% =========================
+    Note over User,Gateway: POST /monitoring/report
+
+    User->>Gateway: Request report (filters, emails)
+    Gateway->>MonitoringSvc: Forward request
+
+    MonitoringSvc->>MonitoringSvc: Validate request
+
+    alt Invalid request
+        MonitoringSvc-->>Gateway: 400 Bad Request
+        Gateway-->>User: Error
+    else Valid request
+
+        %% =========================
+        %% FETCH SERVER METADATA
+        %% =========================
+        MonitoringSvc->>ServerSvc: Get server stats
+        ServerSvc->>DB: Query servers table
+        DB-->>ServerSvc: total, up, down
+        ServerSvc-->>MonitoringSvc: stats
+
+        %% =========================
+        %% FETCH METRICS (VIA SERVICES)
+        %% =========================
+        par Agent metrics
+            MonitoringSvc->>AgentSvc: Get metrics data
+            AgentSvc->>ES: Query metrics index
+            ES-->>AgentSvc: Aggregated metrics
+            AgentSvc-->>MonitoringSvc: metrics result
+        and Server status (uptime)
+            MonitoringSvc->>ServerSvc: Get uptime data
+            ServerSvc->>ES: Query status index
+            ES-->>ServerSvc: Aggregated uptime
+            ServerSvc-->>MonitoringSvc: uptime result
+        end
+
+        %% =========================
+        %% BUILD REPORT
+        %% =========================
+        MonitoringSvc->>MonitoringSvc: Merge all data
+
+        Note right of MonitoringSvc: Combine DB + ES results into unified report
+
+        MonitoringSvc->>MonitoringSvc: Build HTML content
+
+        %% =========================
+        %% EMAIL SIDE EFFECT
+        %% =========================
+        alt Emails provided
+
+            MonitoringSvc->>SMTP: Send email (HTML content)
+
+            alt Email failure
+                SMTP-->>MonitoringSvc: error
+                MonitoringSvc-->>Gateway: 500 Error
+                Gateway-->>User: Failed
+            else Success
+                SMTP-->>MonitoringSvc: OK
+            end
+        end
+
+        %% =========================
+        %% RESPONSE
+        %% =========================
+        MonitoringSvc-->>Gateway: Report data
+        Gateway-->>User: 200 OK
+
+    end
+
+    %% =========================
+    %% NOTES
+    %% =========================
+    Note over MonitoringSvc: Orchestrator only delegates data fetching to services
+
+    Note over ServerSvc,AgentSvc: Services encapsulate ES queries maintain proper ownership boundaries
+
+    Note over MonitoringSvc: Future: async email + job system
+
+    Note over MonitoringSvc: Future: store HTML in MinIO, return presigned URL instead
+   ```
+
+
+## 4.6 Users
 
 - `/POST users`: Create an user
 - `/GET users`: Get list of users. Normally I would use it for the daily report to the servers administrator, by getting all users, then send email to them about the servers statuses for each 24 hours (Which is the job of the email worker)
@@ -507,7 +764,15 @@ Note:
 
 # 5. API scopes
 
-APIs are divided into two scopes, based on user's roles: `admin` and `user`. For APIs that involve read, and not having too much side effects, those would be APIs for everyone. Otherwise, they are for only users with `admin` role. Of course, all of these APIs, aside from the authentication/authorization APIs, needs JWT token for authentication (i.e authentication/authorization APIs have no scope, as they are public APIs). Anyway, here are the scopes of the APIs:
+APIs are divided into two scopes, based on user's roles: `admin` and `user` (With the exception of API for metrics ingestion from agents, that one needs API key instead). For APIs that involve read, and not having too much side effects, those would be APIs for everyone. Otherwise, they are for only users with `admin` role. Of course, all of these APIs, aside from the authentication/authorization APIs, needs JWT token for authentication (i.e authentication/authorization APIs have no scope, as they are public APIs). Anyway, here are the scopes of the APIs:
+
+- For everyone (No scope):
+   - `POST /auth/login`
+   - `POST /auth/refresh`
+   - `POST /auth/logout`
+
+- Only for agents with API keys:
+   - `POST /agent/metrics`
 
 - For both user and admin roles:
    - `GET /servers`
@@ -518,10 +783,11 @@ APIs are divided into two scopes, based on user's roles: `admin` and `user`. For
    - `POST /servers`
    - `PATCH /servers/:id`
    - `DELETE /servers/:id`
-   - `POST /servers/import`
    - `POST /users`
    - `GET /servers/export`
-   - `POST /servers/report`
+   - `POST /monitoring/report`
+   - `POST /job/import-server`
+   - `GET /job/:id`
 
 ---
 
@@ -530,6 +796,9 @@ APIs are divided into two scopes, based on user's roles: `admin` and `user`. For
 ## 6.1 PostgreSQL
 
 ### Users
+
+Represents system users
+
 - ID
 - Name
 - Email (unique)
@@ -538,7 +807,8 @@ APIs are divided into two scopes, based on user's roles: `admin` and `user`. For
 - CreatedAt
 
 ### Servers
-Represents a monitorable service endpoint.
+
+Represents monitorable service endpoints
 
 - ID
 - Name (unique)
@@ -549,10 +819,28 @@ Represents a monitorable service endpoint.
 - CreatedAt
 - LastUpdated
 
-### Memberships
-- Many-to-many relationship between Users and Servers
-- Designed for future RBAC expansion
-- Not utilized yet in current version
+### Agents
+
+Represents registered monitoring agents in the system
+
+- ID
+- Server ID (Foreign key)
+- APIKey
+- CreatedAt
+
+### Import Jobs
+
+Represents long-running import jobs in the system (Will be expanded into full job system for every long-running operations)
+
+- ID
+- FilePath: Link to input file
+- Status: Job's status (Done, processing, failed, etc.)
+- ProcessedRows: Number of rows that were processed already
+- SuccessRowsCount and FailedRowsCount: Counting
+- ResultPath: Path to the resulting file
+- Error: Path to the error file
+- CreatedAt
+- UpdatedAt
 
 ---
 
@@ -560,205 +848,229 @@ Represents a monitorable service endpoint.
 
 Used for high-volume log storage.
 
-### Data Stream
+### For push model (Agent sends)
+
+#### Purpose
+- Store health check logs for push model
+- Support aggregation queries to calculate average usage
+
+#### Data Stream
+- Pattern: `server-metrics*`
+
+#### Fields
+- `@timestamp` (date)
+- `server_id` (long)
+- `container_name` (keyword)
+- `cpu.usage` (float)
+- `cpu.throttling` (float)
+- `cpu.pressure` (float)
+- `memory.usage` (float)
+- `memory.working_set` (float)
+- `memory.rss` (float)
+- `memory.pressure` (float)
+- `io.read_bps` (float)
+- `io.write_bps` (float)
+- `io.pressure` (float)
+- `pids` (integer)
+- `oom.events` (integer)
+- `oom.kills` (integer)
+
+### For pull model (System pings)
+
+#### Purpose
+- Store health check logs for pull model
+- Support aggregation queries (uptime calculation)
+
+#### Data Stream
 - Pattern: `server-status*`
 
-### Fields
+#### Fields
 - `@timestamp` (date)
 - `server_id` (long)
 - `status` (boolean)
-
-### Purpose
-- Store health check logs
-- Support aggregation queries (uptime calculation)
 
 ---
 
 # 🔧 7. Design Decisions
 
-## 7.1 Server as Service Endpoint (IP + Port)
+## 7.1 Server as Service Endpoint
 
-Instead of modeling a “server” as a physical machine, SMS-X models it as a **network-accessible service endpoint (IP + Port + Protocol)**.
-
-### Rationale:
-
-* A single machine can host multiple services (HTTP, SSH, FTP, etc.)
-* A machine may be reachable (ICMP ping succeeds) but critical services may be down
-* Monitoring at service-level provides **more granular and actionable insights**
-
-### Tradeoff:
-
-* Increases number of monitored entities
-* Requires clearer definition of “server” in system context
-
----
-
-## 7.2 Elasticsearch for High-Volume Time-Series Logs
-
-Health checks generate extremely high write throughput:
-
-* 10,000 servers × every 5 seconds
-  → ~2,000 writes/sec
-  → ~170M records/day
-
-### Decision:
-
-Use **Elasticsearch Data Streams** instead of PostgreSQL
-
-### Why:
-
-* Optimized for append-only time-series data
-* Supports horizontal scaling
-* Native aggregation support
-* Built-in lifecycle management (ILM)
-
-### Tradeoff:
-
-* Eventual consistency
-* More complex setup vs relational DB
-
----
-
-## 7.3 Worker-Based Health Checking
-
-Health checking is implemented as a **separate worker process**
-
-### Benefits:
-
-* Decouples monitoring from API
-* Enables independent scaling
-* Prevents API latency from being affected by network operations
-
-### Design Consideration:
-
-* Worker uses concurrency (worker pool pattern)
-* Future improvement: Backpressure control
-
----
-
-## 7.4 Modular Monolith Architecture
-
-The system is structured as a **modular monolith**:
-
-* Single codebase
-* Multiple executables (API, workers)
-
-### Benefits:
-
-* Easier to develop and deploy
-* Clear separation of concerns
-* Avoids premature microservices complexity
-
-### Future Path:
-
-* Components can be extracted into microservices:
-
-  * API service
-  * Health check service
-  * Reporting service
-
----
-
-## 7.5 Pagination Strategy (Offset-Based)
-
-Offset pagination is used for simplicity.
-
-### Pros:
-
-* Easy to implement
-* Works well for small datasets
-
-### Cons:
-
-* Inefficient for large offsets (O(n) scan)
-* Inconsistent results if data changes frequently
-
-### Future Improvement:
-
-* Cursor-based pagination for better performance
-
----
-
-## 7.6 Synchronous vs Asynchronous Processing
-
-Current system performs most operations synchronously.
-
-### Limitation:
-
-* Heavy operations (reporting, email, import/export) can block requests
-
-### Future Direction:
-
-* Introduce asynchronous processing via queue (Kafka/Redis Stream)
-* Convert heavy operations into background jobs
-
----
-
-# 8. Performance Considerations
-
-## 8.1 High Throughput vs Low Latency
-
-The system prioritizes **throughput over latency**, especially for:
-
-* health checks
-* log ingestion
-* reporting
-
----
-
-## 8.2 Bounded Concurrency with Worker Pool
-
-The server checker worker uses a worker pool pattern to control concurrency when performing health checks.
-
-### Implementation
-
-- A fixed number of workers (e.g., 200) are spawned
-- Servers are distributed as jobs through a buffered channel
-- Workers continuously pull jobs and perform health checks
-- Results are collected through a result channel
+SMS-X models a “server” as a **network-accessible service endpoint (IP + Port + Protocol)** rather than a physical machine.
 
 ### Rationale
 
-- Prevents spawning unbounded goroutines (e.g., 10,000 concurrent checks)
-- Avoids exhausting system resources (CPU, memory, network sockets)
-- Provides stable and predictable throughput
+* A single machine can host multiple services
+* Service-level monitoring is more meaningful than host-level availability
+* Enables more granular insights (e.g., HTTP down while SSH is up)
 
-### Tradeoffs
+### Tradeoff
 
-- Fixed worker count may not fully utilize system resources under varying load
-- Requires tuning based on environment
-
-### Future Improvements
-
-- Dynamic worker scaling based on system load
-- Rate limiting per target host
-- Retry and backoff strategies for failed checks
+* Increases number of monitored entities
+* Requires clear definition of “server” in system context
 
 ---
 
-## 8.3 Database Performance
+## 7.2 Push-Based Monitoring with Agents
 
-### PostgreSQL:
+SMS-X uses an **agent-based push model** for metrics collection.
 
-* Stores only current state (not logs)
-* Indexed on frequently queried fields (name, status)
+### Decision
 
-### Elasticsearch:
+* Each monitored server runs an agent that pushes metrics to the system
 
-* Handles heavy aggregation workloads
-* Reduces pressure on relational DB
+### Why
+
+* Scales better than centralized polling
+* Avoids firewall/NAT issues
+* Supports richer metrics (CPU, memory, I/O)
+* Aligns with industry practices
+
+### Tradeoff
+
+* Requires agent installation and management
+* Adds complexity in authentication (API keys)
 
 ---
 
-## 8.4 Batch Processing Opportunities
+## 7.3 Kafka for Asynchronous Processing
 
-Current implementation processes many operations individually.
+Kafka is used as the backbone for **event-driven communication**.
 
-### Improvements:
+### Use Cases
 
-* Batch DB updates
-* Use Elasticsearch Bulk API
-* Reduce network overhead
+* Metrics ingestion (high throughput)
+* CSV import processing
+* Decoupling services and workers
+
+### Why
+
+* High throughput and horizontal scalability
+* Durable event storage (disk-based)
+* Supports replay and auditing
+
+### Tradeoff
+
+* Increased infrastructure complexity
+* Eventual consistency
+
+---
+
+## 7.4 Worker-Based Processing
+
+Background workers handle asynchronous workloads:
+
+* `metrics-consumer`
+* `files-import-consumer`
+* scheduled jobs
+
+### Benefits
+
+* Decouples heavy processing from API services
+* Enables independent scaling
+* Improves system resilience
+
+---
+
+## 7.5 Microservices Architecture
+
+The system is structured as **multiple services + workers**:
+
+* API services (auth, server, monitoring, etc.)
+* background workers
+* shared infrastructure (Kafka, DBs)
+
+### Benefits
+
+* Independent scaling
+* Clear separation of concerns
+* Better fault isolation
+
+### Tradeoff
+
+* Higher operational complexity compared to monolith
+
+---
+
+## 7.6 API Design & Pagination
+
+Offset-based pagination is used for simplicity.
+
+### Tradeoff
+
+* Not efficient for large datasets
+
+### Future Improvement
+
+* Cursor-based pagination
+
+---
+
+## 7.7 Synchronous vs Asynchronous Boundaries
+
+The system uses a mix of:
+
+* **Synchronous**: request/response APIs
+* **Asynchronous**: Kafka-based workflows
+
+### Current Limitation
+
+* Some heavy operations (e.g., reporting) are still synchronous
+
+### Future Direction
+
+* Move long-running tasks to job-based async processing
+
+---
+
+# ⚡ 8. Performance Considerations
+
+## 8.1 Throughput-Oriented Design
+
+The system prioritizes **throughput and reliability** over low latency for:
+
+* metrics ingestion
+* background processing
+* analytics queries
+
+---
+
+## 8.2 Event Buffering with Kafka
+
+Kafka acts as a **buffer layer** between producers and consumers.
+
+### Benefits
+
+* Prevents data loss during traffic spikes
+* Smooths load for downstream services
+* Enables asynchronous scaling
+
+---
+
+## 8.3 Data Storage Strategy
+
+### PostgreSQL
+
+* Stores relational data (servers, users, jobs)
+* Optimized for transactional queries
+
+### Elasticsearch
+
+* Stores time-series metrics
+* Optimized for aggregation and analytics
+
+---
+
+## 8.4 Batch & Stream Processing
+
+### Current
+
+* Mostly per-event processing
+
+### Improvements
+
+* Kafka batching
+* Elasticsearch Bulk API
+* Reduced network overhead
 
 ---
 
@@ -766,34 +1078,36 @@ Current implementation processes many operations individually.
 
 Redis can be used for:
 
-* Frequently accessed server lists
-* Report results
-* Metadata (counts)
-
-### Benefit:
-
-* Reduce repeated expensive queries
+* frequently accessed data
+* report results
+* metadata queries
 
 ---
 
-## 8.6 Heavy Operation Handling
+## 8.6 Handling Heavy Operations
 
-Operations like:
+Heavy operations include:
 
-* reporting
-* CSV import/export
+* CSV import
+* report generation
 * email sending
 
-Should be:
+### Current State (MVP)
 
-* moved to background jobs
-* processed asynchronously
+* Partially synchronous
+
+### Future Improvements
+
+* Move to async job system
+* Store large outputs in object storage (MinIO)
+* Introduce queue-based email processing (e.g., RabbitMQ)
 
 ---
 
 # 9. Authentication & Security
 
-- JWT-based authentication
+- JWT-based authentication/authorization
+- API key-based authentication for agents
 - Access + refresh token mechanism
 - Refresh tokens stored in Redis with TTL
 - Passwords hashed using bcrypt
@@ -811,219 +1125,295 @@ Also, mock codes are used, for components that need extra dependencies. While it
 
 # 11. Deployment & Environment Strategy
 
-## 11.1 Multi-Environment Configuration
+## 11.1 Environment Configuration
 
-System supports multiple environments:
+The system supports multiple runtime environments:
 
-* Local development (.env)
-* Docker-based environment (.env.docker)
+* **Local development** (`.env`)
+* **Containerized environment** (`.env.docker`)
 
-### Key Difference:
+### Key Difference
 
-* Service discovery (localhost vs container names)
+* Local: services communicate via `localhost`
+* Docker: services use **container/service names for discovery**
+
+This ensures consistent configuration across environments while preserving developer flexibility.
 
 ---
 
-## 11.2 Docker-Based Infrastructure
+## 11.2 Containerized Infrastructure
 
-Docker Compose is used to provision:
+Docker Compose is used to provision core infrastructure services:
 
-* PostgreSQL
-* Redis
-* Elasticsearch
-* Kibana
+* PostgreSQL (relational data)
+* Redis (caching)
+* Elasticsearch + Kibana (analytics)
+* Kafka (event streaming)
+* MinIO (object storage)
 
-### Benefits:
+### Benefits
 
 * Reproducible environments
-* Easy onboarding
+* Simplified setup and onboarding
 * Isolation of dependencies
 
 ---
 
-## 11.3 Application Deployment
+## 11.3 Service Deployment Structure
 
-Application services are separated from infrastructure:
+Application and infrastructure are separated:
 
-* `docker-compose.infra.yml` → databases
-* `docker-compose.yml` → application
+* `docker-compose.infra.yml` → infrastructure services
+* `docker-compose.yml` → application services and workers
 
-### Makefile simplifies:
+### Characteristics
+
+* Services communicate via a shared Docker network
+* Horizontal scaling is supported via multiple replicas
+* Traefik acts as a reverse proxy and load balancer
+
+### Tooling
+
+A Makefile is used to simplify:
 
 * environment startup
-* logs
+* log inspection
 * teardown
 
 ---
 
-## 11.4 Elasticsearch Initialization
+## 11.4 Initialization & Bootstrapping
 
-Custom scripts:
+Some services require initialization scripts:
 
-* create index template
-* initialize data stream
+### Elasticsearch
 
-Ensures:
+* Index templates
+* Data streams
 
-* consistent mappings
-* correct ingestion behavior
+### Kafka
+
+* Topic creation
+
+### MinIO
+
+* Bucket initialization
+
+These scripts ensure the system starts in a **consistent and ready-to-use state**.
 
 ---
 
-## 11.5 Limitations
+## 11.5 Current Limitations
 
 * No CI/CD pipeline yet
-* No containerized app images (Go binaries run directly)
-* No orchestration (e.g., Kubernetes)
+* Services are built locally (no centralized image registry)
+* Limited orchestration (Docker Compose only, no Kubernetes/Swarm in production)
+* Initialization relies on custom scripts rather than managed provisioning
+
+---
+
+## 11.6 Future Improvements
+
+* Introduce CI/CD pipeline for automated builds and deployments
+* Publish versioned container images
+* Adopt container orchestration (e.g., Kubernetes)
+* Improve service startup coordination and health management
 
 ---
 
 # 12. Tradeoffs & Limitations
 
-## 12.1 Limited Test Coverage
+## 12.1 Operational Complexity
 
-* Full unit testing not implemented due to time constraints
-* However, architecture supports testability (layered design)
+The system introduces multiple components:
 
----
+* microservices
+* Kafka
+* background workers
+* multiple data stores
 
-## 12.2 Simplified Authorization
+### Tradeoff
 
-* Only supports admin/user roles
-* No fine-grained access control
-
----
-
-## 12.3 Synchronous Processing
-
-* Heavy operations executed inline
-* Can impact performance under load
+* Increased deployment and debugging complexity compared to a monolith
+* Requires better observability and coordination
 
 ---
 
-## 12.4 Elasticsearch Usage
+## 12.2 Eventual Consistency
 
-* Basic setup without:
+Asynchronous processing (Kafka) introduces **eventual consistency**:
 
-  * ILM policies
-  * shard tuning
-  * replication tuning
+* metrics and job results are not immediately available
+* temporary inconsistencies may occur between systems
 
----
+### Impact
 
-## 12.5 No Backpressure Handling
-
-* Worker may overload system under extreme scale
-* No queue or buffering layer
+* Requires careful API design
+* Clients must tolerate delayed results
 
 ---
 
-## 12.6 Offset Pagination Limitation
+## 12.3 Partially Synchronous Workflows
 
-* Performance degradation for large datasets
+Some operations remain synchronous:
 
----
-
-## 12.7 Email Delivery Constraints
-
-* Relies on SMTP (Gmail)
-* Limited throughput and rate limits
-
----
-
-# 13. Future Improvements
-
-## 13.1 Event-Driven Architecture (Kafka)
-
-Introduce Kafka to:
-
-* decouple components
-* handle spikes in workload
-* enable asynchronous processing
-
-### Example:
-
-* health check → Kafka → consumers update DB + ES
-
----
-
-## 13.2 Change Data Capture (CDC - Debezium)
-
-* Capture DB changes automatically
-* Stream updates into Kafka
-* Keep systems in sync without tight coupling
-
----
-
-## 13.3 Pre-Aggregation for Reporting
-
-* Store daily uptime summaries
-* Avoid expensive real-time aggregations
-
----
-
-## 13.4 Background Job System
-
-Convert heavy APIs into async jobs:
-
-* reporting
-* import/export
+* report generation (`POST /monitoring/report`)
 * email sending
 
----
+### Impact
 
-## 13.5 Horizontal Scaling
-
-* multiple API instances behind load balancer
-* distributed workers
+* Increased response time for heavy requests
+* Potential performance bottlenecks under load
 
 ---
 
-## 13.6 Advanced Caching
+## 12.4 Elasticsearch Usage (Basic Setup)
 
-* Redis caching for:
+Current Elasticsearch setup is minimal:
 
-  * queries
-  * reports
-  * counts
+* no Index Lifecycle Management (ILM)
+* no shard/replica tuning
+* single-node configuration
 
----
+### Impact
 
-## 13.7 Full RBAC System
-
-* Utilize Membership table
-* Fine-grained permissions per server
+* Not suitable for production-scale workloads
+* Limited fault tolerance
 
 ---
 
-## 13.8 Observability
+## 12.5 Limited Fault Tolerance in Workers
 
-Add:
+Workers currently lack advanced resilience features:
+
+* no retry/backoff strategies
+* no dead-letter queue (DLQ)
+* limited failure handling
+
+### Impact
+
+* Failed events may require manual intervention
+
+---
+
+## 12.6 Pagination Strategy
+
+Offset-based pagination is used.
+
+### Impact
+
+* Inefficient for large datasets
+* May lead to inconsistent results under frequent updates
+
+---
+
+## 12.7 Simplified Authorization Model
+
+Authorization is limited to basic roles:
+
+* admin / user
+
+### Impact
+
+* No fine-grained access control per resource
+* Not suitable for multi-tenant or enterprise scenarios
+
+---
+
+## 12.8 Email Delivery Constraints
+
+Email delivery is handled synchronously using SMTP.
+
+### Impact
+
+* Limited throughput and rate limits
+* Tight coupling with request lifecycle
+* No retry or queueing mechanism
+
+---
+
+# 🚀 13. Future Improvements
+
+## 13.1 Asynchronous Report Processing
+
+* Move report generation to background jobs
+* Return job ID instead of blocking request
+* Improve responsiveness and scalability
+
+---
+
+## 13.2 Object Storage for Reports
+
+* Store generated reports in MinIO
+* Return pre-signed URLs instead of large responses
+
+---
+
+## 13.3 Message Queue for Email Delivery
+
+* Introduce queue-based email processing (e.g., RabbitMQ)
+* Support retries and dead-letter queues
+
+---
+
+## 13.4 Improved Worker Reliability
+
+* Retry and backoff strategies
+* Dead-letter queue (DLQ)
+* Idempotent processing
+
+---
+
+## 13.5 Advanced Observability
 
 * Metrics (Prometheus)
-* Tracing
-* Structured logging
-* More advanced servers check modelling (Agent based, ICMP, etc.)
+* Distributed tracing
+* Centralized logging
 
 ---
 
-## 13.9 Improved Elasticsearch Strategy
+## 13.6 Enhanced Elasticsearch Strategy
 
 * Index Lifecycle Management (ILM)
-* Hot-warm architecture
-* Optimized shard allocation
+* Shard and replica tuning
+* Multi-node cluster setup
 
 ---
 
-# 14. Conclusion
+## 13.7 Advanced Authorization (RBAC)
 
-SMS-X provides a scalable and modular solution for monitoring server health at scale.
+* Fine-grained permissions per server/resource
+* Multi-tenant support
+
+---
+
+## 13.8 Improved Pagination
+
+* Cursor-based pagination for large datasets
+
+---
+
+## 13.9 Deployment & Scaling Improvements
+
+* CI/CD pipeline
+* Container image registry
+* Kubernetes or Swarm orchestration
+* Autoscaling strategies
+
+---
+
+# 🧠 14. Conclusion
+
+SMS-X demonstrates a **distributed, event-driven architecture** for scalable server monitoring.
 
 The system balances:
-- Simplicity (monolith)
-- Scalability (Elasticsearch, workers)
-- Extensibility (modular structure)
 
-This design serves as a strong foundation for future evolution into a distributed system. It prioritizes correctness and clarity for an MVP, while outlining a clear path toward high-throughput, distributed architecture.
+* **Scalability** (Kafka, workers, horizontal services)
+* **Flexibility** (microservices + modular components)
+* **Practicality** (focused MVP with real-world patterns)
 
-<!--TODO: Add architecture and sequence diagrams here-->
+While the current implementation prioritizes clarity and core functionality, it establishes a strong foundation for:
+
+* high-throughput data processing
+* resilient asynchronous workflows
+* production-grade system evolution
