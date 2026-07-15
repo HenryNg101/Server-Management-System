@@ -1,4 +1,4 @@
-basePath: /agent
+basePath: /agents
 definitions:
   agent.MetricMessage:
     properties:

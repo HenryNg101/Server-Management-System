@@ -14,7 +14,7 @@ import (
 // @version 1.0
 // @description APIs for agents to push data to system
 // @host localhost
-// @BasePath /agent
+// @BasePath /agents
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name X-Agent-API-Key
