@@ -29,11 +29,11 @@ services:
     ports:
       - "${HOST}:8087:8087"
   
-  user-service:
+  users-service:
     ports:
       - "${HOST}:8082:8082"
   
-  server-service:
+  servers-service:
     ports:
       - "${HOST}:8083:8083"
   
@@ -41,7 +41,7 @@ services:
     ports:
       - "${HOST}:8084:8084"
 
-  agent-service:
+  agents-service:
     ports:
       - "${HOST}:8085:8085"
 

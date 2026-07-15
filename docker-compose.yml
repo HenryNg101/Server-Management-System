@@ -41,10 +41,10 @@ services:
       restart_policy:
         condition: on-failure
 
-  user-service:
+  users-service:
     <<: *service-defaults
     build:
-      context: ./services/user-service
+      context: ./services/users-service
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
@@ -64,10 +64,10 @@ services:
       restart_policy:
         condition: on-failure
 
-  server-service:
+  servers-service:
     <<: *service-defaults
     build:
-      context: ./services/server-service
+      context: ./services/servers-service
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
@@ -114,10 +114,10 @@ services:
       restart_policy:
         condition: on-failure
 
-  agent-service:
+  agents-service:
     <<: *service-defaults
     build:
-      context: ./services/agent-service
+      context: ./services/agents-service
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
