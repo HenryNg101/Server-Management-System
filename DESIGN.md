@@ -13,7 +13,7 @@ Instead of manually checking server health, users interact with SMS-X via APIs t
 - Generate uptime reports
 - Receive automated email notifications (Or can send manually)
 
-The system is designed as a **microservice-based architecture system**, separating concerns into multiple services as independent, deployable applications.
+The system follows a **service-oriented architecture (SOA-style)** with clear service boundaries, designed to evolve toward full microservices, separating concerns into multiple services as independent, deployable applications.
 
 ---
 
@@ -129,6 +129,21 @@ flowchart LR
     %% OBSERVABILITY
     ES --> Kibana
 ```
+
+## Monitoring Models
+
+The system supports two monitoring approaches:
+
+- **Push model (primary):**
+  Each monitored server runs an agent that continuously pushes metrics to the system via API → Kafka → consumers → Elasticsearch.
+
+- **Pull model (secondary):**
+  A centralized worker periodically performs health checks (e.g., ping) against registered servers and stores results in Elasticsearch.
+
+The **push model is the primary approach**, as it scales better, avoids network/firewall issues, and enables richer telemetry (CPU, memory, I/O).  
+The pull model is retained for **basic availability probing and fallback scenarios**.
+
+## System components
 
 The system consists of the following components:
 
@@ -531,7 +546,7 @@ Note:
     participant DB as PostgreSQL
     participant MinIO
 
-    Note over User,API: GET /job/:id
+    Note over User,API: GET /jobs/:id
 
     User->>API: Request job status
 
@@ -786,8 +801,8 @@ APIs are divided into two scopes, based on user's roles: `admin` and `user` (Wit
    - `POST /users`
    - `GET /servers/export`
    - `POST /monitoring/report`
-   - `POST /job/import-server`
-   - `GET /job/:id`
+   - `POST /jobs/import-server`
+   - `GET /jobs/:id`
 
 ---
 
@@ -1112,7 +1127,7 @@ Heavy operations include:
 - Refresh tokens stored in Redis with TTL
 - Passwords hashed using bcrypt
 
---
+---
 
 # 10. Testing
 
@@ -1287,7 +1302,7 @@ Current Elasticsearch setup is minimal:
 Workers currently lack advanced resilience features:
 
 * no retry/backoff strategies
-* no dead-letter queue (DLQ)
+* DLQ is implemented for metrics ingestion, but not yet standardized across all async workflows
 * limited failure handling
 
 ### Impact
