@@ -23,11 +23,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
-      - "traefik.http.services.auth.loadbalancer.server.port=8087"
-      - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
-      - "traefik.http.routers.auth.middlewares=auth-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.auth.loadbalancer.server.port=8087"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /auth prefix
+      - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.auth-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.auth-ratelimit.ratelimit.burst=20"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.auth-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.auth-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.auth-api.rule=PathPrefix(`/auth`) && !PathPrefix(`/auth/swagger`)"
+      - "traefik.http.routers.auth-api.entrypoints=web"
+      - "traefik.http.routers.auth-api.middlewares=auth-strip,auth-ratelimit"
+      - "traefik.http.routers.auth-api.service=auth"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.auth-swagger.rule=PathPrefix(`/auth/swagger`)"
+      - "traefik.http.routers.auth-swagger.entrypoints=web"
+      - "traefik.http.routers.auth-swagger.middlewares=auth-strip,auth-swagger-ratelimit"
+      - "traefik.http.routers.auth-swagger.service=auth"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -48,11 +78,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.user.rule=PathPrefix(`/users`)"
-      - "traefik.http.services.user.loadbalancer.server.port=8082"
-      - "traefik.http.middlewares.user-strip.stripprefix.prefixes=/users"
-      - "traefik.http.routers.user.middlewares=user-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.users.loadbalancer.server.port=8082"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /users prefix
+      - "traefik.http.middlewares.users-strip.stripprefix.prefixes=/users"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.users-ratelimit.ratelimit.average=30"
+      - "traefik.http.middlewares.users-ratelimit.ratelimit.burst=60"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.users-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.users-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.users-api.rule=PathPrefix(`/users`) && !PathPrefix(`/users/swagger`)"
+      - "traefik.http.routers.users-api.entrypoints=web"
+      - "traefik.http.routers.users-api.middlewares=users-strip,users-ratelimit"
+      - "traefik.http.routers.users-api.service=users"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.users-swagger.rule=PathPrefix(`/users/swagger`)"
+      - "traefik.http.routers.users-swagger.entrypoints=web"
+      - "traefik.http.routers.users-swagger.middlewares=users-strip,users-swagger-ratelimit"
+      - "traefik.http.routers.users-swagger.service=users"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -71,11 +131,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.servers.rule=PathPrefix(`/servers`)"
-      - "traefik.http.services.servers.loadbalancer.server.port=8083"
-      - "traefik.http.middlewares.servers-strip.stripprefix.prefixes=/servers"
-      - "traefik.http.routers.servers.middlewares=servers-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.servers.loadbalancer.server.port=8083"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /servers prefix
+      - "traefik.http.middlewares.servers-strip.stripprefix.prefixes=/servers"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.servers-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.servers-ratelimit.ratelimit.burst=100"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.servers-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.servers-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.servers-api.rule=PathPrefix(`/servers`) && !PathPrefix(`/servers/swagger`)"
+      - "traefik.http.routers.servers-api.entrypoints=web"
+      - "traefik.http.routers.servers-api.middlewares=servers-strip,servers-ratelimit"
+      - "traefik.http.routers.servers-api.service=servers"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.servers-swagger.rule=PathPrefix(`/servers/swagger`)"
+      - "traefik.http.routers.servers-swagger.entrypoints=web"
+      - "traefik.http.routers.servers-swagger.middlewares=servers-strip,servers-swagger-ratelimit"
+      - "traefik.http.routers.servers-swagger.service=servers"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -96,11 +186,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.monitoring.rule=PathPrefix(`/monitoring`)"
-      - "traefik.http.services.monitoring.loadbalancer.server.port=8084"
-      - "traefik.http.middlewares.monitoring-strip.stripprefix.prefixes=/monitoring"
-      - "traefik.http.routers.monitoring.middlewares=monitoring-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.monitoring.loadbalancer.server.port=8084"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /monitoring prefix
+      - "traefik.http.middlewares.monitoring-strip.stripprefix.prefixes=/monitoring"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.monitoring-ratelimit.ratelimit.average=80"
+      - "traefik.http.middlewares.monitoring-ratelimit.ratelimit.burst=160"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.monitoring-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.monitoring-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.monitoring-api.rule=PathPrefix(`/monitoring`) && !PathPrefix(`/monitoring/swagger`)"
+      - "traefik.http.routers.monitoring-api.entrypoints=web"
+      - "traefik.http.routers.monitoring-api.middlewares=monitoring-strip,monitoring-ratelimit"
+      - "traefik.http.routers.monitoring-api.service=monitoring"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.monitoring-swagger.rule=PathPrefix(`/monitoring/swagger`)"
+      - "traefik.http.routers.monitoring-swagger.entrypoints=web"
+      - "traefik.http.routers.monitoring-swagger.middlewares=monitoring-strip,monitoring-swagger-ratelimit"
+      - "traefik.http.routers.monitoring-swagger.service=monitoring"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -121,11 +241,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.agent.rule=PathPrefix(`/agent`)"
-      - "traefik.http.services.agent.loadbalancer.server.port=8085"
-      - "traefik.http.middlewares.agent-strip.stripprefix.prefixes=/agent"
-      - "traefik.http.routers.agent.middlewares=agent-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.agents.loadbalancer.server.port=8085"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /agents prefix
+      - "traefik.http.middlewares.agents-strip.stripprefix.prefixes=/agents"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.agents-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.agents-ratelimit.ratelimit.burst=200"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.agents-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.agents-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.agents-api.rule=PathPrefix(`/agents`) && !PathPrefix(`/agents/swagger`)"
+      - "traefik.http.routers.agents-api.entrypoints=web"
+      - "traefik.http.routers.agents-api.middlewares=agents-strip,agents-ratelimit"
+      - "traefik.http.routers.agents-api.service=agents"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.agents-swagger.rule=PathPrefix(`/agents/swagger`)"
+      - "traefik.http.routers.agents-swagger.entrypoints=web"
+      - "traefik.http.routers.agents-swagger.middlewares=agents-strip,agents-swagger-ratelimit"
+      - "traefik.http.routers.agents-swagger.service=agents"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -146,11 +296,41 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jobs.rule=PathPrefix(`/jobs`)"
-      - "traefik.http.services.jobs.loadbalancer.server.port=8086"
-      - "traefik.http.middlewares.jobs-strip.stripprefix.prefixes=/jobs"
-      - "traefik.http.routers.jobs.middlewares=jobs-strip"
       - "traefik.docker.network=app-network"
+
+      # SERVICE PORT
+      - "traefik.http.services.jobs.loadbalancer.server.port=8086"
+
+      # ========================
+      # MIDDLEWARES
+      # ========================
+
+      # Strip /jobs prefix
+      - "traefik.http.middlewares.jobs-strip.stripprefix.prefixes=/jobs"
+
+      # Strict API rate limit
+      - "traefik.http.middlewares.jobs-ratelimit.ratelimit.average=20"
+      - "traefik.http.middlewares.jobs-ratelimit.ratelimit.burst=40"
+
+      # Relaxed Swagger rate limit
+      - "traefik.http.middlewares.jobs-swagger-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.jobs-swagger-ratelimit.ratelimit.burst=100"
+
+      # ========================
+      # ROUTERS
+      # ========================
+
+      # Rules for API routes (exclude swagger)
+      - "traefik.http.routers.jobs-api.rule=PathPrefix(`/jobs`) && !PathPrefix(`/jobs/swagger`)"
+      - "traefik.http.routers.jobs-api.entrypoints=web"
+      - "traefik.http.routers.jobs-api.middlewares=jobs-strip,jobs-ratelimit"
+      - "traefik.http.routers.jobs-api.service=jobs"
+
+      # Rules for Swagger routes. Still the same, different rate limiting
+      - "traefik.http.routers.jobs-swagger.rule=PathPrefix(`/jobs/swagger`)"
+      - "traefik.http.routers.jobs-swagger.entrypoints=web"
+      - "traefik.http.routers.jobs-swagger.middlewares=jobs-strip,jobs-swagger-ratelimit"
+      - "traefik.http.routers.jobs-swagger.service=jobs"
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully
@@ -184,6 +364,7 @@ services:
       placement:
         constraints:
           - node.role == manager
+    restart: unless-stopped
 
   metrics-consumer:
     <<: *service-defaults
