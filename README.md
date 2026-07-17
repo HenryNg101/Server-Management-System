@@ -141,7 +141,7 @@ go run ./cmd/simulation
 ## Login
 
 ```http
-POST /api/v1/login
+POST /auth/login
 ```
 
 Body:
@@ -161,13 +161,13 @@ Response:
 ## Refresh Token
 
 ```http
-POST /api/v1/refresh
+POST /auth/refresh
 ```
 
 ## Logout
 
 ```http
-POST /api/v1/logout
+POST /auth/logout
 ```
 
 # API Overview
@@ -176,17 +176,17 @@ You can see all documented APIs through Swagger OpenAPI docs by accessing `/swag
 
 ## Public APIs
 
-* `POST /api/v1/login`
-* `POST /api/v1/refresh`
-* `POST /api/v1/logout`
+* `POST /auth/login`
+* `POST /auth/refresh`
+* `POST /auth/logout`
 
 
 
 ## Authenticated APIs
 
-* `GET /api/v1/servers`
-* `GET /api/v1/servers/{id}`
-* `GET /api/v1/users`
+* `GET /servers/`
+* `GET /servers/{id}`
+* `GET /users`
 
 Supports:
 
@@ -198,17 +198,21 @@ Supports:
 
 ## Admin APIs
 
-* `POST /api/v1/servers`
+* `POST /servers`
 
-* `PATCH /api/v1/servers/{id}`
+* `PATCH /servers/{id}`
 
-* `DELETE /api/v1/servers/{id}`
+* `DELETE /servers/{id}`
 
-* `POST /api/v1/servers/import` (CSV)
+* `POST /jobs/import-server` (CSV)
+
+* `GET /jobs/{id}` (CSV)
 
 * `GET /api/v1/servers/export` (CSV)
 
-* `POST /api/v1/servers/report`
+* `POST /monitoring/report`
+
+* `POST /users`
 
 
 
@@ -257,13 +261,9 @@ Generate docs (Runs this on WSL if you are using Windows):
 
 Docs available in `/docs`, and can be viewed and tested at http://<host>:8080/swagger/index.html when running in local
 
-
-
 # Notes
 
 * Elasticsearch must be fully started (healthy status) before testing
-
-
 
 # Testing
 
@@ -275,25 +275,23 @@ The codebase is structured to support testing with clear separation of:
 * service
 * repository
 
-
-
 # Future Improvements
 
 * Full RBAC system
 * Redis caching layer
-* Kafka integration
 * Improved test coverage
 * Horizontal scaling
-
-
 
 # Project Structure
 
 ```
-/cmd
-/internal
-/migrations
-/docs
+/cmd - Old monolith apps + example client app for testing
+/internal - Old monolith internal
+/migrations - Postgres migrations 
+/services - Splitted services as independent applications in the service-oriented architecture
+/scripts - Setup scripts for infra tools
+/workers - Internal workers of the system
+/docs - OpenAPI docs
 docker-compose.*.yml
 Makefile
 go.mod
