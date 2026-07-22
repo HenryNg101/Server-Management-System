@@ -38,11 +38,8 @@ func TestHandlerCreateServer_Success(t *testing.T) {
 	mock := &MockServerService{
 		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
 			return &model.Server{
-				Name:        req.Name,
-				Status:      req.Status,
-				IPv4Address: req.IPv4Address,
-				Port:        req.Port,
-				Protocol:    req.Protocol,
+				Name: req.Name,
+				IPv4: req.IPv4,
 			}, nil
 		},
 		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
@@ -81,8 +78,8 @@ func TestHandlerCreateServer_MissingField(t *testing.T) {
 	mock := &MockServerService{
 		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
 			return &model.Server{
-				Name:   req.Name,
-				Status: req.Status,
+				Name: req.Name,
+				IPv4: req.IPv4,
 			}, nil
 		},
 		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
@@ -445,7 +442,7 @@ func TestHandlerExportServers_Success(t *testing.T) {
 		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{
 				Servers: []model.Server{
-					{Name: "s1", Status: true, IPv4Address: "127.0.0.1", Port: 80, Protocol: "http", CreatedAt: time.Now(), LastUpdated: time.Now()},
+					{Name: "s1", IPv4: "127.0.0.1", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 				},
 			}, nil
 		},

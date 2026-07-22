@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/HenryNg101/server-service/internal/model"
-	"github.com/HenryNg101/server-service/internal/shared/auth"
 )
 
 type Service interface {
@@ -16,22 +15,14 @@ type Service interface {
 	GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error)
 	UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error)
 	DeleteServer(ctx context.Context, id uint) error
-	BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error
-
-	// Elastic services
-	ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error
-
-	// Monitoring agent
-	CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error)
 }
 
 type serverService struct {
-	repo        Repository
-	elasticRepo ElasticServerRepository
+	repo Repository
 }
 
-func NewService(r Repository, elastic ElasticServerRepository) Service {
-	return &serverService{repo: r, elasticRepo: elastic}
+func NewService(r Repository) Service {
+	return &serverService{repo: r}
 }
 
 func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
@@ -55,102 +46,38 @@ func (s *serverService) GetServers(ctx context.Context, q GetServersQuery) (*Pag
 }
 
 func (s *serverService) CreateServer(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
+	userID := ctx.Value("user_id").(uint) // from JWT middleware
+
 	server := model.Server{
-		Name:        req.Name,
-		Status:      req.Status,
-		IPv4Address: req.IPv4Address,
-		Port:        req.Port,
-		Protocol:    req.Protocol,
+		Name:   req.Name,
+		IPv4:   req.IPv4,
+		UserID: userID,
 	}
+
 	return s.repo.Create(ctx, &server)
 }
 
-// TODO: Use this in server's creation
-func (s *serverService) CreateAgent(ctx context.Context, serverID uint) (*model.Agent, string, error) {
-	rawKey, hash, err := auth.GenerateAPIKey()
-	if err != nil {
-		return nil, "", err
-	}
-
-	agent := model.Agent{
-		ServerID: serverID,
-		APIKey:   hash,
-	}
-	createdAgent, err := s.repo.CreateAgent(ctx, &agent)
-
-	return createdAgent, rawKey, err
-}
-
 func (s *serverService) GetServer(ctx context.Context, id uint, server *model.Server) (*model.Server, error) {
-	return s.repo.FindByID(ctx, id, server)
+	return s.repo.FindByID(ctx, id)
 }
 
 func (s *serverService) UpdateServer(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
-	server := &model.Server{}
-
-	server, err := s.repo.FindByID(ctx, id, server)
+	server, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply updates ONLY if provided
-	isUpdated := false
 	if req.Name != nil {
-		isUpdated = true
 		server.Name = *req.Name
 	}
 
-	if req.Status != nil {
-		isUpdated = true
-		server.Status = *req.Status
+	if req.IPv4 != nil {
+		server.IPv4 = *req.IPv4
 	}
 
-	if req.IPv4Address != nil {
-		isUpdated = true
-		server.IPv4Address = *req.IPv4Address
-	}
+	server.UpdatedAt = time.Now()
 
-	if req.Port != nil {
-		isUpdated = true
-		server.Port = *req.Port
-	}
-
-	if req.Protocol != nil {
-		isUpdated = true
-		server.Protocol = *req.Protocol
-	}
-
-	// If anything changes, it means that, it's actually updated
-	if !isUpdated {
-		return nil, errors.New("Nothing is updated")
-	}
-
-	server.LastUpdated = time.Now()
-	updated, err := s.repo.Update(ctx, server)
-	if err != nil {
-		return nil, err
-	}
-
-	return updated, nil
-}
-
-// Bulk update statuses to be used by worker
-func (s *serverService) BulkUpdateServersStatuses(ctx context.Context, servers []*model.Server) error {
-	const chunkSize = 1000
-
-	for i := 0; i < len(servers); i += chunkSize {
-		end := i + chunkSize
-		if end > len(servers) {
-			end = len(servers)
-		}
-
-		err := s.repo.BulkUpdateStatus(ctx, servers[i:end])
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return s.repo.Update(ctx, server)
 }
 
 var ErrNotFound = errors.New("server not found")
@@ -166,8 +93,4 @@ func (s *serverService) DeleteServer(ctx context.Context, id uint) error {
 	}
 
 	return s.repo.Delete(ctx, id)
-}
-
-func (s *serverService) ElasticBulkInsert(ctx context.Context, serversResults []*model.Server) error {
-	return s.elasticRepo.BulkInsertStatus(ctx, serversResults)
 }

@@ -68,6 +68,72 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/register": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Register an agent instance to an existing server owned by the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Register a new agent",
+                "parameters": [
+                    {
+                        "description": "Agent registration payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/agent.RegisterAgentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/agent.RegisterAgentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request / validation error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -138,6 +204,39 @@ const docTemplate = `{
                 },
                 "pids": {
                     "type": "integer"
+                },
+                "server_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "agent.RegisterAgentRequest": {
+            "type": "object",
+            "required": [
+                "hostname",
+                "instance_id",
+                "server_name"
+            ],
+            "properties": {
+                "hostname": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "server_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "agent.RegisterAgentResponse": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "integer"
+                },
+                "api_key": {
+                    "type": "string"
                 },
                 "server_id": {
                     "type": "integer"

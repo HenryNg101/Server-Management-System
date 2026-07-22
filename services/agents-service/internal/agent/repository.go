@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/HenryNg101/agent-service/internal/model"
 	"gorm.io/gorm"
@@ -10,6 +11,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, agent *model.Agent) (*model.Agent, error)
 	FindByKey(ctx context.Context, key string) (*model.Agent, error)
+	FindByInstance(ctx context.Context, serverID uint, instanceID string) (*model.Agent, error)
 }
 
 type agentRepository struct {
@@ -32,4 +34,19 @@ func (r *agentRepository) FindByKey(ctx context.Context, key string) (*model.Age
 		First(&result).
 		Error
 	return &result, err
+}
+
+func (r *agentRepository) FindByInstance(ctx context.Context, serverID uint, instanceID string) (*model.Agent, error) {
+	var agent model.Agent
+	err := r.db.WithContext(ctx).
+		Where("server_id = ? AND instance_id = ?", serverID, instanceID).
+		First(&agent).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &agent, nil
 }

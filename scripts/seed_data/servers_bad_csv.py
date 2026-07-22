@@ -3,7 +3,7 @@ import random
 
 # Configuration
 num_rows = 1000000
-output_file = "servers.csv"
+output_file = "servers_bad_input.csv"
 protocols = ["tcp", "udp", "http", "https", "ftp", "ssh"]
 
 with open(output_file, mode="w", newline="") as file:

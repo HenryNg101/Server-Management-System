@@ -3,20 +3,19 @@ package server
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/HenryNg101/server-service/internal/model"
 )
 
-type fakeElastic struct{}
+// type fakeElastic struct{}
 
-func (f *fakeElastic) BulkInsertStatus(ctx context.Context, s []*model.Server) error {
-	return nil
-}
+// func (f *fakeElastic) BulkInsertStatus(ctx context.Context, s []*model.Server) error {
+// 	return nil
+// }
 
-func (f *fakeElastic) GetDailyUptime(ctx context.Context, start, end time.Time, topN int) (map[uint]*ServerPullStats, error) {
-	return map[uint]*ServerPullStats{1: {Uptime: 0.99}}, nil
-}
+// func (f *fakeElastic) GetDailyUptime(ctx context.Context, start, end time.Time, topN int) (map[uint]*ServerPullStats, error) {
+// 	return map[uint]*ServerPullStats{1: {Uptime: 0.99}}, nil
+// }
 
 // type fakeMailer struct {
 // 	called bool
@@ -29,73 +28,70 @@ func (f *fakeElastic) GetDailyUptime(ctx context.Context, start, end time.Time, 
 
 func setupService() (Service, *mockRepo) {
 	repo := NewFakeRepo()
-	svc := NewService(repo, nil)
+	svc := NewService(repo)
 	return svc, repo
 }
 
-func TestBulkUpdateServersStatuses(t *testing.T) {
-	svc, repo := setupService()
+// func TestBulkUpdateServersStatuses(t *testing.T) {
+// 	svc, repo := setupService()
 
-	var servers []*model.Server
+// 	var servers []*model.Server
 
-	for i := 0; i < 1500; i++ {
-		s, _ := repo.Create(context.Background(), &model.Server{
-			Status: false,
-		})
-		servers = append(servers, &model.Server{
-			ID:     s.ID,
-			Status: true,
-		})
-	}
+// 	for i := 0; i < 1500; i++ {
+// 		s, _ := repo.Create(context.Background(), &model.Server{
+// 			Status: false,
+// 		})
+// 		servers = append(servers, &model.Server{
+// 			ID:     s.ID,
+// 			Status: true,
+// 		})
+// 	}
 
-	err := svc.BulkUpdateServersStatuses(context.Background(), servers)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+// 	err := svc.BulkUpdateServersStatuses(context.Background(), servers)
+// 	if err != nil {
+// 		t.Fatalf("unexpected error: %v", err)
+// 	}
 
-	for _, s := range servers {
-		if !s.Status {
-			t.Fatalf("expected all servers to be updated")
-		}
-	}
-}
+// 	for _, s := range servers {
+// 		if !s.Status {
+// 			t.Fatalf("expected all servers to be updated")
+// 		}
+// 	}
+// }
 
-func TestBulkUpdate_EmptyList(t *testing.T) {
-	svc, _ := setupService()
+// func TestBulkUpdate_EmptyList(t *testing.T) {
+// 	svc, _ := setupService()
 
-	err := svc.BulkUpdateServersStatuses(context.Background(), []*model.Server{})
-	if err != nil {
-		t.Fatalf("should not fail on empty input")
-	}
-}
+// 	err := svc.BulkUpdateServersStatuses(context.Background(), []*model.Server{})
+// 	if err != nil {
+// 		t.Fatalf("should not fail on empty input")
+// 	}
+// }
 
-func TestBulkUpdate_SmallChunk(t *testing.T) {
-	svc, repo := setupService()
+// func TestBulkUpdate_SmallChunk(t *testing.T) {
+// 	svc, repo := setupService()
 
-	s, _ := repo.Create(context.Background(), &model.Server{Status: false})
+// 	s, _ := repo.Create(context.Background(), &model.Server{Status: false})
 
-	err := svc.BulkUpdateServersStatuses(context.Background(), []*model.Server{
-		{ID: s.ID, Status: true},
-	})
+// 	err := svc.BulkUpdateServersStatuses(context.Background(), []*model.Server{
+// 		{ID: s.ID, Status: true},
+// 	})
 
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+// 	if err != nil {
+// 		t.Fatalf("unexpected error")
+// 	}
 
-	if !repo.servers[s.ID].Status {
-		t.Fatalf("status not updated")
-	}
-}
+// 	if !repo.servers[s.ID].Status {
+// 		t.Fatalf("status not updated")
+// 	}
+// }
 
 func TestCreateServer(t *testing.T) {
 	svc, _ := setupService()
 
 	res, err := svc.CreateServer(context.Background(), CreateServerRequest{
-		Name:        "test",
-		Status:      true,
-		IPv4Address: "127.0.0.1",
-		Port:        80,
-		Protocol:    "tcp",
+		Name: "test",
+		IPv4: "127.0.0.1",
 	})
 
 	if err != nil {
@@ -160,21 +156,21 @@ func TestGetServers_FilteringAndPagination(t *testing.T) {
 	repo := NewFakeRepo()
 
 	err := repo.Seed(
-		&model.Server{Name: "alpha", Status: true, Protocol: "tcp"},
-		&model.Server{Name: "beta", Status: false, Protocol: "udp"},
-		&model.Server{Name: "gamma", Status: true, Protocol: "tcp"},
+		&model.Server{Name: "alpha"},
+		&model.Server{Name: "beta"},
+		&model.Server{Name: "gamma"},
 	)
 
-	svc := NewService(repo, nil)
+	svc := NewService(repo)
 
-	status := true
-	protocol := "tcp"
+	// status := true
+	// protocol := "tcp"
 	page := 1
 	size := 1
 
 	res, err := svc.GetServers(context.Background(), GetServersQuery{
-		Status:   &status,
-		Protocol: &protocol,
+		// Status:   &status,
+		// Protocol: &protocol,
 		Page:     &page,
 		PageSize: &size,
 		SortBy:   "name",
@@ -198,8 +194,8 @@ func TestUpdateServer(t *testing.T) {
 	svc, repo := setupService()
 
 	created, _ := repo.Create(context.Background(), &model.Server{
-		Name:   "old",
-		Status: true,
+		Name: "old",
+		// Status: true,
 	})
 
 	newName := "new"
@@ -232,32 +228,26 @@ func TestUpdateServer_AllFields(t *testing.T) {
 	svc, repo := setupService()
 
 	created, _ := repo.Create(context.Background(), &model.Server{
-		Name:        "old",
-		Status:      false,
-		IPv4Address: "127.0.0.1",
-		Port:        80,
-		Protocol:    "tcp",
+		Name: "old",
+		IPv4: "127.0.0.1",
 	})
 
 	name := "new"
-	status := true
 	ip := "192.168.1.1"
-	port := uint(443)
-	protocol := "udp"
 
 	res, err := svc.UpdateServer(context.Background(), created.ID, UpdateServerRequest{
-		Name:        &name,
-		Status:      &status,
-		IPv4Address: &ip,
-		Port:        &port,
-		Protocol:    &protocol,
+		Name: &name,
+		// Status:      &status,
+		IPv4: &ip,
+		// Port:        &port,
+		// Protocol:    &protocol,
 	})
 
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
 
-	if res.Name != name || res.Protocol != protocol || res.Port != port {
+	if res.Name != name {
 		t.Fatalf("fields not updated correctly")
 	}
 }
@@ -300,7 +290,7 @@ func TestDeleteServer_RepoError(t *testing.T) {
 	repo := NewFakeRepo()
 	repo.SetDbExists(false)
 
-	svc := NewService(repo, nil)
+	svc := NewService(repo)
 
 	err := svc.DeleteServer(context.Background(), 1)
 	if err == nil {
@@ -393,21 +383,21 @@ func TestDeleteServer_RepoError(t *testing.T) {
 // 	}
 // }
 
-func TestElasticBulkInsert(t *testing.T) {
-	repo := NewFakeRepo()
-	elastic := &fakeElastic{}
+// func TestElasticBulkInsert(t *testing.T) {
+// 	repo := NewFakeRepo()
+// 	elastic := &fakeElastic{}
 
-	svc := NewService(repo, elastic)
+// 	svc := NewService(repo, elastic)
 
-	server := model.Server{Status: true}
-	err := svc.ElasticBulkInsert(context.Background(), []*model.Server{
-		&server,
-	})
+// 	server := model.Server{Status: true}
+// 	err := svc.ElasticBulkInsert(context.Background(), []*model.Server{
+// 		&server,
+// 	})
 
-	if err != nil {
-		t.Fatalf("bulk insert should have been successful")
-	}
-}
+// 	if err != nil {
+// 		t.Fatalf("bulk insert should have been successful")
+// 	}
+// }
 
 // TODO: Move these tests to monitoring domain/feature when write unit tests there
 // func TestSendReports_NoEmail(t *testing.T) {

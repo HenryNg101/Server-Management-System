@@ -13,7 +13,7 @@ COPY . .
 # Limit the number of processors to be used by compiler, otherwise it would occupy the entire Docker
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    go build -p=2 -o agent ./cmd/agent/monitoring/docker
+    go build -p=2 -o agent ./agents/monitoring/docker
 
 # ---- runtime ----
 FROM alpine:latest

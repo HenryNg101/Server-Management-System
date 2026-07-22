@@ -7,6 +7,7 @@ import (
 	"github.com/HenryNg101/agent-service/internal/config"
 	kafkaClient "github.com/HenryNg101/agent-service/internal/platform/kafka"
 	"github.com/HenryNg101/agent-service/internal/platform/postgres"
+	"github.com/HenryNg101/agent-service/internal/server"
 	"gorm.io/gorm"
 )
 
@@ -29,8 +30,9 @@ func NewApp() (*Application, error) {
 	}
 
 	agentRepo := agent.NewRepository(postgresSession)
+	serverRepo := server.NewRepository(postgresSession)
 	kafkaAgentProducer := agent.NewKafkaProducer(kafkaClient.NewProducer(kafkaConfig.Brokers, kafkaConfig.AgentMetricsTopic))
-	agentService := agent.NewService(agentRepo, kafkaAgentProducer)
+	agentService := agent.NewService(agentRepo, kafkaAgentProducer, serverRepo)
 
 	return &Application{
 		PostgresSession: postgresSession,

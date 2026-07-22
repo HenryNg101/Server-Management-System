@@ -354,6 +354,8 @@ services:
       # - "--providers.docker.swarmMode=true"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--entrypoints.web.address=:80"
+    labels:
+      - "traefik.enable=true"
     ports:
       - "80:80"
     volumes:

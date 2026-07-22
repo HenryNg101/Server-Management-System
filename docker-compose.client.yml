@@ -6,7 +6,7 @@ services:
       args:
         CMD_PATH: ./cmd/simulation/single_server/
     ports:
-      - "${HOST}:3000:3000"
+      - "${HOST}:3001:3001"
     labels:
       - monitor=true
     mem_limit: 100m
@@ -23,7 +23,7 @@ services:
   monitoring-agent:
     build:
       context: .
-      dockerfile: ./cmd/agent/monitoring/docker/Dockerfile
+      dockerfile: ./agents/monitoring/docker/Dockerfile
     depends_on:
       - docker-proxy
     environment:
@@ -34,3 +34,7 @@ services:
     volumes:
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
       - /proc:/host/proc:ro
+      - agent-data:/app/data
+
+volumes:
+  agent-data:

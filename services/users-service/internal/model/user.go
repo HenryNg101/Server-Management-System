@@ -17,5 +17,5 @@ type User struct {
 	Role      UserRole  `gorm:"type:text;not null;check:role IN ('admin','user')"`
 	CreatedAt time.Time `gorm:"not null"`
 
-	// Memberships []Membership `gorm:"foreignKey:UserID"` // Manage many-to-many relationship between servers and users
+	Servers []Server `gorm:"foreignKey:UserID"`
 }

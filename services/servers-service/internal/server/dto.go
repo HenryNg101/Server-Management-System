@@ -7,9 +7,7 @@ import (
 )
 
 type GetServersQuery struct {
-	Status   *bool
-	Protocol *string
-	Name     *string
+	Name *string
 
 	Page     *int
 	PageSize *int
@@ -19,13 +17,12 @@ type GetServersQuery struct {
 }
 
 type GetServerResponse struct {
-	Name        string    `json:"name"`
-	Status      bool      `json:"status"`       // Server status at the time (Is it on or off)
-	IPv4Address string    `json:"ipv4_address"` // IPv4 of the server
-	Port        uint      `json:"port"`         // Port of the server
-	Protocol    string    `json:"protocol"`     // Network protocol that the server use, could be TCP, FTP, SSH, etc.
-	CreatedAt   time.Time `json:"created_at"`   // Automatically managed by GORM for creation time
-	LastUpdated time.Time `json:"last_updated"` // Last time the server got updated
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+	IPv4      string    `json:"ipv4"`
+	Status    string    `json:"status"` // derived: UP / NO_DATA
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type PaginatedServers struct {
@@ -37,30 +34,19 @@ type PaginatedServers struct {
 }
 
 type UpdateServerRequest struct {
-	Name        *string `json:"name"`
-	Status      *bool   `json:"status"`
-	IPv4Address *string `json:"ipv4"`
-	Port        *uint   `json:"port"`
-	Protocol    *string `json:"protocol"`
+	Name *string `json:"name"`
+	IPv4 *string `json:"ipv4"`
 }
 
 type CreateServerRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Status      bool   `json:"status" binding:"required"`
-	IPv4Address string `json:"ipv4_address" binding:"required,ip"`
-	Port        uint   `json:"port" binding:"required"`
-	Protocol    string `json:"protocol"`
+	Name string `json:"name" binding:"required"`
+	IPv4 string `json:"ipv4" binding:"required,ip"`
 }
 
 type CreateServerResponse struct {
-	CreatedServer model.Server `json:"created_server"`
-	CreatedAgent  model.Agent  `json:"created_agent"`
-	ApiKey        string       `json:"agent_api_key"`
-}
-
-type ServerPullStats struct {
-	Uptime float64 `json:"uptime"`
-
-	// TODO: Add this later
-	// LatencyP95 float64
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+	IPv4      string    `json:"ipv4"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

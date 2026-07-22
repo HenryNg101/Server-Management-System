@@ -45,15 +45,12 @@ func (h *Handler) CreateServer(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Server creation error": err.Error()})
 		return
 	}
-	createdAgent, apiKey, err := h.service.CreateAgent(c, createdServer.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Agent creation error": err.Error()})
-		return
-	}
 	c.JSON(http.StatusCreated, CreateServerResponse{
-		CreatedServer: *createdServer,
-		CreatedAgent:  *createdAgent,
-		ApiKey:        apiKey,
+		ID:        createdServer.ID,
+		Name:      createdServer.Name,
+		IPv4:      createdServer.IPv4,
+		CreatedAt: createdServer.CreatedAt,
+		UpdatedAt: createdServer.UpdatedAt,
 	})
 }
 
@@ -86,13 +83,12 @@ func (h *Handler) GetServers(c *gin.Context) {
 	result := make([]GetServerResponse, 0)
 	for _, server := range paginatedResult.Servers {
 		result = append(result, GetServerResponse{
-			Name:        server.Name,
-			Status:      server.Status,
-			IPv4Address: server.IPv4Address,
-			Port:        server.Port,
-			Protocol:    server.Protocol,
-			CreatedAt:   server.CreatedAt,
-			LastUpdated: server.LastUpdated,
+			ID:        server.ID,
+			Name:      server.Name,
+			IPv4:      server.IPv4,
+			Status:    "NO_DATA", // TODO: Replace this with actual checks on agents
+			CreatedAt: server.CreatedAt,
+			UpdatedAt: server.UpdatedAt,
 		})
 	}
 	c.JSON(http.StatusOK, result)
@@ -128,13 +124,12 @@ func (h *Handler) GetServer(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, &GetServerResponse{
-		Name:        server.Name,
-		Status:      server.Status,
-		IPv4Address: server.IPv4Address,
-		Port:        server.Port,
-		Protocol:    server.Protocol,
-		CreatedAt:   server.CreatedAt,
-		LastUpdated: server.LastUpdated,
+		ID:        server.ID,
+		Name:      server.Name,
+		IPv4:      server.IPv4,
+		Status:    "NO_DATA", // TODO: Same with GetServers
+		CreatedAt: server.CreatedAt,
+		UpdatedAt: server.UpdatedAt,
 	})
 }
 
@@ -252,7 +247,7 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	writer := csv.NewWriter(c.Writer)
 
 	// Write header
-	header := []string{"name", "status", "ipv4_address", "port", "protocol", "created_at", "last_updated_at"}
+	header := []string{"id", "name", "ipv4", "created_at", "updated_at"}
 	if err := writer.Write(header); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"File write error": err.Error()})
 		return
@@ -261,13 +256,11 @@ func (h *Handler) ExportServers(c *gin.Context) {
 	// Write rows
 	for _, s := range servers.Servers {
 		row := []string{
+			strconv.FormatUint(uint64(s.ID), 10),
 			s.Name,
-			strconv.FormatBool(s.Status),
-			s.IPv4Address,
-			strconv.FormatUint(uint64(s.Port), 10),
-			s.Protocol,
+			s.IPv4,
 			s.CreatedAt.Format(time.RFC3339),
-			s.LastUpdated.Format(time.RFC3339),
+			s.UpdatedAt.Format(time.RFC3339),
 		}
 
 		if err := writer.Write(row); err != nil {

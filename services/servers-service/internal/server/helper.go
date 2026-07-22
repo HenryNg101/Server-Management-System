@@ -11,17 +11,17 @@ func ParseServersQuery(c *gin.Context) (GetServersQuery, error) {
 	var query GetServersQuery
 
 	// filters
-	if status := c.Query("status"); status != "" {
-		parsed, err := strconv.ParseBool(status)
-		if err != nil {
-			return query, errors.New("Invalid status")
-		}
-		query.Status = &parsed
-	}
+	// if status := c.Query("status"); status != "" {
+	// 	parsed, err := strconv.ParseBool(status)
+	// 	if err != nil {
+	// 		return query, errors.New("Invalid status")
+	// 	}
+	// 	query.Status = &parsed
+	// }
 
-	if protocol := c.Query("protocol"); protocol != "" {
-		query.Protocol = &protocol
-	}
+	// if protocol := c.Query("protocol"); protocol != "" {
+	// 	query.Protocol = &protocol
+	// }
 
 	if name := c.Query("name"); name != "" {
 		query.Name = &name

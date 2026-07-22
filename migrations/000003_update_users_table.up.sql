@@ -1,7 +1,7 @@
 -- 1. Add columns with temporary defaults so existing rows don't break
 ALTER TABLE users
-ADD COLUMN password TEXT NOT NULL DEFAULT 'TEMP_PASSWORD',
-ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+ADD COLUMN password TEXT NOT NULL,
+ADD COLUMN role TEXT NOT NULL;
 
 -- 2. Add constraint for role
 ALTER TABLE users

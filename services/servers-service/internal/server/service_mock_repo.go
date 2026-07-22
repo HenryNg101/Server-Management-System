@@ -37,12 +37,12 @@ func (f *mockRepo) FindAll(ctx context.Context, q GetServersQuery) ([]model.Serv
 	}
 
 	for _, s := range f.servers {
-		if q.Status != nil && s.Status != *q.Status {
-			continue
-		}
-		if q.Protocol != nil && s.Protocol != *q.Protocol {
-			continue
-		}
+		// if q.Status != nil && s.Status != *q.Status {
+		// 	continue
+		// }
+		// if q.Protocol != nil && s.Protocol != *q.Protocol {
+		// 	continue
+		// }
 		if q.Name != nil && !strings.Contains(strings.ToLower(s.Name), strings.ToLower(*q.Name)) {
 			continue
 		}
@@ -120,7 +120,7 @@ func (f *mockRepo) CreateAgent(ctx context.Context, agent *model.Agent) (*model.
 // --------------------
 // FIND BY ID
 // --------------------
-func (f *mockRepo) FindByID(ctx context.Context, id uint, out *model.Server) (*model.Server, error) {
+func (f *mockRepo) FindByID(ctx context.Context, id uint) (*model.Server, error) {
 	if !f.dbExist {
 		return nil, errors.New("db error")
 	}
@@ -154,9 +154,6 @@ func (f *mockRepo) ExistsByID(ctx context.Context, id uint) (bool, error) {
 		return false, errors.New("db error")
 	}
 	_, ok := f.servers[id]
-	if !ok {
-		return false, errors.New("User does not exist")
-	}
 	return ok, nil
 }
 
@@ -178,37 +175,37 @@ func (f *mockRepo) Delete(ctx context.Context, id uint) error {
 // --------------------
 // BULK UPDATE STATUS
 // --------------------
-func (f *mockRepo) BulkUpdateStatus(ctx context.Context, results []*model.Server) error {
-	if !f.dbExist {
-		return errors.New("db error")
-	}
-	for _, r := range results {
-		s, ok := f.servers[r.ID]
-		if !ok {
-			continue
-		}
-		s.Status = r.Status
-	}
-	return nil
-}
+// func (f *mockRepo) BulkUpdateStatus(ctx context.Context, results []*model.Server) error {
+// 	if !f.dbExist {
+// 		return errors.New("db error")
+// 	}
+// 	for _, r := range results {
+// 		s, ok := f.servers[r.ID]
+// 		if !ok {
+// 			continue
+// 		}
+// 		s.Status = r.Status
+// 	}
+// 	return nil
+// }
 
 // --------------------
 // STATS
 // --------------------
-func (f *mockRepo) GetStats(ctx context.Context) (total, up, down int64, err error) {
-	if !f.dbExist {
-		return 0, 0, 0, errors.New("db error")
-	}
-	for _, s := range f.servers {
-		total++
-		if s.Status {
-			up++
-		} else {
-			down++
-		}
-	}
-	return
-}
+// func (f *mockRepo) GetStats(ctx context.Context) (total, up, down int64, err error) {
+// 	if !f.dbExist {
+// 		return 0, 0, 0, errors.New("db error")
+// 	}
+// 	for _, s := range f.servers {
+// 		total++
+// 		if s.Status {
+// 			up++
+// 		} else {
+// 			down++
+// 		}
+// 	}
+// 	return
+// }
 
 func (f *mockRepo) Seed(servers ...*model.Server) error {
 	if !f.dbExist {

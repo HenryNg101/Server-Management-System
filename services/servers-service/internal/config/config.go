@@ -31,15 +31,6 @@ type PostgresConfig struct {
 	Port         string
 }
 
-type ElasticSearchConfig struct {
-	Host                  string
-	User                  string
-	Password              string
-	Port                  string
-	StatusDataStreamName  string
-	MetricsDataStreamName string
-}
-
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -61,17 +52,6 @@ func LoadPostgres() *PostgresConfig {
 		Password:     getEnv("POSTGRES_PASSWORD", ""),
 		DatabaseName: getEnv("POSTGRES_DB", "postgres"),
 		Port:         getEnv("POSTGRES_PORT", "5432"),
-	}
-}
-
-func LoadElasticsearch() *ElasticSearchConfig {
-	return &ElasticSearchConfig{
-		Host:                  getEnv("ELASTIC_HOST", "localhost"),
-		User:                  getEnv("ELASTIC_USER", "elastic"),
-		Password:              getEnv("ELASTIC_PASSWORD", ""),
-		Port:                  getEnv("ELASTIC_PORT", "9200"),
-		StatusDataStreamName:  getEnv("ELASTIC_STATUS_DATA_STREAM_SOURCE", "server-status"),
-		MetricsDataStreamName: getEnv("ELASTIC_METRICS_DATA_STREAM_SOURCE", "server-metrics"),
 	}
 }
 

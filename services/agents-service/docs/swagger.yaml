@@ -47,6 +47,28 @@ definitions:
       server_id:
         type: integer
     type: object
+  agent.RegisterAgentRequest:
+    properties:
+      hostname:
+        type: string
+      instance_id:
+        type: string
+      server_name:
+        type: string
+    required:
+    - hostname
+    - instance_id
+    - server_name
+    type: object
+  agent.RegisterAgentResponse:
+    properties:
+      agent_id:
+        type: integer
+      api_key:
+        type: string
+      server_id:
+        type: integer
+    type: object
 host: localhost
 info:
   contact: {}
@@ -86,6 +108,49 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Metrics
+      tags:
+      - agents
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register an agent instance to an existing server owned by the authenticated
+        user
+      parameters:
+      - description: Agent registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agent.RegisterAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/agent.RegisterAgentResponse'
+        "400":
+          description: Bad request / validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register a new agent
       tags:
       - agents
 securityDefinitions:

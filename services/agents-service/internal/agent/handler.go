@@ -57,3 +57,48 @@ func (h *Handler) IngestMetrics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
+
+// Register a new agent to the system
+// RegisterAgent godoc
+// @Summary Register a new agent
+// @Description Register an agent instance to an existing server owned by the authenticated user
+// @Tags agents
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body RegisterAgentRequest true "Agent registration payload"
+// @Success 201 {object} RegisterAgentResponse
+// @Failure 400 {object} map[string]string "Bad request / validation error"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /register [post]
+func (h *Handler) RegisterAgent(c *gin.Context) {
+	var req RegisterAgentRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid user context"})
+		return
+	}
+
+	resp, err := h.service.RegisterAgent(c, userID, req)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(201, resp)
+}
+
+// TODO: Agent un-registration

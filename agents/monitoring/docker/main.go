@@ -3,30 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/HenryNg101/server-management-system/cmd/agent/monitoring/docker/metrics"
-	"github.com/HenryNg101/server-management-system/internal/feature/agent"
+	"github.com/HenryNg101/docker-monitoring-agent/internal/bootstrap"
+	"github.com/HenryNg101/docker-monitoring-agent/metrics"
 )
 
-// --------------------
-// MAIN
-// --------------------
 func main() {
-	serverIDStr := os.Getenv("SERVER_ID")
-	apiURL := os.Getenv("API_URL")
-	apiKey := os.Getenv("API_KEY")
-
-	serverID, err := strconv.Atoi(serverIDStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	agentConfigs := bootstrap.InitiateAgent()
 
 	clientHTTP := &http.Client{Timeout: 5 * time.Second}
 
@@ -38,7 +25,7 @@ func main() {
 			continue
 		}
 
-		var messages []agent.MetricMessage
+		var messages []metrics.MetricMessage
 		cpuTrackers := make(map[string]*metrics.CPUTracker)
 		ioTrackers := make(map[string]*metrics.IOTracker)
 
@@ -48,7 +35,6 @@ func main() {
 				name = strings.TrimPrefix(c.Names[0], "/")
 			}
 
-			// ---- cgroup path
 			cgroupPath := metrics.GetCgroupPath(c.ID)
 			if cgroupPath == "" {
 				continue
@@ -57,12 +43,12 @@ func main() {
 			cpuTracker := metrics.AddCPUTracker(cpuTrackers, c.ID)
 			ioTracker := metrics.AddIOTracker(ioTrackers, c.ID)
 
-			// Dealing with metrics
 			oomEvents, oomKills := metrics.GetOOMEvents(cgroupPath)
 			readBPS, writeBPS := ioTracker.GetIO(cgroupPath)
-			msg := agent.MetricMessage{
+
+			msg := metrics.MetricMessage{
 				Timestamp:     time.Now().UTC(),
-				ServerID:      serverID,
+				ServerID:      agentConfigs.ServerID,
 				ContainerName: name,
 
 				PIDs: int(metrics.GetPIDs(cgroupPath)),
@@ -107,24 +93,24 @@ func main() {
 					Kills:  int(oomKills),
 				},
 			}
+
 			messages = append(messages, msg)
 		}
 
-		//
-		// Sending metrics to HTTP server
 		body, _ := json.Marshal(messages)
 
-		fmt.Println("Sending:", string(body))
-
-		req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPost, agentConfigs.APIURL+"/agent/metrics", bytes.NewBuffer(body))
 		if err != nil {
-			log.Fatalf("Failed to create request: %v", err)
+			log.Println("request error:", err)
+			continue
 		}
-		req.Header.Set("X-Agent-API-Key", apiKey)
+
+		req.Header.Set("X-Agent-API-Key", agentConfigs.APIKey)
+		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := clientHTTP.Do(req)
 		if err != nil {
-			log.Println("failed:", err)
+			log.Println("send failed:", err)
 		} else {
 			resp.Body.Close()
 		}

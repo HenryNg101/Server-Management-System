@@ -80,10 +80,12 @@ func LoadJWTSecret() string {
 
 func LoadKafka() *KafkaConfig {
 	return &KafkaConfig{
-		Brokers:                   strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		AgentMetricsTopic:         getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
-		AgentMetricsConsumerGroup: getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
-		AgentMetricsDLQTopic:      getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
+		Brokers:                    strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		AgentMetricsTopic:          getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
+		AgentMetricsConsumerGroup:  getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
+		AgentMetricsDLQTopic:       getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
+		ServersImportTopic:         getEnv("KAFKA_SERVERS_IMPORT_TOPIC", "servers-import"),
+		ServersImportConsumerGroup: getEnv("KAFKA_SERVERS_IMPORT_GROUP", "servers-import-consumer-group"),
 	}
 }
 

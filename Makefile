@@ -1,8 +1,9 @@
-COMPOSE_INFRA  = -f docker-compose.infra.yml
-COMPOSE_APP    = -f docker-compose.yml
-COMPOSE_DEV	   = -f docker-compose.dev.yml
-COMPOSE_CLIENT = -f docker-compose.client.yml
-ENV_FILE       = .env.docker
+COMPOSE_INFRA	= -f docker-compose.infra.yml
+COMPOSE_APP		= -f docker-compose.yml
+COMPOSE_DEV		= -f docker-compose.dev.yml
+COMPOSE_CLIENT	= -f docker-compose.client.yml
+ENV_FILE		= .env.docker
+ENV_FILE_CLIENT	= .env.client
 
 .PHONY: env_init dev.build dev.up dev.down prod.build prod.up prod.down prod.logs client.build client.up client.down
 
@@ -73,10 +74,10 @@ dev.down:
 # For testing monitoring agent purposes
 # ==========================================
 client.build: env_init
-	docker compose --parallel 1 --env-file $(ENV_FILE) $(COMPOSE_CLIENT) build
+	docker compose --parallel 1 --env-file $(ENV_FILE_CLIENT) $(COMPOSE_CLIENT) build
 
 client.up: client.build
-	docker compose --env-file $(ENV_FILE) $(COMPOSE_CLIENT) up -d --no-build
+	docker compose --env-file $(ENV_FILE_CLIENT) $(COMPOSE_CLIENT) up -d --no-build
 	@echo "========================================="
 	@echo "Docker compose services are available! Access them through: http://$(HOST):<port>"
 	@echo "========================================="

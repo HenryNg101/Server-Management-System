@@ -4,16 +4,13 @@ import (
 	"errors"
 
 	"github.com/HenryNg101/server-service/internal/config"
-	"github.com/HenryNg101/server-service/internal/platform/elastic"
 	"github.com/HenryNg101/server-service/internal/platform/postgres"
 	"github.com/HenryNg101/server-service/internal/server"
-	"github.com/elastic/go-elasticsearch/v9"
 	"gorm.io/gorm"
 )
 
 type Application struct {
 	PostgresSession *gorm.DB
-	ElasticSession  *elasticsearch.Client
 	ServerService   server.Service
 }
 
@@ -25,19 +22,11 @@ func NewApp() (*Application, error) {
 	}
 	postgresSession := postgres.NewPostgresSession(postgresConfig)
 
-	elasticConfig := config.LoadElasticsearch()
-	if len(elasticConfig.Password) == 0 {
-		return nil, errors.New("Password for Elasticsearch connection is not set. You have to set it in .env file in root folder using ELASTIC_PASSWORD variable")
-	}
-	esSession := elastic.NewElasticsearchSession(elasticConfig)
-
 	serverRepo := server.NewRepository(postgresSession)
-	elasticServerRepo := server.NewServerESRepository(esSession)
-	serverService := server.NewService(serverRepo, elasticServerRepo)
+	serverService := server.NewService(serverRepo)
 
 	return &Application{
 		PostgresSession: postgresSession,
-		ElasticSession:  esSession,
 		ServerService:   serverService,
 	}, nil
 }

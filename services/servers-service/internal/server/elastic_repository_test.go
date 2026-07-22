@@ -1,182 +1,167 @@
 package server
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"strings"
-	"testing"
-	"time"
+// func setupElasticsearch(t *testing.T) *elasticsearch.Client {
+// 	ctx := context.Background()
 
-	"github.com/HenryNg101/server-service/internal/model"
-	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/go-openapi/testify/v2/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
-)
+// 	req := testcontainers.ContainerRequest{
+// 		Image:        "docker.elastic.co/elasticsearch/elasticsearch:8.13.4",
+// 		ExposedPorts: []string{"9200/tcp"},
+// 		Env: map[string]string{
+// 			"discovery.type":         "single-node",
+// 			"xpack.security.enabled": "false",
+// 			"ES_JAVA_OPTS":           "-Xms512m -Xmx512m",
+// 		},
+// 		WaitingFor: wait.ForHTTP("/").
+// 			WithPort("9200/tcp").
+// 			WithStartupTimeout(60 * time.Second),
+// 	}
 
-func setupElasticsearch(t *testing.T) *elasticsearch.Client {
-	ctx := context.Background()
+// 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+// 		ContainerRequest: req,
+// 		Started:          true,
+// 	})
+// 	require.NoError(t, err)
 
-	req := testcontainers.ContainerRequest{
-		Image:        "docker.elastic.co/elasticsearch/elasticsearch:8.13.4",
-		ExposedPorts: []string{"9200/tcp"},
-		Env: map[string]string{
-			"discovery.type":         "single-node",
-			"xpack.security.enabled": "false",
-			"ES_JAVA_OPTS":           "-Xms512m -Xmx512m",
-		},
-		WaitingFor: wait.ForHTTP("/").
-			WithPort("9200/tcp").
-			WithStartupTimeout(60 * time.Second),
-	}
+// 	t.Cleanup(func() {
+// 		container.Terminate(ctx)
+// 	})
 
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	require.NoError(t, err)
+// 	host, _ := container.Host(ctx)
+// 	port, _ := container.MappedPort(ctx, "9200")
 
-	t.Cleanup(func() {
-		container.Terminate(ctx)
-	})
+// 	addr := fmt.Sprintf("http://%s:%s", host, port.Port())
 
-	host, _ := container.Host(ctx)
-	port, _ := container.MappedPort(ctx, "9200")
+// 	es, err := elasticsearch.NewClient(elasticsearch.Config{
+// 		Addresses: []string{addr},
+// 	})
+// 	require.NoError(t, err)
 
-	addr := fmt.Sprintf("http://%s:%s", host, port.Port())
+// 	// wait until ready
+// 	for i := 0; i < 10; i++ {
+// 		_, err := es.Info()
+// 		if err == nil {
+// 			break
+// 		}
+// 		time.Sleep(time.Second)
+// 	}
+// 	require.NoError(t, err)
 
-	es, err := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{addr},
-	})
-	require.NoError(t, err)
+// 	return es
+// }
 
-	// wait until ready
-	for i := 0; i < 10; i++ {
-		_, err := es.Info()
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	require.NoError(t, err)
+// func createIndex(t *testing.T, es *elasticsearch.Client) {
+// 	mapping := `{
+// 	  "mappings": {
+// 	    "properties": {
+// 	      "@timestamp": { "type": "date" },
+// 	      "server_id": { "type": "long" },
+// 	      "status": { "type": "boolean" }
+// 	    }
+// 	  }
+// 	}`
 
-	return es
-}
+// 	res, err := es.Indices.Create(
+// 		"server-status",
+// 		es.Indices.Create.WithBody(strings.NewReader(mapping)),
+// 	)
+// 	require.NoError(t, err)
+// 	defer res.Body.Close()
+// }
 
-func createIndex(t *testing.T, es *elasticsearch.Client) {
-	mapping := `{
-	  "mappings": {
-	    "properties": {
-	      "@timestamp": { "type": "date" },
-	      "server_id": { "type": "long" },
-	      "status": { "type": "boolean" }
-	    }
-	  }
-	}`
+// func TestElasticRepository_BulkInsertStatus(t *testing.T) {
+// 	es := setupElasticsearch(t)
+// 	createIndex(t, es)
 
-	res, err := es.Indices.Create(
-		"server-status",
-		es.Indices.Create.WithBody(strings.NewReader(mapping)),
-	)
-	require.NoError(t, err)
-	defer res.Body.Close()
-}
+// 	repo := NewServerESRepository(es)
 
-func TestElasticRepository_BulkInsertStatus(t *testing.T) {
-	es := setupElasticsearch(t)
-	createIndex(t, es)
+// 	now := time.Now()
 
-	repo := NewServerESRepository(es)
+// 	servers := []*model.Server{
+// 		{ID: 1, Status: true, LastUpdated: now},
+// 		{ID: 2, Status: false, LastUpdated: now},
+// 	}
 
-	now := time.Now()
+// 	err := repo.BulkInsertStatus(context.Background(), servers)
+// 	require.NoError(t, err)
 
-	servers := []*model.Server{
-		{ID: 1, Status: true, LastUpdated: now},
-		{ID: 2, Status: false, LastUpdated: now},
-	}
+// 	_, err = es.Indices.Refresh(
+// 		es.Indices.Refresh.WithIndex("server-status"),
+// 	)
+// 	require.NoError(t, err)
 
-	err := repo.BulkInsertStatus(context.Background(), servers)
-	require.NoError(t, err)
+// 	// verify inserted
+// 	res, err := es.Count(es.Count.WithIndex("server-status"))
+// 	require.NoError(t, err)
+// 	defer res.Body.Close()
 
-	_, err = es.Indices.Refresh(
-		es.Indices.Refresh.WithIndex("server-status"),
-	)
-	require.NoError(t, err)
+// 	var body map[string]interface{}
+// 	json.NewDecoder(res.Body).Decode(&body)
 
-	// verify inserted
-	res, err := es.Count(es.Count.WithIndex("server-status"))
-	require.NoError(t, err)
-	defer res.Body.Close()
+// 	require.Equal(t, float64(2), body["count"])
+// }
 
-	var body map[string]interface{}
-	json.NewDecoder(res.Body).Decode(&body)
+// func TestElasticRepository_GetDailyUptime(t *testing.T) {
+// 	es := setupElasticsearch(t)
+// 	createIndex(t, es)
 
-	require.Equal(t, float64(2), body["count"])
-}
+// 	repo := NewServerESRepository(es)
 
-func TestElasticRepository_GetDailyUptime(t *testing.T) {
-	es := setupElasticsearch(t)
-	createIndex(t, es)
+// 	now := time.Now()
 
-	repo := NewServerESRepository(es)
+// 	// Insert test data
+// 	data := []*model.Server{
+// 		{ID: 1, Status: true, LastUpdated: now.Add(-1 * time.Hour)},
+// 		{ID: 1, Status: false, LastUpdated: now.Add(-30 * time.Minute)},
+// 		{ID: 2, Status: true, LastUpdated: now.Add(-1 * time.Hour)},
+// 	}
 
-	now := time.Now()
+// 	err := repo.BulkInsertStatus(context.Background(), data)
+// 	require.NoError(t, err)
 
-	// Insert test data
-	data := []*model.Server{
-		{ID: 1, Status: true, LastUpdated: now.Add(-1 * time.Hour)},
-		{ID: 1, Status: false, LastUpdated: now.Add(-30 * time.Minute)},
-		{ID: 2, Status: true, LastUpdated: now.Add(-1 * time.Hour)},
-	}
+// 	// ES needs refresh to make docs searchable
+// 	_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex("server-status"))
+// 	require.NoError(t, err)
 
-	err := repo.BulkInsertStatus(context.Background(), data)
-	require.NoError(t, err)
+// 	result, err := repo.GetDailyUptime(
+// 		context.Background(),
+// 		now.Add(-2*time.Hour),
+// 		now,
+// 		10,
+// 	)
+// 	require.NoError(t, err)
 
-	// ES needs refresh to make docs searchable
-	_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex("server-status"))
-	require.NoError(t, err)
+// 	require.Contains(t, result, uint(1))
+// 	require.Contains(t, result, uint(2))
 
-	result, err := repo.GetDailyUptime(
-		context.Background(),
-		now.Add(-2*time.Hour),
-		now,
-		10,
-	)
-	require.NoError(t, err)
+// 	// server 1: (true + false) / 2 = 0.5
+// 	require.InDelta(t, 0.5, result[1], 0.01)
 
-	require.Contains(t, result, uint(1))
-	require.Contains(t, result, uint(2))
+// 	// server 2: only true = 1.0
+// 	require.InDelta(t, 1.0, result[2], 0.01)
+// }
 
-	// server 1: (true + false) / 2 = 0.5
-	require.InDelta(t, 0.5, result[1], 0.01)
+// func TestElasticRepository_GetDailyUptime_ESFailure(t *testing.T) {
+// 	es, _ := elasticsearch.NewClient(elasticsearch.Config{
+// 		Addresses: []string{"http://localhost:9999"}, // invalid
+// 	})
 
-	// server 2: only true = 1.0
-	require.InDelta(t, 1.0, result[2], 0.01)
-}
+// 	repo := NewServerESRepository(es)
 
-func TestElasticRepository_GetDailyUptime_ESFailure(t *testing.T) {
-	es, _ := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{"http://localhost:9999"}, // invalid
-	})
+// 	_, err := repo.GetDailyUptime(context.Background(), time.Now(), time.Now(), 10)
 
-	repo := NewServerESRepository(es)
+// 	require.Error(t, err)
+// }
 
-	_, err := repo.GetDailyUptime(context.Background(), time.Now(), time.Now(), 10)
+// func TestElasticRepository_BulkInsertStatus_Error(t *testing.T) {
+// 	es, _ := elasticsearch.NewClient(elasticsearch.Config{
+// 		Addresses: []string{"http://localhost:9999"},
+// 	})
 
-	require.Error(t, err)
-}
+// 	repo := NewServerESRepository(es)
 
-func TestElasticRepository_BulkInsertStatus_Error(t *testing.T) {
-	es, _ := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{"http://localhost:9999"},
-	})
+// 	err := repo.BulkInsertStatus(context.Background(), []*model.Server{
+// 		{ID: 1, Status: true, LastUpdated: time.Now()},
+// 	})
 
-	repo := NewServerESRepository(es)
-
-	err := repo.BulkInsertStatus(context.Background(), []*model.Server{
-		{ID: 1, Status: true, LastUpdated: time.Now()},
-	})
-
-	require.Error(t, err)
-}
+// 	require.Error(t, err)
+// }

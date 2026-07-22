@@ -53,3 +53,15 @@ type ServerPushStats struct {
 	OOMEventsTotal float64 `json:"oom_events_total"`
 	OOMKillsTotal  float64 `json:"oom_kills_total"`
 }
+
+type RegisterAgentRequest struct {
+	ServerName string `json:"server_name" binding:"required"`
+	Hostname   string `json:"hostname" binding:"required"`
+	InstanceID string `json:"instance_id" binding:"required"`
+}
+
+type RegisterAgentResponse struct {
+	ServerID uint   `json:"server_id"`
+	AgentID  uint   `json:"agent_id"`
+	APIKey   string `json:"api_key"`
+}

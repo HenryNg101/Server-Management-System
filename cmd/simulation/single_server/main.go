@@ -11,5 +11,5 @@ func main() {
 		fmt.Fprintf(w, "Server is alive")
 	})
 
-	http.ListenAndServe(":3000", nil)
+	http.ListenAndServe(":3001", nil)
 }
