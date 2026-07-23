@@ -14,6 +14,7 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 	agentGroup.Use(auth.AgentAuthMiddleware(app.AgentService))
 	{
 		agentGroup.POST("/metrics", agentH.IngestMetrics)
+		agentGroup.POST("/rotate-key", agentH.RotateAPIKey)
 	}
 
 	// User-auth routes

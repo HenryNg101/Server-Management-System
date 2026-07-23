@@ -153,6 +153,36 @@ paths:
       summary: Register a new agent
       tags:
       - agents
+  /rotate-key:
+    post:
+      description: Rotate API key for the authenticated agent. The old key will be
+        invalidated immediately.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New API key
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - invalid or missing API key
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Rotate agent API key
+      tags:
+      - agents
 securityDefinitions:
   ApiKeyAuth:
     description: API Key for external automated systems.

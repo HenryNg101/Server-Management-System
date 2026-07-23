@@ -12,6 +12,7 @@ type Repository interface {
 	Create(ctx context.Context, agent *model.Agent) (*model.Agent, error)
 	FindByKey(ctx context.Context, key string) (*model.Agent, error)
 	FindByInstance(ctx context.Context, serverID uint, instanceID string) (*model.Agent, error)
+	UpdateAPIKey(ctx context.Context, agentID uint, newHash string) error
 }
 
 type agentRepository struct {
@@ -49,4 +50,11 @@ func (r *agentRepository) FindByInstance(ctx context.Context, serverID uint, ins
 		return nil, err
 	}
 	return &agent, nil
+}
+
+func (r *agentRepository) UpdateAPIKey(ctx context.Context, agentID uint, newHash string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Agent{}).
+		Where("id = ?", agentID).
+		Update("api_key", newHash).Error
 }

@@ -94,6 +94,30 @@ func (h *Handler) IngestMetrics(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// RotateAPIKey godoc
+// @Summary Rotate agent API key
+// @Description Rotate API key for the authenticated agent. The old key will be invalidated immediately.
+// @Tags agents
+// @Produce json
+// @Success 200 {object} map[string]string "New API key"
+// @Failure 401 {object} map[string]string "Unauthorized - invalid or missing API key"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security ApiKeyAuth
+// @Router /rotate-key [post]
+func (h *Handler) RotateAPIKey(c *gin.Context) {
+	apiKey := c.GetHeader("X-Agent-API-Key")
+
+	newKey, err := h.service.RotateAPIKey(c, apiKey)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"api_key": newKey,
+	})
+}
+
 // Register a new agent to the system
 // RegisterAgent godoc
 // @Summary Register a new agent

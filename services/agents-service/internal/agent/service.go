@@ -14,6 +14,7 @@ type Service interface {
 	AgentExist(ctx context.Context, key string, server *model.Agent) error
 	PushMetrics(ctx context.Context, messages []MetricMessage) error
 	RegisterAgent(ctx context.Context, userID uint, req RegisterAgentRequest) (*RegisterAgentResponse, error)
+	RotateAPIKey(ctx context.Context, apiKey string) (string, error)
 }
 
 type agentService struct {
@@ -82,4 +83,27 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 		AgentID:  agent.ID,
 		APIKey:   rawKey,
 	}, nil
+}
+
+func (s *agentService) RotateAPIKey(ctx context.Context, apiKey string) (string, error) {
+	// 1. find agent by API key
+	hashedKey := auth.HashAPIKey(apiKey)
+	agent, err := s.repo.FindByKey(ctx, apiKey)
+	if err != nil {
+		return "", err
+	}
+
+	// 2. generate new key
+	rawKey, hashedKey, err := auth.GenerateAPIKey()
+	if err != nil {
+		return "", err
+	}
+
+	// 3. update DB
+	err = s.repo.UpdateAPIKey(ctx, agent.ID, hashedKey)
+	if err != nil {
+		return "", err
+	}
+
+	return rawKey, nil
 }
