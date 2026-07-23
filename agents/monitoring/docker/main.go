@@ -99,6 +99,8 @@ func main() {
 
 		body, _ := json.Marshal(messages)
 
+		log.Println("Sending:", string(body))
+
 		req, err := http.NewRequest(http.MethodPost, agentConfigs.APIURL+"/agent/metrics", bytes.NewBuffer(body))
 		if err != nil {
 			log.Println("request error:", err)

@@ -14,12 +14,8 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 
 	protected.GET("/", serverH.GetServers)
 	protected.GET("/:id", serverH.GetServer)
-
-	admin := protected.Group("/")
-	admin.Use(auth.RequireRoles("admin"))
-
-	admin.POST("/", serverH.CreateServer)
-	admin.PATCH("/:id", serverH.UpdateServer)
-	admin.DELETE("/:id", serverH.DeleteServer)
-	admin.GET("/export", serverH.ExportServers)
+	protected.POST("/", serverH.CreateServer)
+	protected.PATCH("/:id", serverH.UpdateServer)
+	protected.DELETE("/:id", serverH.DeleteServer)
+	protected.GET("/export", serverH.ExportServers)
 }

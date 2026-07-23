@@ -33,6 +33,10 @@ func (r *serverRepository) FindAll(ctx context.Context, q GetServersQuery) ([]mo
 
 	db := r.db.WithContext(ctx).Model(&model.Server{})
 
+	if q.UserID != nil {
+		db = db.Where("user_id = ?", *q.UserID)
+	}
+
 	if q.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*q.Name+"%")
 	}
@@ -72,7 +76,7 @@ func (r *serverRepository) FindAll(ctx context.Context, q GetServersQuery) ([]mo
 func (r *serverRepository) Create(ctx context.Context, server *model.Server) (*model.Server, error) {
 	result := r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "name"}},
+			Columns:   []clause.Column{{Name: "name"}},
 			DoNothing: true,
 		}).
 		Create(server)

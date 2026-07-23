@@ -1,5 +1,6 @@
 CREATE TABLE import_jobs (
     id UUID PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     file_path TEXT NOT NULL,
     status TEXT NOT NULL CHECK (
         status IN ('pending', 'processing', 'done', 'failed')

@@ -5,8 +5,6 @@ CREATE TABLE servers (
     name TEXT UNIQUE NOT NULL,
     ipv4_address INET NOT NULL,
 
-    status BOOLEAN NOT NULL,
-
     created_at TIMESTAMP DEFAULT NOW(),
     last_updated TIMESTAMP DEFAULT NOW()
 );

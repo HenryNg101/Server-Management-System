@@ -13,6 +13,7 @@ const (
 
 type ImportJob struct {
 	ID               string    `gorm:"column:id;type:uuid;primaryKey"`
+	UserID           uint      `gorm:"uniqueIndex:idx_user_server_name"`
 	FilePath         string    `gorm:"column:file_path;type:text;not null"`
 	Status           JobStatus `gorm:"column:status;type:text;not null;check:status IN ('pending','processing','done','failed')"`
 	ProcessedRows    int       `gorm:"column:processed_rows;type:int;not null;default:0;check:processed_rows >= 0"`
@@ -22,4 +23,6 @@ type ImportJob struct {
 	Error            *string   `gorm:"column:error;type:text"`
 	CreatedAt        time.Time `gorm:"column:created_at;type:timestamp;not null;default:now()"`
 	UpdatedAt        time.Time `gorm:"column:updated_at;type:timestamp;not null;default:now()"`
+
+	User User `gorm:"foreignKey:UserID"`
 }

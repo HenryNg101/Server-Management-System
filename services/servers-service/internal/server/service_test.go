@@ -26,6 +26,13 @@ import (
 // 	return nil
 // }
 
+func testUserCtx() *UserContext {
+	return &UserContext{
+		UserID: 1,
+		Role:   "user",
+	}
+}
+
 func setupService() (Service, *mockRepo) {
 	repo := NewFakeRepo()
 	svc := NewService(repo)
@@ -88,11 +95,12 @@ func setupService() (Service, *mockRepo) {
 
 func TestCreateServer(t *testing.T) {
 	svc, _ := setupService()
+	userCtx := testUserCtx()
 
 	res, err := svc.CreateServer(context.Background(), CreateServerRequest{
 		Name: "test",
 		IPv4: "127.0.0.1",
-	})
+	}, userCtx.UserID)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -105,12 +113,14 @@ func TestCreateServer(t *testing.T) {
 
 func TestGetServer(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
 	created, _ := repo.Create(context.Background(), &model.Server{
-		Name: "test",
+		Name:   "test",
+		UserID: userCtx.UserID,
 	})
 
-	res, err := svc.GetServer(context.Background(), created.ID, nil)
+	res, err := svc.GetServer(context.Background(), created.ID, userCtx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -122,14 +132,15 @@ func TestGetServer(t *testing.T) {
 
 func TestGetServers(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
-	repo.Create(context.Background(), &model.Server{Name: "a"})
-	repo.Create(context.Background(), &model.Server{Name: "b"})
+	repo.Create(context.Background(), &model.Server{Name: "a", UserID: userCtx.UserID})
+	repo.Create(context.Background(), &model.Server{Name: "b", UserID: userCtx.UserID})
 
 	page := 1
 	size := 10
 
-	res, err := svc.GetServers(context.Background(), GetServersQuery{
+	res, err := svc.GetServers(context.Background(), userCtx, GetServersQuery{
 		Page:     &page,
 		PageSize: &size,
 	})
@@ -145,8 +156,9 @@ func TestGetServers(t *testing.T) {
 
 func TestGetServer_NotFound(t *testing.T) {
 	svc, _ := setupService()
+	userCtx := testUserCtx()
 
-	_, err := svc.GetServer(context.Background(), 999, nil)
+	_, err := svc.GetServer(context.Background(), 999, userCtx, nil)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -154,11 +166,12 @@ func TestGetServer_NotFound(t *testing.T) {
 
 func TestGetServers_FilteringAndPagination(t *testing.T) {
 	repo := NewFakeRepo()
+	userCtx := testUserCtx()
 
 	err := repo.Seed(
-		&model.Server{Name: "alpha"},
-		&model.Server{Name: "beta"},
-		&model.Server{Name: "gamma"},
+		&model.Server{Name: "alpha", UserID: 1},
+		&model.Server{Name: "beta", UserID: 1},
+		&model.Server{Name: "gamma", UserID: 2},
 	)
 
 	svc := NewService(repo)
@@ -168,7 +181,7 @@ func TestGetServers_FilteringAndPagination(t *testing.T) {
 	page := 1
 	size := 1
 
-	res, err := svc.GetServers(context.Background(), GetServersQuery{
+	res, err := svc.GetServers(context.Background(), userCtx, GetServersQuery{
 		// Status:   &status,
 		// Protocol: &protocol,
 		Page:     &page,
@@ -192,15 +205,16 @@ func TestGetServers_FilteringAndPagination(t *testing.T) {
 
 func TestUpdateServer(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
 	created, _ := repo.Create(context.Background(), &model.Server{
-		Name: "old",
-		// Status: true,
+		Name:   "old",
+		UserID: userCtx.UserID,
 	})
 
 	newName := "new"
 
-	res, err := svc.UpdateServer(context.Background(), created.ID, UpdateServerRequest{
+	res, err := svc.UpdateServer(context.Background(), created.ID, userCtx, UpdateServerRequest{
 		Name: &newName,
 	})
 
@@ -215,10 +229,11 @@ func TestUpdateServer(t *testing.T) {
 
 func TestUpdateServer_NoChanges(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
 	created, _ := repo.Create(context.Background(), &model.Server{})
 
-	_, err := svc.UpdateServer(context.Background(), created.ID, UpdateServerRequest{})
+	_, err := svc.UpdateServer(context.Background(), created.ID, userCtx, UpdateServerRequest{})
 	if err == nil {
 		t.Fatalf("expected error when nothing updated")
 	}
@@ -226,6 +241,7 @@ func TestUpdateServer_NoChanges(t *testing.T) {
 
 func TestUpdateServer_AllFields(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
 	created, _ := repo.Create(context.Background(), &model.Server{
 		Name: "old",
@@ -235,12 +251,9 @@ func TestUpdateServer_AllFields(t *testing.T) {
 	name := "new"
 	ip := "192.168.1.1"
 
-	res, err := svc.UpdateServer(context.Background(), created.ID, UpdateServerRequest{
+	res, err := svc.UpdateServer(context.Background(), created.ID, userCtx, UpdateServerRequest{
 		Name: &name,
-		// Status:      &status,
 		IPv4: &ip,
-		// Port:        &port,
-		// Protocol:    &protocol,
 	})
 
 	if err != nil {
@@ -254,10 +267,11 @@ func TestUpdateServer_AllFields(t *testing.T) {
 
 func TestUpdateServer_NotFound(t *testing.T) {
 	svc, _ := setupService()
+	userCtx := testUserCtx()
 
 	name := "new"
 
-	_, err := svc.UpdateServer(context.Background(), 999, UpdateServerRequest{
+	_, err := svc.UpdateServer(context.Background(), 999, userCtx, UpdateServerRequest{
 		Name: &name,
 	})
 
@@ -268,10 +282,11 @@ func TestUpdateServer_NotFound(t *testing.T) {
 
 func TestDeleteServer(t *testing.T) {
 	svc, repo := setupService()
+	userCtx := testUserCtx()
 
 	created, _ := repo.Create(context.Background(), &model.Server{})
 
-	err := svc.DeleteServer(context.Background(), created.ID)
+	err := svc.DeleteServer(context.Background(), created.ID, userCtx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -279,8 +294,9 @@ func TestDeleteServer(t *testing.T) {
 
 func TestDeleteServer_NotFound(t *testing.T) {
 	svc, _ := setupService()
+	userCtx := testUserCtx()
 
-	err := svc.DeleteServer(context.Background(), 999)
+	err := svc.DeleteServer(context.Background(), 999, userCtx)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -289,10 +305,11 @@ func TestDeleteServer_NotFound(t *testing.T) {
 func TestDeleteServer_RepoError(t *testing.T) {
 	repo := NewFakeRepo()
 	repo.SetDbExists(false)
+	userCtx := testUserCtx()
 
 	svc := NewService(repo)
 
-	err := svc.DeleteServer(context.Background(), 1)
+	err := svc.DeleteServer(context.Background(), 1, userCtx)
 	if err == nil {
 		t.Fatalf("expected error")
 	}

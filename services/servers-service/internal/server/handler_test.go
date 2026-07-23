@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/HenryNg101/server-service/internal/model"
-	"github.com/HenryNg101/server-service/internal/shared/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/go-openapi/testify/v2/require"
 	"gorm.io/gorm"
@@ -21,6 +20,14 @@ func setupRouter(s Service) *gin.Engine {
 
 	h := NewHandler(s)
 	r := gin.New()
+
+	// Inject fake user context
+	r.Use(func(c *gin.Context) {
+		c.Set("user", &UserContext{
+			UserID: 1,
+			Role:   "user",
+		})
+	})
 
 	r.POST("/servers", h.CreateServer)
 	r.GET("/servers", h.GetServers)
@@ -36,32 +43,19 @@ func setupRouter(s Service) *gin.Engine {
 
 func TestHandlerCreateServer_Success(t *testing.T) {
 	mock := &MockServerService{
-		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
+		createFn: func(ctx context.Context, req CreateServerRequest, userID uint) (*model.Server, error) {
 			return &model.Server{
-				Name: req.Name,
-				IPv4: req.IPv4,
+				Name:   req.Name,
+				IPv4:   req.IPv4,
+				UserID: userID,
 			}, nil
-		},
-		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
-			rawKey, hash, err := auth.GenerateAPIKey()
-			if err != nil {
-				return nil, "", err
-			}
-			agent := model.Agent{
-				ServerID: serverID,
-				APIKey:   hash,
-			}
-			return &agent, rawKey, err
 		},
 	}
 	r := setupRouter(mock)
 
 	body := `{
 		"name":"test",
-		"status":true,
-		"ipv4_address": "192.168.1.1",
-		"port": 1234,
-		"protocol": "tcp"
+		"ipv4": "192.168.1.1",
 	}`
 
 	req := httptest.NewRequest(http.MethodPost, "/servers", strings.NewReader(body))
@@ -76,22 +70,12 @@ func TestHandlerCreateServer_Success(t *testing.T) {
 
 func TestHandlerCreateServer_MissingField(t *testing.T) {
 	mock := &MockServerService{
-		createFn: func(ctx context.Context, req CreateServerRequest) (*model.Server, error) {
+		createFn: func(ctx context.Context, req CreateServerRequest, userID uint) (*model.Server, error) {
 			return &model.Server{
-				Name: req.Name,
-				IPv4: req.IPv4,
+				Name:   req.Name,
+				IPv4:   req.IPv4,
+				UserID: userID,
 			}, nil
-		},
-		createAgentFn: func(ctx context.Context, serverID uint) (*model.Agent, string, error) {
-			rawKey, hash, err := auth.GenerateAPIKey()
-			if err != nil {
-				return nil, "", err
-			}
-			agent := model.Agent{
-				ServerID: serverID,
-				APIKey:   hash,
-			}
-			return &agent, rawKey, err
 		},
 	}
 	r := setupRouter(mock)
@@ -112,7 +96,7 @@ func TestHandlerCreateServer_MissingField(t *testing.T) {
 
 func TestHandlerGetServers_Success(t *testing.T) {
 	mock := &MockServerService{
-		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+		getServersFn: func(ctx context.Context, userCtx *UserContext, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{
 				Servers: []model.Server{
 					{Name: "s1"},
@@ -135,7 +119,7 @@ func TestHandlerGetServers_Success(t *testing.T) {
 
 func TestHandlerGetServers_InvalidQuery(t *testing.T) {
 	mock := &MockServerService{
-		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+		getServersFn: func(ctx context.Context, userCtx *UserContext, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{}, nil
 		},
 	}
@@ -151,7 +135,7 @@ func TestHandlerGetServers_InvalidQuery(t *testing.T) {
 
 func TestGetServers_ServiceError(t *testing.T) {
 	mock := &MockServerService{
-		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+		getServersFn: func(ctx context.Context, userCtx *UserContext, q GetServersQuery) (*PaginatedServers, error) {
 			return nil, errors.New("db fail")
 		},
 	}
@@ -167,7 +151,7 @@ func TestGetServers_ServiceError(t *testing.T) {
 
 func TestHandlerGetServer_Success(t *testing.T) {
 	mock := &MockServerService{
-		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
+		getFn: func(ctx context.Context, id uint, userCtx *UserContext, s *model.Server) (*model.Server, error) {
 			return &model.Server{Name: "server1"}, nil
 		},
 	}
@@ -196,7 +180,7 @@ func TestHandlerGetServer_InvalidID(t *testing.T) {
 
 func TestHandlerGetServer_NotFound(t *testing.T) {
 	mock := &MockServerService{
-		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
+		getFn: func(ctx context.Context, id uint, userCtx *UserContext, s *model.Server) (*model.Server, error) {
 			return nil, gorm.ErrRecordNotFound
 		},
 	}
@@ -212,7 +196,7 @@ func TestHandlerGetServer_NotFound(t *testing.T) {
 
 func TestHandlerGetServer_InternalError(t *testing.T) {
 	mock := &MockServerService{
-		getFn: func(ctx context.Context, id uint, s *model.Server) (*model.Server, error) {
+		getFn: func(ctx context.Context, id uint, userCtx *UserContext, s *model.Server) (*model.Server, error) {
 			return nil, errors.New("db error")
 		},
 	}
@@ -255,7 +239,7 @@ func TestHandlerUpdateServer_InvalidID(t *testing.T) {
 
 func TestHandlerUpdateServer_ServiceError(t *testing.T) {
 	mock := &MockServerService{
-		updateFn: func(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
+		updateFn: func(ctx context.Context, id uint, userCtx *UserContext, req UpdateServerRequest) (*model.Server, error) {
 			return nil, errors.New("update fail")
 		},
 	}
@@ -273,7 +257,7 @@ func TestHandlerUpdateServer_ServiceError(t *testing.T) {
 
 func TestHandlerUpdateServer_Success(t *testing.T) {
 	mock := &MockServerService{
-		updateFn: func(ctx context.Context, id uint, req UpdateServerRequest) (*model.Server, error) {
+		updateFn: func(ctx context.Context, id uint, userCtx *UserContext, req UpdateServerRequest) (*model.Server, error) {
 			return &model.Server{Name: "updated"}, nil
 		},
 	}
@@ -291,7 +275,7 @@ func TestHandlerUpdateServer_Success(t *testing.T) {
 
 func TestHandlerDeleteServer_NotFound(t *testing.T) {
 	mock := &MockServerService{
-		deleteFn: func(ctx context.Context, id uint) error {
+		deleteFn: func(ctx context.Context, id uint, userCtx *UserContext) error {
 			return ErrNotFound
 		},
 	}
@@ -321,7 +305,7 @@ func TestHandlerDeleteServer_InvalidID(t *testing.T) {
 
 func TestHandlerDeleteServer_InternalError(t *testing.T) {
 	mock := &MockServerService{
-		deleteFn: func(ctx context.Context, id uint) error {
+		deleteFn: func(ctx context.Context, id uint, userCtx *UserContext) error {
 			return errors.New("fail")
 		},
 	}
@@ -338,7 +322,7 @@ func TestHandlerDeleteServer_InternalError(t *testing.T) {
 
 func TestHandlerDeleteServer_Success(t *testing.T) {
 	mock := &MockServerService{
-		deleteFn: func(ctx context.Context, id uint) error {
+		deleteFn: func(ctx context.Context, id uint, userCtx *UserContext) error {
 			return nil
 		},
 	}
@@ -354,7 +338,7 @@ func TestHandlerDeleteServer_Success(t *testing.T) {
 }
 
 // func TestHandlerImportServers_Success(t *testing.T) {
-// 	csvData := `name,status,ipv4_address,port,protocol
+// 	csvData := `name,status,ipv4,port,protocol
 // server1,true,127.0.0.1,8080,http`
 
 // 	mock := &MockServerService{
@@ -422,7 +406,7 @@ func TestHandlerDeleteServer_Success(t *testing.T) {
 
 func TestHandlerExportServers_ServiceError(t *testing.T) {
 	mock := &MockServerService{
-		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+		getServersFn: func(ctx context.Context, userCtx *UserContext, q GetServersQuery) (*PaginatedServers, error) {
 			return nil, errors.New("fail")
 		},
 	}
@@ -439,7 +423,7 @@ func TestHandlerExportServers_ServiceError(t *testing.T) {
 
 func TestHandlerExportServers_Success(t *testing.T) {
 	mock := &MockServerService{
-		getServersFn: func(ctx context.Context, q GetServersQuery) (*PaginatedServers, error) {
+		getServersFn: func(ctx context.Context, userCtx *UserContext, q GetServersQuery) (*PaginatedServers, error) {
 			return &PaginatedServers{
 				Servers: []model.Server{
 					{Name: "s1", IPv4: "127.0.0.1", CreatedAt: time.Now(), UpdatedAt: time.Now()},

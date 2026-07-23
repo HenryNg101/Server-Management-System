@@ -20,6 +20,6 @@ type RefreshResponse struct {
 }
 
 type RefreshData struct {
-	UserID uint   `json:"user_id"`
+	UserID uint   `json:"userID"`
 	Role   string `json:"role"`
 }

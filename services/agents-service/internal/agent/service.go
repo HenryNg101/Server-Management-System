@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/HenryNg101/agent-service/internal/model"
 	"github.com/HenryNg101/agent-service/internal/server"
@@ -41,8 +42,11 @@ func (s *agentService) AgentExist(ctx context.Context, key string, server *model
 
 func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req RegisterAgentRequest) (*RegisterAgentResponse, error) {
 	// 1. Find if server exist for the user
-	server, err := s.serverRepo.FindByNameAndUser(ctx, req.ServerName)
+	server, err := s.serverRepo.FindByNameAndUser(ctx, strings.TrimSpace(req.ServerName))
 	if err != nil || server.UserID != userID {
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("There's no server %s exist for this user", req.ServerName)
 	}
 

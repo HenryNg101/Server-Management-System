@@ -429,94 +429,141 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "apikey": {
+                    "description": "Auth",
                     "type": "string"
                 },
                 "createdAt": {
                     "type": "string"
                 },
+                "hostname": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
+                },
+                "instanceID": {
+                    "description": "Identity of an agent's instance",
+                    "type": "string"
+                },
+                "lastSeenAt": {
+                    "type": "string"
                 },
                 "server": {
                     "$ref": "#/definitions/model.Server"
                 },
                 "serverID": {
                     "type": "integer"
+                },
+                "status": {
+                    "description": "Lifecycle",
+                    "type": "string"
                 }
             }
         },
         "model.Server": {
             "type": "object",
             "properties": {
+                "agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Agent"
+                    }
+                },
                 "createdAt": {
-                    "description": "Automatically managed by GORM for creation time",
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "ipv4Address": {
-                    "description": "IPv4 of the server",
-                    "type": "string"
-                },
-                "lastUpdated": {
-                    "description": "Last time the server got updated",
+                "ipv4": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
-                "port": {
-                    "description": "Port of the server",
-                    "type": "integer"
-                },
-                "protocol": {
-                    "description": "Network protocol that the server use, could be TCP, FTP, SSH, etc.",
+                "updatedAt": {
                     "type": "string"
                 },
-                "status": {
-                    "description": "Server status at the time (Is it on or off)",
-                    "type": "boolean"
+                "user": {
+                    "$ref": "#/definitions/model.User"
+                },
+                "userID": {
+                    "type": "integer"
                 }
             }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/model.UserRole"
+                },
+                "servers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Server"
+                    }
+                }
+            }
+        },
+        "model.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "user"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleUser"
+            ]
         },
         "server.CreateServerRequest": {
             "type": "object",
             "required": [
-                "ipv4_address",
-                "name",
-                "port",
-                "status"
+                "ipv4",
+                "name"
             ],
             "properties": {
-                "ipv4_address": {
+                "ipv4": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
-                },
-                "port": {
-                    "type": "integer"
-                },
-                "protocol": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "boolean"
                 }
             }
         },
         "server.CreateServerResponse": {
             "type": "object",
             "properties": {
-                "agent_api_key": {
+                "created_at": {
                     "type": "string"
                 },
-                "created_agent": {
-                    "$ref": "#/definitions/model.Agent"
+                "id": {
+                    "type": "integer"
                 },
-                "created_server": {
-                    "$ref": "#/definitions/model.Server"
+                "ipv4": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -524,31 +571,23 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
-                    "description": "Automatically managed by GORM for creation time",
                     "type": "string"
                 },
-                "ipv4_address": {
-                    "description": "IPv4 of the server",
-                    "type": "string"
+                "id": {
+                    "type": "integer"
                 },
-                "last_updated": {
-                    "description": "Last time the server got updated",
+                "ipv4": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
-                "port": {
-                    "description": "Port of the server",
-                    "type": "integer"
-                },
-                "protocol": {
-                    "description": "Network protocol that the server use, could be TCP, FTP, SSH, etc.",
+                "status": {
+                    "description": "derived: UP / NO_DATA",
                     "type": "string"
                 },
-                "status": {
-                    "description": "Server status at the time (Is it on or off)",
-                    "type": "boolean"
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -560,15 +599,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                },
-                "port": {
-                    "type": "integer"
-                },
-                "protocol": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "boolean"
                 }
             }
         }

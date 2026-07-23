@@ -14,6 +14,7 @@ type GetServersQuery struct {
 
 	SortBy string
 	Order  string
+	UserID *uint
 }
 
 type GetServerResponse struct {

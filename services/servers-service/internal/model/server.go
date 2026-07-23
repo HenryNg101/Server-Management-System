@@ -4,9 +4,9 @@ import "time"
 
 type Server struct {
 	ID     uint `gorm:"primaryKey"`
-	UserID uint `gorm:"uniqueIndex:idx_user_server_name"`
+	UserID uint
 
-	Name      string    `gorm:"not null;uniqueIndex:idx_user_server_name"`
+	Name      string    `gorm:"not null;unique"`
 	IPv4      string    `gorm:"column:ipv4_address;type:inet"`
 	CreatedAt time.Time `gorm:"not null;autoCreateTime"`
 	UpdatedAt time.Time `gorm:"column:last_updated;not null;autoUpdateTime"`

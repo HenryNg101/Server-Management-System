@@ -20,6 +20,41 @@ func NewHandler(s Service) *Handler {
 	return &Handler{service: s}
 }
 
+type UserContext struct {
+	UserID uint
+	Role   string
+}
+
+func GetUserContext(c *gin.Context) *UserContext {
+	var userContext UserContext
+
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return nil
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid user context"})
+		return nil
+	}
+
+	userRoleRaw, exists := c.Get("role")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return nil
+	}
+	userRole, ok := userRoleRaw.(string)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid role context"})
+		return nil
+	}
+
+	userContext.UserID = userID
+	userContext.Role = userRole
+	return &userContext
+}
+
 // CreateServer godoc
 // @Summary Create a server
 // @Description Create a new server, with specifications
@@ -40,7 +75,12 @@ func (h *Handler) CreateServer(c *gin.Context) {
 		return
 	}
 
-	createdServer, err := h.service.CreateServer(c.Request.Context(), req)
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
+	createdServer, err := h.service.CreateServer(c.Request.Context(), req, userContext.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Server creation error": err.Error()})
 		return
@@ -75,7 +115,13 @@ func (h *Handler) GetServers(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Request parsing error": err.Error()})
 	}
-	paginatedResult, err := h.service.GetServers(c.Request.Context(), query)
+
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
+	paginatedResult, err := h.service.GetServers(c.Request.Context(), userContext, query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Get servers error": err.Error()})
 		return
@@ -113,8 +159,13 @@ func (h *Handler) GetServer(c *gin.Context) {
 		return
 	}
 
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
 	var server *model.Server
-	server, err = h.service.GetServer(c.Request.Context(), uint(id), server)
+	server, err = h.service.GetServer(c.Request.Context(), uint(id), userContext, server)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"Get server error": err.Error()})
@@ -161,9 +212,15 @@ func (h *Handler) UpdateServer(c *gin.Context) {
 		return
 	}
 
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
 	updated, err := h.service.UpdateServer(
 		c.Request.Context(),
 		uint(serverId),
+		userContext,
 		req,
 	)
 
@@ -198,7 +255,12 @@ func (h *Handler) DeleteServer(c *gin.Context) {
 		return
 	}
 
-	err = h.service.DeleteServer(c.Request.Context(), uint(serverId))
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
+	err = h.service.DeleteServer(c.Request.Context(), uint(serverId), userContext)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"Delete server error": "server not found"})
@@ -235,7 +297,12 @@ func (h *Handler) ExportServers(c *gin.Context) {
 		return
 	}
 
-	servers, err := h.service.GetServers(c.Request.Context(), query)
+	userContext := GetUserContext(c)
+	if userContext == nil {
+		return
+	}
+
+	servers, err := h.service.GetServers(c.Request.Context(), userContext, query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Get servers error": err.Error()})
 		return

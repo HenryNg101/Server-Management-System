@@ -405,25 +405,7 @@ services:
       replicas: 3
       restart_policy:
         condition: on-failure
-  
-  servers-ping-checker:
-    <<: *service-defaults
-    build:
-      context: ./workers/servers-ping-checker
-      dockerfile: Dockerfile
-    depends_on:
-      postgres-migrate:
-        condition: service_completed_successfully
-      elasticsearch-setup:
-        condition: service_completed_successfully
 
-    # For Swarm mode later
-    # image: server-management-servers-ping-checker:latest
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-  
   cron-scheduler:
     <<: *service-defaults
     build:

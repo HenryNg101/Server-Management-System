@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,41 @@ type Handler struct {
 
 func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
+}
+
+type UserContext struct {
+	UserID uint
+	Role   string
+}
+
+func GetUserContext(c *gin.Context) *UserContext {
+	var userContext UserContext
+
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return nil
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid user context"})
+		return nil
+	}
+
+	userRoleRaw, exists := c.Get("role")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return nil
+	}
+	userRole, ok := userRoleRaw.(string)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid role context"})
+		return nil
+	}
+
+	userContext.UserID = userID
+	userContext.Role = userRole
+	return &userContext
 }
 
 // Ingest metrics from agents upload
@@ -80,19 +116,13 @@ func (h *Handler) RegisterAgent(c *gin.Context) {
 		return
 	}
 
-	userIDRaw, exists := c.Get("userID")
-	if !exists {
-		c.JSON(401, gin.H{"error": "unauthorized"})
+	userContext := GetUserContext(c)
+	if userContext == nil {
 		return
 	}
+	log.Println(userContext)
 
-	userID, ok := userIDRaw.(uint)
-	if !ok {
-		c.JSON(500, gin.H{"error": "invalid user context"})
-		return
-	}
-
-	resp, err := h.service.RegisterAgent(c, userID, req)
+	resp, err := h.service.RegisterAgent(c, userContext.UserID, req)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
