@@ -8,8 +8,8 @@ import (
 )
 
 // Only load the first time
-func InitiateAgent() *Config {
-	cfg, err := LoadConfig()
+func InitiateAgent() (*Config, *Secret) {
+	cfg, secret, err := LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func InitiateAgent() *Config {
 	}
 
 	// Register if not done yet
-	if cfg.APIKey == "" {
+	if secret.APIKeyEncrypted == "" {
 		log.Println("First run: registering agent...")
 
 		accessToken, refreshToken, err := Login(cfg)
@@ -34,11 +34,11 @@ func InitiateAgent() *Config {
 			log.Fatal("login failed:", err)
 		}
 
-		if err := Register(cfg, accessToken); err != nil {
+		if err := Register(cfg, secret, accessToken); err != nil {
 			log.Fatal("register failed:", err)
 		}
 
-		if err := SaveConfig(cfg); err != nil {
+		if err := SaveConfig(cfg, secret); err != nil {
 			log.Fatal("save config failed:", err)
 		}
 
@@ -49,5 +49,5 @@ func InitiateAgent() *Config {
 
 		log.Println("Agent registered successfully")
 	}
-	return cfg
+	return cfg, secret
 }

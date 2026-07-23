@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	agentConfigs := bootstrap.InitiateAgent()
+	agentConfigs, secretValues := bootstrap.InitiateAgent()
 
 	clientHTTP := &http.Client{Timeout: 5 * time.Second}
 
@@ -107,7 +107,7 @@ func main() {
 			continue
 		}
 
-		req.Header.Set("X-Agent-API-Key", agentConfigs.APIKey)
+		req.Header.Set("X-Agent-API-Key", secretValues.APIKeyEncrypted)
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := clientHTTP.Do(req)

@@ -15,7 +15,7 @@ func getHostname() string {
 	return h
 }
 
-func Register(cfg *Config, token string) error {
+func Register(cfg *Config, secret *Secret, token string) error {
 	body := map[string]string{
 		"server_name": cfg.ServerName,
 		"hostname":    getHostname(),
@@ -44,7 +44,7 @@ func Register(cfg *Config, token string) error {
 		return err
 	}
 
-	cfg.APIKey = res.APIKey
+	secret.APIKeyEncrypted = res.APIKey
 	cfg.ServerID = res.ServerID
 
 	return nil
