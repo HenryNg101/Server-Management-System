@@ -259,14 +259,10 @@ const docTemplate = `{
         "agent.RegisterAgentRequest": {
             "type": "object",
             "required": [
-                "hostname",
                 "instance_id",
                 "server_name"
             ],
             "properties": {
-                "hostname": {
-                    "type": "string"
-                },
                 "instance_id": {
                     "type": "string"
                 },

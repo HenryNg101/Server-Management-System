@@ -89,9 +89,6 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
-                "hostname": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },

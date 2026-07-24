@@ -11,7 +11,6 @@ type Agent struct {
 
 	// Identity of an agent's instance
 	InstanceID string `gorm:"column:instance_id;not null;uniqueIndex:idx_server_instance"` // UUID from agent
-	Hostname   string `gorm:"column:hostname;not null"`
 
 	// Lifecycle
 	Status     string     `gorm:"column:status;type:text;not null;default:'active'"` // active, revoked

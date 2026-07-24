@@ -49,14 +49,11 @@ definitions:
     type: object
   agent.RegisterAgentRequest:
     properties:
-      hostname:
-        type: string
       instance_id:
         type: string
       server_name:
         type: string
     required:
-    - hostname
     - instance_id
     - server_name
     type: object

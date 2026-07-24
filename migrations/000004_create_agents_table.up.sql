@@ -5,7 +5,6 @@ CREATE TABLE agents (
     created_at TIMESTAMP DEFAULT NOW(),
 
     instance_id TEXT NOT NULL,
-    hostname TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'active',
 
     last_seen_at TIMESTAMP,

@@ -69,7 +69,6 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 		ServerID:   server.ID,
 		APIKey:     hashedKey,
 		InstanceID: req.InstanceID,
-		Hostname:   req.Hostname,
 		Status:     "active",
 	}
 

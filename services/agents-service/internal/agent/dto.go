@@ -56,7 +56,6 @@ type ServerPushStats struct {
 
 type RegisterAgentRequest struct {
 	ServerName string `json:"server_name" binding:"required"`
-	Hostname   string `json:"hostname" binding:"required"`
 	InstanceID string `json:"instance_id" binding:"required"`
 }
 

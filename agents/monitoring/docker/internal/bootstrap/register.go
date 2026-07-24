@@ -4,21 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"os"
 )
-
-func getHostname() string {
-	h, err := os.Hostname()
-	if err != nil {
-		return "unknown"
-	}
-	return h
-}
 
 func Register(cfg *Config, secret *Secret, token string) error {
 	body := map[string]string{
 		"server_name": cfg.ServerName,
-		"hostname":    getHostname(),
 		"instance_id": cfg.InstanceID,
 	}
 

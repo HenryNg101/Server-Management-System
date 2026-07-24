@@ -63,13 +63,15 @@ func LoadConfig() (*Config, *Secret, error) {
 }
 
 func SaveConfig(cfg *Config, sec *Secret) error {
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	// Needs full permission on the user to allow traversing/entering the directory
+	if err := os.MkdirAll(configDir, 0700); err != nil {
 		return err
 	}
 
 	// save config
+	// Still need both read and write permission, so that the app itself can override/add content
 	cfgData, _ := json.MarshalIndent(cfg, "", "  ")
-	if err := os.WriteFile(configPath, cfgData, 0644); err != nil {
+	if err := os.WriteFile(configPath, cfgData, 0600); err != nil {
 		return err
 	}
 

@@ -22,19 +22,22 @@ services:
 
   monitoring-agent:
     build:
-      context: .
-      dockerfile: ./agents/monitoring/docker/Dockerfile
+      context: ./agents/monitoring/docker/
+      dockerfile: Dockerfile
     depends_on:
       - docker-proxy
     environment:
-      - SERVER_ID=${CLIENT_AGENT_SERVER_ID}   # TODO: Put this information in API key instead of having to make user adding extra variable themselves
-      - API_URL=http://${HOST}/agent/metrics 
-      - API_KEY=${CLIENT_AGENT_API_KEY}
+      - SERVER_NAME=${SERVER_NAME}   # TODO: Put this information in API key instead of having to make user adding extra variable themselves
+      - API_URL=http://${HOST}
       - DOCKER_HOST=tcp://docker-proxy:2375
+
+      - EMAIL=${EMAIL}
+      - PASSWORD=${PASSWORD}
     volumes:
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
       - /proc:/host/proc:ro
       - agent-data:/app/data
+      - /etc/machine-id:/host/machine-id:ro
 
 volumes:
   agent-data:
