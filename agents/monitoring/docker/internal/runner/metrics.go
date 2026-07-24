@@ -1,60 +1,12 @@
 package runner
 
 import (
-	"bytes"
-	"encoding/json"
-	"log"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/HenryNg101/docker-monitoring-agent/internal/metrics"
-	"github.com/HenryNg101/docker-monitoring-agent/internal/security"
 	"github.com/moby/moby/api/types/container"
 )
-
-func (r *Runner) handleMetrics() {
-	messages, err := collectMetrics(r.cfg.ServerID)
-	if err != nil {
-		log.Println("[Agent] collect error:", err)
-		return
-	}
-
-	if len(messages) == 0 {
-		return
-	}
-
-	body, _ := json.Marshal(messages)
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		r.cfg.APIURL+"/agents/metrics",
-		bytes.NewBuffer(body),
-	)
-	if err != nil {
-		log.Println("[Agent] request error:", err)
-		return
-	}
-
-	// Decrypt before send
-	key := security.DeriveKey(r.cfg.InstanceID)
-	rawKey, err := security.Decrypt(r.sec.APIKeyEncrypted, key)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.Header.Set("X-Agent-API-Key", rawKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := r.client.Do(req)
-	if err != nil {
-		log.Println("[Agent] send failed:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	log.Println("[Agent] metrics sent:", len(messages))
-}
 
 func collectMetrics(serverID int) ([]metrics.MetricMessage, error) {
 	containers, err := metrics.ListContainers()
