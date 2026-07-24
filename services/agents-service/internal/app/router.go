@@ -11,7 +11,7 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 
 	// Agent-only routes
 	agentGroup := rg.Group("/")
-	agentGroup.Use(auth.AgentAuthMiddleware(app.AgentService, app.RedisSession))
+	agentGroup.Use(auth.AgentAuthMiddleware(app.AgentService, app.RedisSession, app.L1Cache))
 	{
 		agentGroup.POST("/metrics", agentH.IngestMetrics)
 		agentGroup.POST("/rotate-key", agentH.RotateAPIKey)

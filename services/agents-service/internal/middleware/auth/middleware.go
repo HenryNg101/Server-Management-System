@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/HenryNg101/agents-service/internal/agent"
+	"github.com/HenryNg101/agents-service/internal/platform/cache"
 	"github.com/HenryNg101/agents-service/internal/shared/auth"
 	internalAuth "github.com/HenryNg101/agents-service/internal/shared/auth"
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ type LocalCache struct {
 }
 
 // TODO: Fix this
-func AgentAuthMiddleware(agentService agent.Service, redisClient *redis.Client) gin.HandlerFunc {
+func AgentAuthMiddleware(agentService agent.Service, redisClient *redis.Client, localCache *cache.LocalCache) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-Agent-API-Key")
 		if apiKey == "" {
@@ -30,33 +31,58 @@ func AgentAuthMiddleware(agentService agent.Service, redisClient *redis.Client) 
 		hashedKey := auth.HashAPIKey(apiKey)
 		redisKey := "agent:auth:" + hashedKey
 
-		// 1. Try Redis first
+		// =========================
+		// 1. L1 CACHE (FASTEST)
+		// =========================
+		if serverID, ok := localCache.Get(redisKey); ok {
+			c.Set("server_id", serverID)
+			c.Next()
+			return
+		}
+
+		// =========================
+		// 2. REDIS
+		// =========================
 		serverIDStr, err := redisClient.Get(c, redisKey).Result()
 		if err == nil {
 			serverID, _ := strconv.Atoi(serverIDStr)
+
+			// backfill L1
+			localCache.Set(redisKey, uint(serverID))
+
 			c.Set("server_id", uint(serverID))
 			c.Next()
 			return
 		}
 
-		// 2. If Redis miss → fallback to find in DB
+		// =========================
+		// 3. REDIS ERROR / MISS
+		// =========================
 		if err != redis.Nil {
 			log.Println("[WARN] redis error:", err)
 		}
 
+		// =========================
+		// 4. DB FALLBACK
+		// =========================
 		agentModel, err := agentService.FindByHashedKey(c, hashedKey)
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid api key"})
 			return
 		}
+		serverID := agentModel.ServerID
 
-		// 3. Backfill Redis
+		// =========================
+		// 5. BACKFILL BOTH LAYERS OF L1 CACHE + REDIS
+		// =========================
+		localCache.Set(redisKey, serverID)
+
 		if err := redisClient.Set(c, redisKey, agentModel.ServerID, 0).Err(); err != nil {
 			log.Println("[WARN] redis backfill failed:", err)
 		}
 
 		// attach server_id to context
-		c.Set("server_id", agentModel.ServerID)
+		c.Set("server_id", serverID)
 		c.Next()
 	}
 }

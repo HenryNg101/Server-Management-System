@@ -27,7 +27,7 @@ func (r *Runner) handleMetrics() {
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		r.cfg.APIURL+"/agent/metrics",
+		r.cfg.APIURL+"/agents/metrics",
 		bytes.NewBuffer(body),
 	)
 	if err != nil {

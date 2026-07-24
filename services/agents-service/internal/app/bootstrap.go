@@ -2,12 +2,13 @@ package app
 
 import (
 	"errors"
+	"time"
 
 	"github.com/HenryNg101/agents-service/internal/agent"
 	"github.com/HenryNg101/agents-service/internal/config"
+	"github.com/HenryNg101/agents-service/internal/platform/cache"
 	kafkaClient "github.com/HenryNg101/agents-service/internal/platform/kafka"
 	"github.com/HenryNg101/agents-service/internal/platform/postgres"
-	redisServer "github.com/HenryNg101/agents-service/internal/platform/redis"
 	"github.com/HenryNg101/agents-service/internal/server"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -16,6 +17,7 @@ import (
 type Application struct {
 	PostgresSession *gorm.DB
 	RedisSession    *redis.Client
+	L1Cache         *cache.LocalCache
 	AgentService    agent.Service
 }
 
@@ -32,11 +34,13 @@ func NewApp() (*Application, error) {
 		return nil, errors.New("Kafka brokers not configured. You have to set it in .env file in root folder using KAFKA_BROKERS variable")
 	}
 
+	localCache := cache.NewLocalCache(5*time.Minute, 20000)
+
 	redisConfig := config.LoadRedis()
 	if len(redisConfig.Password) == 0 {
 		return nil, errors.New("Password for Redis connection is not set. You have to set it in .env file in root folder using REDIS_PASSWORD variable")
 	}
-	redisSession := redisServer.NewRedisSession(redisConfig)
+	redisSession := cache.NewRedisSession(redisConfig)
 
 	agentRepo := agent.NewRepository(postgresSession)
 	serverRepo := server.NewRepository(postgresSession)
@@ -45,6 +49,8 @@ func NewApp() (*Application, error) {
 
 	return &Application{
 		PostgresSession: postgresSession,
+		RedisSession:    redisSession,
+		L1Cache:         localCache,
 		AgentService:    agentService,
 	}, nil
 }
