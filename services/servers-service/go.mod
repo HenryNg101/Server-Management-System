@@ -1,4 +1,4 @@
-module github.com/HenryNg101/server-service
+module github.com/HenryNg101/servers-service
 
 go 1.25.0
 

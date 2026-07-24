@@ -3,7 +3,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/HenryNg101/user-service/internal/model"
+	"github.com/HenryNg101/users-service/internal/model"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )

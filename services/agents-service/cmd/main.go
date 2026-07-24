@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/HenryNg101/agent-service/internal/app"
-	"github.com/HenryNg101/agent-service/internal/config"
+	"github.com/HenryNg101/agents-service/internal/app"
+	"github.com/HenryNg101/agents-service/internal/config"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 
-	"github.com/HenryNg101/agent-service/internal/config"
+	"github.com/HenryNg101/agents-service/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 

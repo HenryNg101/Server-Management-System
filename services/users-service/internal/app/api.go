@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/HenryNg101/user-service/docs"
-	"github.com/HenryNg101/user-service/internal/config"
+	"github.com/HenryNg101/users-service/docs"
+	"github.com/HenryNg101/users-service/internal/config"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )

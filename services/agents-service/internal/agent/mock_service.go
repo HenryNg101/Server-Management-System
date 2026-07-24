@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/HenryNg101/agent-service/internal/model"
+	"github.com/HenryNg101/agents-service/internal/model"
 )
 
 type MockAgentService struct {

@@ -3,7 +3,7 @@ package auth
 import (
 	"strings"
 
-	"github.com/HenryNg101/server-service/internal/shared/auth"
+	"github.com/HenryNg101/servers-service/internal/shared/auth"
 	"github.com/gin-gonic/gin"
 )
 

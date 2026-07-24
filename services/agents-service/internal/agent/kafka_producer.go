@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/HenryNg101/agent-service/internal/platform/kafka"
+	"github.com/HenryNg101/agents-service/internal/platform/kafka"
 	kgo "github.com/segmentio/kafka-go"
 )
 

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/HenryNg101/server-service/internal/model"
+	"github.com/HenryNg101/servers-service/internal/model"
 )
 
 type mockRepo struct {

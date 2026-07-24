@@ -3,7 +3,7 @@ package user
 import (
 	"time"
 
-	"github.com/HenryNg101/user-service/internal/model"
+	"github.com/HenryNg101/users-service/internal/model"
 )
 
 type GetUsersResponse struct {

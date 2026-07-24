@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/HenryNg101/agent-service/internal/agent"
-	"github.com/HenryNg101/agent-service/internal/middleware/auth"
+	"github.com/HenryNg101/agents-service/internal/agent"
+	"github.com/HenryNg101/agents-service/internal/middleware/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +11,7 @@ func RegisterRoutes(rg *gin.RouterGroup, app *Application) {
 
 	// Agent-only routes
 	agentGroup := rg.Group("/")
-	agentGroup.Use(auth.AgentAuthMiddleware(app.AgentService))
+	agentGroup.Use(auth.AgentAuthMiddleware(app.AgentService, app.RedisSession))
 	{
 		agentGroup.POST("/metrics", agentH.IngestMetrics)
 		agentGroup.POST("/rotate-key", agentH.RotateAPIKey)

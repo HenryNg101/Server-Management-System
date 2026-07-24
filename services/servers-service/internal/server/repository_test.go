@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/HenryNg101/server-service/internal/model"
+	"github.com/HenryNg101/servers-service/internal/model"
 	"github.com/go-openapi/testify/v2/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"

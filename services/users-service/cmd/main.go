@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/HenryNg101/user-service/internal/app"
-	"github.com/HenryNg101/user-service/internal/config"
+	"github.com/HenryNg101/users-service/internal/app"
+	"github.com/HenryNg101/users-service/internal/config"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/HenryNg101/server-service/internal/middleware/auth"
-	"github.com/HenryNg101/server-service/internal/server"
+	"github.com/HenryNg101/servers-service/internal/middleware/auth"
+	"github.com/HenryNg101/servers-service/internal/server"
 	"github.com/gin-gonic/gin"
 )
 

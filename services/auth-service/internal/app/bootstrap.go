@@ -29,7 +29,7 @@ func NewApp() (*Application, error) {
 		return nil, errors.New("Password for Redis connection is not set. You have to set it in .env file in root folder using REDIS_PASSWORD variable")
 	}
 	postgresSession := postgres.NewPostgresSession(postgresConfig)
-	redisSession := redisServer.NewPostgresSession(redisConfig)
+	redisSession := redisServer.NewRedisSession(redisConfig)
 
 	userRepo := user.NewRepository(postgresSession)
 	authRepo := auth.NewRepository(redisSession)

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/HenryNg101/server-service/internal/model"
+	"github.com/HenryNg101/servers-service/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/go-openapi/testify/v2/require"
 	"gorm.io/gorm"

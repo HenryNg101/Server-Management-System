@@ -1,4 +1,4 @@
-module github.com/HenryNg101/user-service
+module github.com/HenryNg101/users-service
 
 go 1.25.0
 

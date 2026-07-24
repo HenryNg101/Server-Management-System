@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/HenryNg101/server-service/internal/model"
+	"github.com/HenryNg101/servers-service/internal/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

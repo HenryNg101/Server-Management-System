@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/HenryNg101/server-service/internal/model"
+	"github.com/HenryNg101/servers-service/internal/model"
 )
 
 type MockServerService struct {

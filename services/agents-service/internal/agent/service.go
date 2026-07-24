@@ -3,15 +3,17 @@ package agent
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
-	"github.com/HenryNg101/agent-service/internal/model"
-	"github.com/HenryNg101/agent-service/internal/server"
-	"github.com/HenryNg101/agent-service/internal/shared/auth"
+	"github.com/HenryNg101/agents-service/internal/model"
+	"github.com/HenryNg101/agents-service/internal/server"
+	"github.com/HenryNg101/agents-service/internal/shared/auth"
+	"github.com/redis/go-redis/v9"
 )
 
 type Service interface {
-	AgentExist(ctx context.Context, key string, server *model.Agent) error
+	FindByHashedKey(ctx context.Context, hashedKey string) (*model.Agent, error)
 	PushMetrics(ctx context.Context, messages []MetricMessage) error
 	RegisterAgent(ctx context.Context, userID uint, req RegisterAgentRequest) (*RegisterAgentResponse, error)
 	RotateAPIKey(ctx context.Context, apiKey string) (string, error)
@@ -21,24 +23,19 @@ type agentService struct {
 	repo          Repository
 	kafkaProducer KafkaProducer
 	serverRepo    server.Repository
+	redisClient   *redis.Client
 }
 
-func NewService(r Repository, k KafkaProducer, serverRepo server.Repository) Service {
-	return &agentService{repo: r, kafkaProducer: k, serverRepo: serverRepo}
+func NewService(r Repository, k KafkaProducer, serverRepo server.Repository, redisClient *redis.Client) Service {
+	return &agentService{repo: r, kafkaProducer: k, serverRepo: serverRepo, redisClient: redisClient}
 }
 
 func (s *agentService) PushMetrics(ctx context.Context, messages []MetricMessage) error {
 	return s.kafkaProducer.PublishMetrics(ctx, messages)
 }
 
-func (s *agentService) AgentExist(ctx context.Context, key string, server *model.Agent) error {
-	hashedKey := auth.HashAPIKey(key)
-	_, err := s.repo.FindByKey(ctx, hashedKey)
-
-	if err != nil {
-		return err
-	}
-	return nil
+func (s *agentService) FindByHashedKey(ctx context.Context, hashedKey string) (*model.Agent, error) {
+	return s.repo.FindByKey(ctx, hashedKey)
 }
 
 func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req RegisterAgentRequest) (*RegisterAgentResponse, error) {
@@ -51,20 +48,20 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 		return nil, fmt.Errorf("There's no server %s exist for this user", req.ServerName)
 	}
 
-	// 2. Check duplicate instance
-	// TODO: Right now, this only prevents registration of duplicated same agents,
-	existing, _ := s.repo.FindByInstance(ctx, server.ID, req.InstanceID)
-	if existing != nil {
-		return nil, fmt.Errorf("Agent with instance ID of %s is already registered for this server", req.InstanceID)
-	}
+	// Check duplicate instance
+	// No need to do this, because there's already constraint in DB to enforce this
+	// existing, _ := s.repo.FindByInstance(ctx, server.ID, req.InstanceID)
+	// if existing != nil {
+	// 	return nil, fmt.Errorf("Agent with instance ID of %s is already registered for this server", req.InstanceID)
+	// }
 
-	// 3. Generate API key
+	// 2. Generate API key
 	rawKey, hashedKey, err := auth.GenerateAPIKey()
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Create agent
+	// 3. Create agent
 	agent := &model.Agent{
 		ServerID:   server.ID,
 		APIKey:     hashedKey,
@@ -77,6 +74,15 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 		return nil, err
 	}
 
+	// 4. Write-through to Redis
+	redisKey := "agent:auth:" + hashedKey
+	err = s.redisClient.Set(ctx, redisKey, server.ID, 0).Err() // no TTL
+	if err != nil {
+		// don't fail the request → system still consistent via DB fallback
+		// but LOG it
+		log.Println("[WARN] failed to write agent key to redis:", err)
+	}
+
 	return &RegisterAgentResponse{
 		ServerID: server.ID,
 		AgentID:  agent.ID,
@@ -85,24 +91,40 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 }
 
 func (s *agentService) RotateAPIKey(ctx context.Context, apiKey string) (string, error) {
-	// 1. find agent by API key
-	hashedKey := auth.HashAPIKey(apiKey)
-	agent, err := s.repo.FindByKey(ctx, apiKey)
+	// 1. hash incoming key
+	oldHashedKey := auth.HashAPIKey(apiKey)
+
+	// 2. find agent by API key
+	agent, err := s.repo.FindByKey(ctx, oldHashedKey)
 	if err != nil {
 		return "", err
 	}
 
-	// 2. generate new key
-	rawKey, hashedKey, err := auth.GenerateAPIKey()
+	// 3. generate new key
+	newRawKey, newlyHashedKey, err := auth.GenerateAPIKey()
 	if err != nil {
 		return "", err
 	}
 
-	// 3. update DB
-	err = s.repo.UpdateAPIKey(ctx, agent.ID, hashedKey)
+	// 4. update DB
+	err = s.repo.UpdateAPIKey(ctx, agent.ID, newlyHashedKey)
 	if err != nil {
 		return "", err
 	}
 
-	return rawKey, nil
+	// 5. update Redis (write-through sync)
+	oldRedisKey := "agent:auth:" + oldHashedKey
+	newRedisKey := "agent:auth:" + newlyHashedKey
+
+	// delete old
+	if err := s.redisClient.Del(ctx, oldRedisKey).Err(); err != nil {
+		log.Println("[WARN] failed to delete old key from redis:", err)
+	}
+
+	// set new
+	if err := s.redisClient.Set(ctx, newRedisKey, agent.ServerID, 0).Err(); err != nil {
+		log.Println("[WARN] failed to set new key to redis:", err)
+	}
+
+	return newRawKey, nil
 }

@@ -3,9 +3,9 @@ package app
 import (
 	"errors"
 
-	"github.com/HenryNg101/server-service/internal/config"
-	"github.com/HenryNg101/server-service/internal/platform/postgres"
-	"github.com/HenryNg101/server-service/internal/server"
+	"github.com/HenryNg101/servers-service/internal/config"
+	"github.com/HenryNg101/servers-service/internal/platform/postgres"
+	"github.com/HenryNg101/servers-service/internal/server"
 	"gorm.io/gorm"
 )
 

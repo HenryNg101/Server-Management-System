@@ -1,33 +1,62 @@
 package auth
 
 import (
+	"log"
+	"strconv"
 	"strings"
+	"sync"
 
-	"github.com/HenryNg101/agent-service/internal/agent"
-	"github.com/HenryNg101/agent-service/internal/model"
-	internalAuth "github.com/HenryNg101/agent-service/internal/shared/auth"
+	"github.com/HenryNg101/agents-service/internal/agent"
+	"github.com/HenryNg101/agents-service/internal/shared/auth"
+	internalAuth "github.com/HenryNg101/agents-service/internal/shared/auth"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
+type LocalCache struct {
+	data map[string]uint
+	mu   sync.RWMutex
+}
+
 // TODO: Fix this
-func AgentAuthMiddleware(agentService agent.Service) gin.HandlerFunc {
+func AgentAuthMiddleware(agentService agent.Service, redisClient *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-Agent-API-Key")
-
 		if apiKey == "" {
 			c.AbortWithStatusJSON(401, gin.H{"error": "missing auth header"})
 			return
 		}
 
-		var agent model.Agent
-		if err := agentService.AgentExist(c, apiKey, &agent); err != nil {
+		hashedKey := auth.HashAPIKey(apiKey)
+		redisKey := "agent:auth:" + hashedKey
+
+		// 1. Try Redis first
+		serverIDStr, err := redisClient.Get(c, redisKey).Result()
+		if err == nil {
+			serverID, _ := strconv.Atoi(serverIDStr)
+			c.Set("server_id", uint(serverID))
+			c.Next()
+			return
+		}
+
+		// 2. If Redis miss → fallback to find in DB
+		if err != redis.Nil {
+			log.Println("[WARN] redis error:", err)
+		}
+
+		agentModel, err := agentService.FindByHashedKey(c, hashedKey)
+		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid api key"})
 			return
 		}
 
-		// attach server_id to context
-		c.Set("server_id", agent.ServerID)
+		// 3. Backfill Redis
+		if err := redisClient.Set(c, redisKey, agentModel.ServerID, 0).Err(); err != nil {
+			log.Println("[WARN] redis backfill failed:", err)
+		}
 
+		// attach server_id to context
+		c.Set("server_id", agentModel.ServerID)
 		c.Next()
 	}
 }

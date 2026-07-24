@@ -41,6 +41,12 @@ type KafkaConfig struct {
 	ServersImportConsumerGroup string
 }
 
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+}
+
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -75,5 +81,13 @@ func LoadKafka() *KafkaConfig {
 		AgentMetricsTopic:         getEnv("KAFKA_AGENT_METRICS_TOPIC", "agent-metrics"),
 		AgentMetricsConsumerGroup: getEnv("KAFKA_AGENT_METRICS_GROUP", "agent-metrics-consumer-group"),
 		AgentMetricsDLQTopic:      getEnv("KAFKA_AGENT_METRICS_DLQ_TOPIC", "agent-metrics-dlq"),
+	}
+}
+
+func LoadRedis() *RedisConfig {
+	return &RedisConfig{
+		Host:     getEnv("REDIS_HOST", "redis"),
+		Port:     getEnv("REDIS_PORT", "6379"),
+		Password: getEnv("REDIS_PASSWORD", ""),
 	}
 }

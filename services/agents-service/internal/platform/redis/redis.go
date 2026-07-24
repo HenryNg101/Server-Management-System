@@ -3,7 +3,7 @@ package redis
 import (
 	"fmt"
 
-	"github.com/HenryNg101/auth-service/internal/config"
+	"github.com/HenryNg101/agents-service/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
