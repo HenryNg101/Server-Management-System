@@ -69,7 +69,9 @@ func (s *agentService) RegisterAgent(ctx context.Context, userID uint, req Regis
 		Status:     "active",
 	}
 
-	agent, err = s.repo.Create(ctx, agent)
+	// Create or replace. 
+	// The only risk is someone having email and password of the user, and override this. But if that happens, user could just reset account information
+	agent, err = s.repo.Upsert(ctx, agent)
 	if err != nil {
 		return nil, err
 	}

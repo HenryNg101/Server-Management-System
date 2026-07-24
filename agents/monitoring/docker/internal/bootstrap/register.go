@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+
+	"github.com/HenryNg101/docker-monitoring-agent/internal/security"
 )
 
 func Register(cfg *Config, secret *Secret, token string) error {
@@ -34,7 +36,14 @@ func Register(cfg *Config, secret *Secret, token string) error {
 		return err
 	}
 
-	secret.APIKeyEncrypted = res.APIKey
+	// Encrypt NEW key before storing
+	key := security.DeriveKey(cfg.InstanceID)
+	encryptedNewKey, err := security.Encrypt(res.APIKey, key)
+	if err != nil {
+		return err
+	}
+
+	secret.APIKeyEncrypted = encryptedNewKey
 	cfg.ServerID = res.ServerID
 
 	return nil

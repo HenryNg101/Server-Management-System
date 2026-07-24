@@ -6,10 +6,11 @@ import (
 
 	"github.com/HenryNg101/agents-service/internal/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository interface {
-	Create(ctx context.Context, agent *model.Agent) (*model.Agent, error)
+	Upsert(ctx context.Context, agent *model.Agent) (*model.Agent, error)
 	FindByKey(ctx context.Context, key string) (*model.Agent, error)
 	FindByInstance(ctx context.Context, serverID uint, instanceID string) (*model.Agent, error)
 	UpdateAPIKey(ctx context.Context, agentID uint, newHash string) error
@@ -23,8 +24,21 @@ func NewRepository(db *gorm.DB) Repository {
 	return &agentRepository{db: db}
 }
 
-func (r *agentRepository) Create(ctx context.Context, agent *model.Agent) (*model.Agent, error) {
-	err := r.db.WithContext(ctx).Create(&agent).Error
+func (r *agentRepository) Upsert(ctx context.Context, agent *model.Agent) (*model.Agent, error) {
+	err := r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "server_id"}, // conflict target
+			},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"api_key":      agent.APIKey,
+				"instance_id":  agent.InstanceID,
+				"status":       agent.Status,
+				"last_seen_at": gorm.Expr("NOW()"),
+			}),
+		}).
+		Create(agent).Error
+
 	return agent, err
 }
 

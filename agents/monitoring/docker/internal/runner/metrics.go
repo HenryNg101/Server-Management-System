@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/HenryNg101/docker-monitoring-agent/internal/metrics"
+	"github.com/HenryNg101/docker-monitoring-agent/internal/security"
 	"github.com/moby/moby/api/types/container"
 )
 
@@ -35,7 +36,14 @@ func (r *Runner) handleMetrics() {
 		return
 	}
 
-	req.Header.Set("X-Agent-API-Key", r.sec.APIKeyEncrypted)
+	// Decrypt before send
+	key := security.DeriveKey(r.cfg.InstanceID)
+	rawKey, err := security.Decrypt(r.sec.APIKeyEncrypted, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.Header.Set("X-Agent-API-Key", rawKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := r.client.Do(req)

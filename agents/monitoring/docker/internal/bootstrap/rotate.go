@@ -3,11 +3,20 @@ package bootstrap
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/HenryNg101/docker-monitoring-agent/internal/security"
 )
 
 func RotateKey(cfg *Config, sec *Secret) error {
+	// Decrypt before sending
+	key := security.DeriveKey(cfg.InstanceID)
+	rawKey, err := security.Decrypt(sec.APIKeyEncrypted, key)
+	if err != nil {
+		return err
+	}
+
 	req, _ := http.NewRequest("POST", cfg.APIURL+"/agents/rotate-key", nil)
-	req.Header.Set("X-Agent-API-Key", sec.APIKeyEncrypted)
+	req.Header.Set("X-Agent-API-Key", rawKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -24,15 +33,13 @@ func RotateKey(cfg *Config, sec *Secret) error {
 		return err
 	}
 
-	// Update in-memory, then persist to disk (overwrite old key)
-	oldKey := sec.APIKeyEncrypted
-	sec.APIKeyEncrypted = res.APIKey
-
-	if err := SaveConfig(cfg, sec); err != nil {
-		// rollback in memory to the old value, if it fails to save it
-		sec.APIKeyEncrypted = oldKey
+	// 3. Encrypt NEW key before storing
+	encryptedNewKey, err := security.Encrypt(res.APIKey, key)
+	if err != nil {
 		return err
 	}
+	// 4. Update ONLY with encrypted value
+	sec.APIKeyEncrypted = encryptedNewKey
 
 	return SaveConfig(cfg, sec)
 }
