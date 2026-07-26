@@ -30,7 +30,7 @@ env_init:
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "if (Test-Path $(ENV_FILE)) { (Get-Content $(ENV_FILE)) -notmatch '^ *HOST=' | Set-Content $(ENV_FILE) }"
 	@powershell -Command "Add-Content $(ENV_FILE) 'HOST=$(HOST)'"
-else
+else ifeq ($(shell uname -s),Linux)
 	@sed -i '/^ *HOST=/d' $(ENV_FILE) 2>/dev/null || true
 	@echo "HOST=$(HOST)" >> $(ENV_FILE)
 endif

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/elastic/go-elasticsearch/v9"
 )
@@ -31,7 +32,9 @@ func (r *elasticAgentRepository) BulkInsertStatus(ctx context.Context, messages 
 			m.ContainerName,
 			m.Timestamp.UnixNano(),
 		)
-		meta := fmt.Sprintf(`{"index":{"_index":"server-metrics","_id":"%s"}}`, docID) + "\n"
+
+		// Data streams only allow "create"
+		meta := fmt.Sprintf(`{"create":{"_index":"server-metrics","_id":"%s"}}`, docID) + "\n"
 
 		// marshal actual document
 		docBytes, err := json.Marshal(m)
@@ -44,14 +47,54 @@ func (r *elasticAgentRepository) BulkInsertStatus(ctx context.Context, messages 
 		buf.WriteString("\n")
 	}
 
-	res, err := r.es.Bulk(bytes.NewReader(buf.Bytes()))
+	res, err := r.es.Bulk(
+		bytes.NewReader(buf.Bytes()),
+		r.es.Bulk.WithContext(ctx),
+		r.es.Bulk.WithRefresh("wait_for"), // good for demo visibility
+	)
+	// res, err := r.es.Bulk(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
 
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
 	if res.IsError() {
-		return fmt.Errorf("bulk insert error: %s", res.String())
+		return fmt.Errorf("bulk insert error: %s", string(body))
+	}
+
+	var bulkResp struct {
+		Errors bool `json:"errors"`
+		Items  []map[string]struct {
+			Status int `json:"status"`
+			Error  *struct {
+				Type   string `json:"type"`
+				Reason string `json:"reason"`
+			} `json:"error,omitempty"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(body, &bulkResp); err != nil {
+		return err
+	}
+
+	if bulkResp.Errors {
+		for _, item := range bulkResp.Items {
+			for action, result := range item {
+				// 409 is normal if the same docID gets retried
+				if result.Status == 409 {
+					continue
+				}
+				if result.Error != nil {
+					return fmt.Errorf("bulk item failed (%s): %s: %s", action, result.Error.Type, result.Error.Reason)
+				}
+			}
+		}
+		// return fmt.Errorf("bulk insert had errors")
 	}
 
 	return nil

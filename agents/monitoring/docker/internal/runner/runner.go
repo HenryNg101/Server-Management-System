@@ -128,7 +128,7 @@ func (r *Runner) flush() {
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		r.cfg.APIURL+"/agent/metrics",
+		r.cfg.APIURL+"/agents/metrics",
 		bytes.NewBuffer(payload),
 	)
 	if err != nil {
