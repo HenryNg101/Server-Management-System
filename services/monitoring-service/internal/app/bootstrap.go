@@ -47,11 +47,10 @@ func NewApp() (*Application, error) {
 	)
 
 	serverRepo := server.NewRepository(postgresSession)
-	elasticServerRepo := server.NewServerESRepository(esSession)
 
 	elasticAgentRepo := agent.NewAgentESRepository(esSession)
 
-	monitoringService := monitoring.NewService(elasticAgentRepo, elasticServerRepo, serverRepo, mailerUtility)
+	monitoringService := monitoring.NewService(elasticAgentRepo, serverRepo, mailerUtility)
 
 	return &Application{
 		PostgresSession:   postgresSession,

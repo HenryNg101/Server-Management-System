@@ -3,7 +3,6 @@ package monitoring
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"maps"
 	"slices"
 	"time"
@@ -19,23 +18,20 @@ type Service interface {
 }
 
 type monitoringService struct {
-	agentElasticRepo  agent.ElasticAgentRepository
-	serverRepo        server.Repository
-	serverElasticRepo server.ElasticServerRepository
-	mailUtility       mailer.MailingUtility
+	agentElasticRepo agent.ElasticAgentRepository
+	serverRepo       server.Repository
+	mailUtility      mailer.MailingUtility
 }
 
 func NewService(
 	agentElastic agent.ElasticAgentRepository,
-	serverElastic server.ElasticServerRepository,
 	serverRepo server.Repository,
 	mailer mailer.MailingUtility,
 ) Service {
 	return &monitoringService{
-		agentElasticRepo:  agentElastic,
-		serverElasticRepo: serverElastic,
-		serverRepo:        serverRepo,
-		mailUtility:       mailer,
+		agentElasticRepo: agentElastic,
+		serverRepo:       serverRepo,
+		mailUtility:      mailer,
 	}
 }
 
@@ -48,7 +44,7 @@ func (s *monitoringService) SendReports(
 	ctx context.Context,
 ) (*Report, error) {
 
-	total, up, down, err := s.serverRepo.GetStats(ctx)
+	total, err := s.serverRepo.GetStats(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +52,15 @@ func (s *monitoringService) SendReports(
 	overview, err := s.GetServersOverview(ctx, startTime, endTime, topN)
 	if err != nil {
 		return nil, err
+	}
+
+	// In push-only mode:
+	// - any server that has agent data in the window is treated as "up"
+	// - servers with no data are "down / no data"
+	up := int64(len(overview))
+	down := total - up
+	if down < 0 {
+		down = 0
 	}
 
 	report := &Report{
@@ -71,15 +76,9 @@ func (s *monitoringService) SendReports(
 
 	html := buildReportHTML(report, startTime, endTime)
 
-	subject := fmt.Sprintf(
-		"Server Report (%s → %s)",
-		startTime.Format("2006-01-02"),
-		endTime.Format("2006-01-02"),
-	)
-
 	// TODO: Add async here, could be through Kafka or some sort of job system
 	go func() {
-		_ = s.mailUtility.Send(*emailsList, subject, html)
+		_ = s.mailUtility.Send(*emailsList, "Server Statuses Report", html)
 	}()
 
 	return report, nil
@@ -91,17 +90,8 @@ func (s *monitoringService) GetServersOverview(ctx context.Context, start, end t
 		return nil, err
 	}
 
-	uptime, err := s.serverElasticRepo.GetDailyUptime(ctx, start, end, topN)
-	if err != nil {
-		return nil, err
-	}
-
 	result := make(map[uint]*ServerOverview)
 
-	for id, u := range uptime {
-		result[id] = &ServerOverview{ServerID: id}
-		result[id].ServerPullStats = *u
-	}
 	for id, m := range metrics {
 		if _, ok := result[id]; !ok {
 			result[id] = &ServerOverview{ServerID: id}
@@ -112,7 +102,7 @@ func (s *monitoringService) GetServersOverview(ctx context.Context, start, end t
 	// Sorting the result by uptime (worst first) and limiting to topN
 	values := slices.Collect(maps.Values(result))
 	slices.SortFunc(values, func(a, b *ServerOverview) int {
-		return cmp.Compare(a.Uptime, b.Uptime) // worst first
+		return cmp.Compare(a.ServerPushStats.Uptime, b.ServerPushStats.Uptime) // worst first
 	})
 	if len(values) > topN {
 		values = values[:topN]

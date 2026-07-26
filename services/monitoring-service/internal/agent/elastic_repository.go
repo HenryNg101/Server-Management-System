@@ -10,6 +10,8 @@ import (
 	"github.com/elastic/go-elasticsearch/v9"
 )
 
+const expectedInterval = 30 * time.Second
+
 type ElasticAgentRepository interface {
 	GetServersStats(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPushStats, error)
 }
@@ -22,6 +24,9 @@ func NewAgentESRepository(es *elasticsearch.Client) ElasticAgentRepository {
 	return &elasticAgentRepository{es: es}
 }
 
+// Basically, the idea is to calculate sum/avg of the stats of all containers in each time bucket at first
+// Then, do it the same, but sum/avg of the stats of all buckets (And yes, min/max for the case of OOM events)
+// And finally, count the number of buckets, divided by the amount of expected buckets -> Uptime percentage
 func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPushStats, error) {
 	query := fmt.Sprintf(`
 		{
@@ -42,122 +47,41 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 			},
 			"aggs": {
 				"per_time": {
-				"date_histogram": {
-					"field": "@timestamp",
-					"fixed_interval": "10s",
-					"min_doc_count": 1
-				},
-				"aggs": {
-					"cpu_usage_sum": {
-					"sum": { "field": "cpu.usage" }
+					"date_histogram": {
+						"field": "@timestamp",
+						"fixed_interval": "%s",
+						"min_doc_count": 1
 					},
-					"cpu_throttling_avg": {
-					"avg": { "field": "cpu.throttling" }
-					},
-					"cpu_pressure_avg": {
-					"avg": { "field": "cpu.pressure" }
-					},
-
-					"memory_usage_avg": {
-					"avg": { "field": "memory.usage" }
-					},
-					"memory_ws_sum": {
-					"sum": { "field": "memory.working_set" }
-					},
-					"memory_rss_sum": {
-					"sum": { "field": "memory.rss" }
-					},
-					"memory_pressure_avg": {
-					"avg": { "field": "memory.pressure" }
-					},
-
-					"read_bps_sum": {
-					"sum": { "field": "io.read_bps" }
-					},
-					"write_bps_sum": {
-					"sum": { "field": "io.write_bps" }
-					},
-					"io_pressure_avg": {
-					"avg": { "field": "io.pressure" }
-					},
-
-					"pids_sum": {
-					"sum": { "field": "pids" }
+					"aggs": {
+						"cpu_usage_sum": { "sum": { "field": "cpu.usage" } },
+						"cpu_throttling_avg": { "avg": { "field": "cpu.throttling" } },
+						"cpu_pressure_avg": { "avg": { "field": "cpu.pressure" } },
+						"memory_usage_avg": { "avg": { "field": "memory.usage" } },
+						"memory_ws_sum": { "sum": { "field": "memory.working_set" } },
+						"memory_rss_sum": { "sum": { "field": "memory.rss" } },
+						"memory_pressure_avg": { "avg": { "field": "memory.pressure" } },
+						"read_bps_sum": { "sum": { "field": "io.read_bps" } },
+						"write_bps_sum": { "sum": { "field": "io.write_bps" } },
+						"io_pressure_avg": { "avg": { "field": "io.pressure" } },
+						"pids_sum": { "sum": { "field": "pids" } }
 					}
-				}
 				},
 
-				"cpu_usage_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>cpu_usage_sum"
-				}
-				},
-				"cpu_throttling_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>cpu_throttling_avg"
-				}
-				},
-				"cpu_pressure_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>cpu_pressure_avg"
-				}
-				},
-
-				"memory_usage_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>memory_usage_avg"
-				}
-				},
-				"memory_ws_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>memory_ws_sum"
-				}
-				},
-				"memory_rss_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>memory_rss_sum"
-				}
-				},
-				"memory_pressure_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>memory_pressure_avg"
-				}
-				},
-
-				"read_bps_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>read_bps_sum"
-				}
-				},
-				"write_bps_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>write_bps_sum"
-				}
-				},
-				"io_pressure_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>io_pressure_avg"
-				}
-				},
-
-				"pids_overall": {
-				"avg_bucket": {
-					"buckets_path": "per_time>pids_sum"
-				}
-				},
-
-				"oom_events_max": {
-				"max": { "field": "oom.events" }
-				},
-				"oom_events_min": {
-				"min": { "field": "oom.events" }
-				},
-				"oom_kills_max": {
-				"max": { "field": "oom.kills" }
-				},
-				"oom_kills_min": {
-				"min": { "field": "oom.kills" }
-				}
+				"cpu_usage_overall": { "avg_bucket": { "buckets_path": "per_time>cpu_usage_sum" } },
+				"cpu_throttling_overall": { "avg_bucket": { "buckets_path": "per_time>cpu_throttling_avg" } },
+				"cpu_pressure_overall": { "avg_bucket": { "buckets_path": "per_time>cpu_pressure_avg" } },
+				"memory_usage_overall": { "avg_bucket": { "buckets_path": "per_time>memory_usage_avg" } },
+				"memory_ws_overall": { "avg_bucket": { "buckets_path": "per_time>memory_ws_sum" } },
+				"memory_rss_overall": { "avg_bucket": { "buckets_path": "per_time>memory_rss_sum" } },
+				"memory_pressure_overall": { "avg_bucket": { "buckets_path": "per_time>memory_pressure_avg" } },
+				"read_bps_overall": { "avg_bucket": { "buckets_path": "per_time>read_bps_sum" } },
+				"write_bps_overall": { "avg_bucket": { "buckets_path": "per_time>write_bps_sum" } },
+				"io_pressure_overall": { "avg_bucket": { "buckets_path": "per_time>io_pressure_avg" } },
+				"pids_overall": { "avg_bucket": { "buckets_path": "per_time>pids_sum" } },
+				"oom_events_max": { "max": { "field": "oom.events" } },
+				"oom_events_min": { "min": { "field": "oom.events" } },
+				"oom_kills_max": { "max": { "field": "oom.kills" } },
+				"oom_kills_min": { "min": { "field": "oom.kills" } }
 			}
 			}
 		}
@@ -166,6 +90,7 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 		startTime.Format(time.RFC3339),
 		endTime.Format(time.RFC3339),
 		topN,
+		expectedInterval,
 	)
 
 	res, err := r.es.Search(
@@ -189,12 +114,32 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 
 	result := make(map[uint]*ServerPushStats)
 
-	aggs := raw["aggregations"].(map[string]interface{})
-	servers := aggs["servers"].(map[string]interface{})
-	buckets := servers["buckets"].([]interface{})
+	aggs, ok := raw["aggregations"].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	servers, ok := aggs["servers"].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	buckets, ok := servers["buckets"].([]interface{})
+	if !ok {
+		return result, nil
+	}
+
+	// The agent sends every 30s now, so keep this aligned with the agent interval.
+	expectedBuckets := int(endTime.Sub(startTime) / expectedInterval)
+	if expectedBuckets < 1 {
+		expectedBuckets = 1
+	}
 
 	for _, b := range buckets {
-		bucket := b.(map[string]interface{})
+		bucket, ok := b.(map[string]interface{})
+		if !ok {
+			continue
+		}
 
 		serverID := uint(bucket["key"].(float64))
 
@@ -203,6 +148,26 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 				return v
 			}
 			return 0
+		}
+
+		// Count how many time buckets actually contain docs.
+		// This is the push-based uptime definition.
+		actualBuckets := 0
+		if perTime, ok := bucket["per_time"].(map[string]interface{}); ok {
+			if tb, ok := perTime["buckets"].([]interface{}); ok {
+				for _, item := range tb {
+					if m, ok := item.(map[string]interface{}); ok {
+						if dc, ok := m["doc_count"].(float64); ok && int(dc) > 0 {
+							actualBuckets++
+						}
+					}
+				}
+			}
+		}
+
+		uptime := 0.0
+		if expectedBuckets > 0 {
+			uptime = float64(actualBuckets) / float64(expectedBuckets) * 100
 		}
 
 		stats := &ServerPushStats{
@@ -223,6 +188,8 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 
 			OOMEventsTotal: getVal("oom_events_max") - getVal("oom_events_min"),
 			OOMKillsTotal:  getVal("oom_kills_max") - getVal("oom_kills_min"),
+
+			Uptime: uptime,
 		}
 
 		result[serverID] = stats

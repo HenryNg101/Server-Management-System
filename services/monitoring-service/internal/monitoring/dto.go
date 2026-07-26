@@ -2,7 +2,6 @@ package monitoring
 
 import (
 	"github.com/HenryNg101/monitoring-service/internal/agent"
-	"github.com/HenryNg101/monitoring-service/internal/server"
 )
 
 type SendReportRequest struct {
@@ -21,10 +20,6 @@ type Report struct {
 
 type ServerOverview struct {
 	ServerID uint
-
-	// Embed the structs here to centralize monitoring data easier
-	// Pull model (Ping based)
-	server.ServerPullStats
 
 	// Push model (agent based)
 	agent.ServerPushStats

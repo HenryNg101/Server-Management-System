@@ -18,4 +18,6 @@ type ServerPushStats struct {
 
 	OOMEventsTotal float64 `json:"oom_events_total"`
 	OOMKillsTotal  float64 `json:"oom_kills_total"`
+
+	Uptime float64 `json:"uptime"`
 }
