@@ -10,10 +10,10 @@ import (
 	"github.com/elastic/go-elasticsearch/v9"
 )
 
-const expectedInterval = 30 * time.Second
+const reportBucketInterval = 30 * time.Second
 
 type ElasticAgentRepository interface {
-	GetServersStats(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPushStats, error)
+	GetServersStats(ctx context.Context, startTime time.Time, endTime time.Time, topN int, serverCreatedAt map[uint]time.Time) (map[uint]*ServerPushStats, error)
 }
 
 type elasticAgentRepository struct {
@@ -27,7 +27,13 @@ func NewAgentESRepository(es *elasticsearch.Client) ElasticAgentRepository {
 // Basically, the idea is to calculate sum/avg of the stats of all containers in each time bucket at first
 // Then, do it the same, but sum/avg of the stats of all buckets (And yes, min/max for the case of OOM events)
 // And finally, count the number of buckets, divided by the amount of expected buckets -> Uptime percentage
-func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime time.Time, endTime time.Time, topN int) (map[uint]*ServerPushStats, error) {
+func (r *elasticAgentRepository) GetServersStats(
+	ctx context.Context,
+	startTime time.Time,
+	endTime time.Time,
+	topN int,
+	serverCreatedAt map[uint]time.Time,
+) (map[uint]*ServerPushStats, error) {
 	query := fmt.Sprintf(`
 		{
 		"size": 0,
@@ -90,7 +96,7 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 		startTime.Format(time.RFC3339),
 		endTime.Format(time.RFC3339),
 		topN,
-		expectedInterval,
+		reportBucketInterval,
 	)
 
 	res, err := r.es.Search(
@@ -130,10 +136,10 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 	}
 
 	// The agent sends every 30s now, so keep this aligned with the agent interval.
-	expectedBuckets := int(endTime.Sub(startTime) / expectedInterval)
-	if expectedBuckets < 1 {
-		expectedBuckets = 1
-	}
+	// expectedBuckets := int(endTime.Sub(startTime) / reportBucketInterval)
+	// if expectedBuckets < 1 {
+	// 	expectedBuckets = 1
+	// }
 
 	for _, b := range buckets {
 		bucket, ok := b.(map[string]interface{})
@@ -165,9 +171,25 @@ func (r *elasticAgentRepository) GetServersStats(ctx context.Context, startTime 
 			}
 		}
 
+		// Clamp the start time for this server to its own creation time.
+		effectiveStart := startTime.UTC()
+		if createdAt, ok := serverCreatedAt[serverID]; ok {
+			if createdAt.After(effectiveStart) {
+				effectiveStart = createdAt.UTC()
+			}
+		}
+
 		uptime := 0.0
-		if expectedBuckets > 0 {
+		if effectiveStart.Before(endTime.UTC()) || effectiveStart.Equal(endTime.UTC()) {
+			expectedBuckets := int(endTime.UTC().Sub(effectiveStart) / reportBucketInterval)
+			if expectedBuckets < 1 {
+				expectedBuckets = 1
+			}
+
 			uptime = float64(actualBuckets) / float64(expectedBuckets) * 100
+			if uptime > 100 {
+				uptime = 100
+			}
 		}
 
 		stats := &ServerPushStats{

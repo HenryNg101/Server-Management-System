@@ -1,6 +1,8 @@
 package monitoring
 
 import (
+	"time"
+
 	"github.com/HenryNg101/monitoring-service/internal/agent"
 )
 
@@ -20,6 +22,11 @@ type Report struct {
 
 type ServerOverview struct {
 	ServerID uint
+
+	// The time window actually used for uptime calculation for this server.
+	// This is clamped to max(report_start, server_created_at).
+	ActualStart time.Time `json:"actual_start"`
+	ActualEnd   time.Time `json:"actual_end"`
 
 	// Push model (agent based)
 	agent.ServerPushStats

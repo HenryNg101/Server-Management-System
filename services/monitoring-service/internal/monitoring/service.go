@@ -35,6 +35,13 @@ func NewService(
 	}
 }
 
+func maxTime(a, b time.Time) time.Time {
+	if b.After(a) {
+		return b
+	}
+	return a
+}
+
 // TODO: Add proper sorting for top N servers based on uptime and other metrics, which we needs to decide further on it, maybe some scoring would be needed
 func (s *monitoringService) SendReports(
 	startTime time.Time,
@@ -85,7 +92,12 @@ func (s *monitoringService) SendReports(
 }
 
 func (s *monitoringService) GetServersOverview(ctx context.Context, start, end time.Time, topN int) ([]*ServerOverview, error) {
-	metrics, err := s.agentElasticRepo.GetServersStats(ctx, start, end, topN)
+	createdAtMap, err := s.serverRepo.GetCreatedAtMap(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics, err := s.agentElasticRepo.GetServersStats(ctx, start, end, topN, createdAtMap)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +105,17 @@ func (s *monitoringService) GetServersOverview(ctx context.Context, start, end t
 	result := make(map[uint]*ServerOverview)
 
 	for id, m := range metrics {
-		if _, ok := result[id]; !ok {
-			result[id] = &ServerOverview{ServerID: id}
+		actualStart := start
+		if createdAt, ok := createdAtMap[id]; ok {
+			actualStart = maxTime(start, createdAt)
 		}
-		result[id].ServerPushStats = *m
+
+		result[id] = &ServerOverview{
+			ServerID:        id,
+			ActualStart:     actualStart,
+			ActualEnd:       end,
+			ServerPushStats: *m,
+		}
 	}
 
 	// Sorting the result by uptime (worst first) and limiting to topN

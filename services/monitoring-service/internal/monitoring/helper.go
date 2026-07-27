@@ -1,61 +1,3 @@
-// package monitoring
-
-// import (
-// 	"fmt"
-// 	"strings"
-// 	"time"
-// )
-
-// func buildReportHTML(report *Report, startTime, endTime time.Time) string {
-// 	var b strings.Builder
-
-// 	b.WriteString("<h2>Server Report</h2>")
-// 	b.WriteString(fmt.Sprintf(
-// 		"<p><b>Period:</b> %s → %s</p>",
-// 		startTime.Format("2006-01-02"),
-// 		endTime.Format("2006-01-02"),
-// 	))
-
-// 	// Summary
-// 	b.WriteString("<h3>Summary</h3>")
-// 	b.WriteString(fmt.Sprintf(`
-// 	<ul>
-// 		<li>Total Servers: %d</li>
-// 		<li>Up: %d</li>
-// 		<li>Down: %d</li>
-// 	</ul>
-// 	`, report.TotalServers, report.ServersUp, report.ServersDown))
-
-// 	// Table report
-// 	b.WriteString("<h3>Servers stats</h3>")
-// 	b.WriteString(`<table border="1" cellpadding="5" cellspacing="0">
-// 	<tr>
-// 		<th>Server ID</th>
-// 		<th>Uptime</th>
-// 		<th>CPU Avg</th>
-// 		<th>Memory Avg</th>
-// 	</tr>`)
-
-// 	for _, s := range report.Stats {
-// 		b.WriteString(fmt.Sprintf(
-// 			`<tr>
-// 				<td>%d</td>
-// 				<td>%.2f%%</td>
-// 				<td>%.2f</td>
-// 				<td>%.2f</td>
-// 			</tr>`,
-// 			s.ServerID,
-// 			s.Uptime*100,
-// 			s.CPUUsageAvg,
-// 			s.MemoryUsageAvg,
-// 		))
-// 	}
-
-// 	b.WriteString("</table>")
-
-// 	return b.String()
-// }
-
 package monitoring
 
 import (
@@ -101,7 +43,7 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       color: #1f2937;
     }
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       background: #ffffff;
       border-radius: 16px;
@@ -144,6 +86,11 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       font-size: 18px;
       color: #0f172a;
     }
+    .note {
+      margin: 10px 0 18px;
+      color: #475569;
+      font-size: 13px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -159,6 +106,7 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       padding: 12px 14px;
       border-bottom: 1px solid #e2e8f0;
       white-space: nowrap;
+      vertical-align: bottom;
     }
     tbody td {
       padding: 12px 14px;
@@ -187,6 +135,10 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       font-size: 12px;
       color: #64748b;
       margin-top: 4px;
+      line-height: 1.35;
+    }
+    .window {
+      min-width: 210px;
     }
     @media (max-width: 900px) {
       .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -222,16 +174,21 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       </div>
     </div>
 
-    <div class="section-title">Top servers by lowest uptime</div>
+    <div class="section-title">Servers by lowest uptime</div>
+    <div class="note">
+      Uptime is calculated from push telemetry only. For each server, the report window is clamped to the server’s own creation time so a newly created server is not penalized for time before it existed.
+    </div>
+
     <table>
       <thead>
         <tr>
-          <th>Server ID</th>
+          <th>Server</th>
+          <th>Actual monitoring window</th>
           <th>Uptime</th>
           <th>CPU avg</th>
           <th>Memory usage avg</th>
-          <th>Memory working set avg</th>
-          <th>Memory RSS avg</th>
+          <th>Working set avg</th>
+          <th>RSS avg</th>
           <th>IO read avg</th>
           <th>IO write avg</th>
           <th>PIDs avg</th>
@@ -242,10 +199,17 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
       <tbody>
         {{range .Stats}}
         <tr>
-          <td>{{.ServerID}}</td>
+          <td>
+            <div class="metric">#{{.ServerID}}</div>
+          </td>
+          <td class="window">
+            <div>{{formatTime .ActualStart}}</div>
+            <div class="small">→ {{formatTime .ActualEnd}}</div>
+            <div class="small">Duration: {{duration .ActualStart .ActualEnd}}</div>
+          </td>
           <td>
             <span class="badge {{uptimeClass .Uptime}}">{{formatPct .Uptime}}</span>
-            <div class="small">Availability in the selected window</div>
+            <div class="small">Availability in the observed window</div>
           </td>
           <td>
             <span class="metric">{{formatFloat .CPUUsageAvg}}</span>
@@ -275,8 +239,12 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
             <span class="metric">{{formatFloat .PIDsAvg}}</span>
             <div class="small">processes</div>
           </td>
-          <td>{{formatFloat .OOMEventsTotal}}</td>
-          <td>{{formatFloat .OOMKillsTotal}}</td>
+          <td>
+            <span class="metric">{{formatFloat .OOMEventsTotal}}</span>
+          </td>
+          <td>
+            <span class="metric">{{formatFloat .OOMKillsTotal}}</span>
+          </td>
         </tr>
         {{end}}
       </tbody>
@@ -287,19 +255,28 @@ func buildReportHTML(report *Report, startTime, endTime time.Time) string {
 
 	funcMap := template.FuncMap{
 		"formatPct": func(v float64) string {
-			return template.HTMLEscapeString(fmt.Sprintf("%.2f%%", v))
+			return fmt.Sprintf("%.2f%%", v)
 		},
 		"formatFloat": func(v float64) string {
-			return template.HTMLEscapeString(fmt.Sprintf("%.2f", v))
+			return fmt.Sprintf("%.2f", v)
 		},
 		"formatRate": func(v float64) string {
-			return template.HTMLEscapeString(fmt.Sprintf("%.2f", v))
+			return fmt.Sprintf("%.2f", v)
 		},
 		"formatBytes": func(v float64) string {
-			// Your collector currently returns raw numeric values.
-			// I’m labeling these as MiB in the report for readability.
-			// If your metric is already bytes, convert here later.
-			return template.HTMLEscapeString(fmt.Sprintf("%.2f", v))
+			return fmt.Sprintf("%.2f", v)
+		},
+		"formatTime": func(t time.Time) string {
+			if t.IsZero() {
+				return "-"
+			}
+			return t.Format("2006-01-02 15:04:05")
+		},
+		"duration": func(start, end time.Time) string {
+			if start.IsZero() || end.IsZero() || end.Before(start) {
+				return "-"
+			}
+			return end.Sub(start).Truncate(time.Second).String()
 		},
 		"uptimeClass": func(v float64) string {
 			switch {
