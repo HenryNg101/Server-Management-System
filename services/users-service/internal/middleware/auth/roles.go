@@ -4,8 +4,14 @@ import "github.com/gin-gonic/gin"
 
 func RequireRoles(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, exists := c.Get("role")
+		userRoleRaw, exists := c.Get("role")
 		if !exists {
+			c.AbortWithStatusJSON(403, gin.H{"error": "forbidden"})
+			return
+		}
+
+		userRole, ok := userRoleRaw.(string)
+		if !ok {
 			c.AbortWithStatusJSON(403, gin.H{"error": "forbidden"})
 			return
 		}

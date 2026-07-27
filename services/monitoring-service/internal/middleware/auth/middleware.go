@@ -28,6 +28,11 @@ func UserAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if claims.Type != "access" {
+			c.AbortWithStatusJSON(401, gin.H{"error": "invalid token type"})
+			return
+		}
+
 		c.Set("userID", claims.UserID)
 		c.Set("role", claims.Role)
 
