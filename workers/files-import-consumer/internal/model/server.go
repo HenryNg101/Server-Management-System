@@ -1,18 +1,19 @@
 package model
 
-import (
-	"time"
-)
+import "time"
 
 type Server struct {
-	ID          uint      `gorm:"primarykey"`
-	Name        string    `gorm:"unique;not null"`
-	Status      bool      `gorm:"not null"`                // Server status at the time (Is it on or off)
-	IPv4Address string    `gorm:"type:inet;not null"`      // IPv4 of the server
-	Port        uint      `gorm:"check:port <= 65535"`     // Port of the server
-	Protocol    string    `gorm:"not null;default:tcp"`    // Network protocol that the server use, could be TCP, FTP, SSH, etc.
-	CreatedAt   time.Time `gorm:"not null;autoCreateTime"` // Automatically managed by GORM for creation time
-	LastUpdated time.Time `gorm:"not null;autoUpdateTime"` // Last time the server got updated
+	ID     uint `gorm:"primaryKey"`
+	UserID uint `gorm:"uniqueIndex:idx_user_server_name"`
 
-	// Memberships []Membership `gorm:"foreignKey:ServerID"` // Manage many-to-many relationship between servers and users
+	Name      string    `gorm:"not null;uniqueIndex:idx_user_server_name"`
+	IPv4      string    `gorm:"column:ipv4_address;type:inet"`
+	CreatedAt time.Time `gorm:"not null;autoCreateTime"`
+	UpdatedAt time.Time `gorm:"column:last_updated;not null;autoUpdateTime"`
+
+	User   User    `gorm:"foreignKey:UserID"`
+	Agents []Agent `gorm:"foreignKey:ServerID"`
+
+	// Optional: enforce unique per user
+	// gorm:"uniqueIndex:idx_user_server_name"
 }

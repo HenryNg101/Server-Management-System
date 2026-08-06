@@ -1,299 +1,186 @@
-# SMS-X (Server Management System)
+# SMS-X — Server Management System
 
-SMS-X is a system used for managing and monitoring up to 10,000 servers.
+SMS-X manages server endpoints and their monitoring data at scale. It provides server inventory management, agent-based metrics ingestion, CSV import/export, uptime reporting, and role-based access through independently deployable Go services.
 
-It allows users to:
-- Register and manage servers (IP + port)
-- Monitor server health in near real-time
-- Query server status via APIs
-- Generate uptime reports
-- Receive email notifications
+## Components
 
+- **Services:** authentication, users, servers, agents, jobs, and monitoring.
+- **Workers:** metrics ingestion, file import processing, and scheduled reporting.
+- **Infrastructure:** PostgreSQL, Redis, Elasticsearch, Kafka, MinIO, Traefik, and Kibana.
+- **Frontend:** a React/Vite operations console in [`frontend/`](frontend/).
 
+## Prerequisites
 
-# Features
+- Docker Desktop with Docker Compose v2
+- GNU Make (or run the equivalent `docker compose` commands)
+- Go 1.25+ only when running tools such as migrations or Swagger generation locally
 
-- Server CRUD (Create, Read, Update, Delete)
-- Server health checking (every 5 seconds)
-- CSV import/export
-- JWT authentication (access + refresh tokens)
-- Role-based access (admin / user)
-- Elasticsearch-based uptime analytics
-- Email reporting
-- Agent-based monitoring to collect metrics from client's servers
+## Configuration and startup
 
+Create a local `.env.docker` file in the repository root. It is intentionally ignored by Git; use the following development template and replace every placeholder before starting the stack:
 
+```dotenv
+# Docker networking (make env_init writes the active host IP on Windows/WSL)
+HOST=127.0.0.1
 
-# Tech Stack
-
-- **Golang**
-- **PostgreSQL** (primary database)
-- **Elasticsearch** (log storage & analytics)
-- **Redis** (refresh token storage)
-- **Docker Compose** (infrastructure)
-- **Swaggo** (OpenAPI documentation)
-
-
-
-# Setup
-
-## 1. Environment Variables
-
-Create an environment variable file in the root directory:
-
-```
+# PostgreSQL
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=...
+POSTGRES_PASSWORD=change-me
 POSTGRES_DB=postgres
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 
+# Elasticsearch and Kibana
 ELASTIC_USER=elastic
-ELASTIC_PASSWORD=...
-KIBANA_PASSWORD=...
+ELASTIC_PASSWORD=change-me
+KIBANA_PASSWORD=change-me
 ELASTIC_HOST=http://elasticsearch
 ELASTIC_PORT=9200
 ELASTIC_STATUS_DATA_STREAM_SOURCE=server-status
-ELASTIC_METRICS_DATA_STREAM_SOURCE=server-metric
+ELASTIC_METRICS_DATA_STREAM_SOURCE=server-metrics
 
+# Redis
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=...
+REDIS_PASSWORD=change-me
 
-# Information to setup mail server
-MAIL_SERVER=smtp.gmail.com
+# Kafka
+KAFKA_HOST=kafka
+KAFKA_PORT=9092
+
+# MinIO
+MINIO_ENDPOINT=minio:9000
+MINIO_PUBLIC_ENDPOINT=host.docker.internal:9000
+MINIO_ACCESS_KEY=change-me
+MINIO_SECRET_KEY=change-me
+MINIO_USE_SSL=false
+
+# SMTP mail delivery
+MAIL_SERVER=smtp.example.com
 MAIL_PORT=587
-MAIL_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
-MAIL_PASSWORD=your_app_password
-MAIL_FROM_USER=[your_email@gmail.com](mailto:your_email@gmail.com)
-
-JWT_SECRET=...
-
-# Client stuff. For testing monitoring agent on sample server
-CLIENT_AGENT_SERVER_ID=1
-CLIENT_AGENT_API_SERVER = http://host.docker.internal:8080
-
-# Generated API key that's given to youwhen you register a server to the system
-CLIENT_AGENT_API_KEY = ...
-````
-
-## 2. How to run
-
-### For dev environment
-
-Setup:
-```bash
-make dev.up ENV_FILE="Your env file's path"
-````
-
-Tear down:
-```bash
-make dev.down
-````
-
-Services:
-
-* PostgreSQL
-* Redis
-* Elasticsearch
-* Kibana
-* API Server: Gin application to expose all APIs for usage
-* Server Checker Worker: A worker that runs every 5 seconds to checks server's reachability using ping, then updates information to Elasticsearch, and logs to Elasticsearch for append-only logs
-* Email worker: Sends daily reports via email
-
-**Note**: Elasticsearch may take some time to fully start.
-
-### For prod simulation
-
-Prod has quite similar settings, with the exception of exposing minimal service ports and disable debugging information for security purposes
-
-Start up:
-```bash
-make prod.up ENV_FILE="Your env file's path"
-```
-
-Tear down:
-```bash
-make prod.down
-```
-
-Check logs of the whole system:
-```bash
-make prod.logs
-```
-
-Check logs of specific services:
-```bash
-make prod.logs SERVICE="service name to check logs"
-```
-
-## 3. (Optional) Simulation
-
-```bash
-go run ./cmd/simulation
-```
-
-* Simulates opening 10k services on 10k ports on localhost
-* For testing only (not production)
+MAIL_USER=notifications@example.com
+MAIL_PASSWORD=change-me
+MAIL_FROM_USER=notifications@example.com
 
 # Authentication
-
-## Login
-
-```http
-POST /auth/login
+JWT_SECRET=replace-with-a-long-random-secret
 ```
 
-Body:
+Start the development stack:
 
-```json
-{
-  "email": "admin@example.com",
-  "password": "password"
-}
+```bash
+make dev.up ENV_FILE=.env.docker
 ```
 
-Response:
+Stop it:
 
-* Access token
-* Refresh token
-
-## Refresh Token
-
-```http
-POST /auth/refresh
+```bash
+make dev.down
 ```
 
-## Logout
+`make dev.up` applies pending PostgreSQL migrations through the `postgres-migrate` Compose service before starting dependent application services. Use the service-specific Swagger documentation under `services/<service>/docs/` to explore APIs.
 
-```http
-POST /auth/logout
+## PostgreSQL migrations
+
+Migration SQL files live in [`migrations/`](migrations/). The system uses [`golang-migrate`](https://github.com/golang-migrate/migrate).
+
+### Run through Docker Compose
+
+When the database container is running, rerun all pending migrations with:
+
+```bash
+ENV_FILE=.env.docker docker compose --env-file .env.docker -f docker-compose.infra.yml run --rm postgres-migrate
 ```
 
-# API Overview
+### Run locally with the migrate CLI
 
-You can see all documented APIs through Swagger OpenAPI docs by accessing `/swagger/index.html` after the application is up
+Install the PostgreSQL-enabled CLI once:
 
-## Public APIs
-
-* `POST /auth/login`
-* `POST /auth/refresh`
-* `POST /auth/logout`
-
-
-
-## Authenticated APIs
-
-* `GET /servers/`
-* `GET /servers/{id}`
-* `GET /users`
-
-Supports:
-
-* Filtering
-* Pagination (offset-based)
-* Sorting
-
-
-
-## Admin APIs
-
-* `POST /servers`
-
-* `PATCH /servers/{id}`
-
-* `DELETE /servers/{id}`
-
-* `POST /jobs/import-server` (CSV)
-
-* `GET /jobs/{id}` (CSV)
-
-* `GET /api/v1/servers/export` (CSV)
-
-* `POST /monitoring/report`
-
-* `POST /users`
-
-
-
-# Reporting
-
-## Generate Report
-
-```http
-POST /api/v1/servers/report
+```bash
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 ```
 
-Body:
+Set a connection string that reaches the forwarded PostgreSQL port. With the default development configuration, replace `<HOST>` with the value written to `HOST` in `.env.docker` by `make env_init`.
 
-```json
-{
-  "start_time": "2026-05-01T00:00:00Z",
-  "end_time": "2026-05-02T00:00:00Z",
-  "top_n": 10,
-  "emails": ["admin@example.com"]
-}
+```bash
+export DATABASE_URL='postgres://postgres:secret@<HOST>:5432/postgres?sslmode=disable'
 ```
 
-Returns:
+On PowerShell:
 
-* Total servers
-* Servers up/down
-* Uptime per server
-
-Optionally sends email report.
-
-
-
-# OpenAPI Docs
-
-Generate docs (Runs this on WSL if you are using Windows):
-
-- If you haven't got swag-go command line tool available (Skip this if it's available on your terminal):
-  ```bash
-  go install github.com/swaggo/swag/cmd/swag@latest
-  ```
-
-- Then: 
-  ```bash
-  swag init -g ./internal/app/api.go
-  ```
-
-Docs available in `/docs`, and can be viewed and tested at http://<host>:8080/swagger/index.html when running in local
-
-# Notes
-
-* Elasticsearch must be fully started (healthy status) before testing
-
-# Testing
-
-Unit test coverage is limited in this version due to time constraints.
-
-The codebase is structured to support testing with clear separation of:
-
-* handler
-* service
-* repository
-
-# Future Improvements
-
-* Full RBAC system
-* Redis caching layer
-* Improved test coverage
-* Horizontal scaling
-
-# Project Structure
-
+```powershell
+$env:DATABASE_URL = 'postgres://postgres:secret@<HOST>:5432/postgres?sslmode=disable'
 ```
-/cmd - Old monolith apps + example client app for testing
-/internal - Old monolith internal
-/migrations - Postgres migrations 
-/services - Splitted services as independent applications in the service-oriented architecture
-/scripts - Setup scripts for infra tools
-/workers - Internal workers of the system
-/docs - OpenAPI docs
-docker-compose.*.yml
-Makefile
-go.mod
-go.sum
+
+Apply all pending migrations:
+
+```bash
+migrate -path migrations -database "$DATABASE_URL" up
+```
+
+Roll back only the most recently applied migration:
+
+```bash
+migrate -path migrations -database "$DATABASE_URL" down 1
+```
+
+Inspect the current migration version:
+
+```bash
+migrate -path migrations -database "$DATABASE_URL" version
+```
+
+`down` without a number rolls back every migration and is intentionally not recommended for normal development. If a migration fails and leaves the database marked dirty, inspect and correct the migration before using `migrate force <version>`.
+
+### Development users
+
+The initial database contains no users, so authentication cannot bootstrap itself through the API. After migrations have completed, seed local-only accounts:
+
+```bash
+psql "$DATABASE_URL" -f scripts/postgres/seed-dev-users.sql
+```
+
+This creates these accounts only if they do not already exist:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Administrator | `admin@example.com` | `password` |
+| User | `user@example.com` | `password` |
+
+The seed script is for local development only. Change or remove these accounts before using any non-local database.
+
+## Authentication and access
+
+`POST /auth/login` returns short-lived access and refresh JWTs. Protected APIs require the access token as `Authorization: Bearer <token>`; refresh tokens can be rotated through `POST /auth/refresh` and invalidated through `POST /auth/logout`.
+
+The backend remains the authorization authority. In the current services, all authenticated users can work with the server records they own; administrators can access all server records and the admin-only user, import-job, and reporting operations.
+
+## API documentation
+
+Each service owns its API definition:
+
+- `services/auth-service/docs/`
+- `services/users-service/docs/`
+- `services/servers-service/docs/`
+- `services/agents-service/docs/`
+- `services/jobs-service/docs/`
+- `services/monitoring-service/docs/`
+
+To regenerate one service’s Swagger files, run this from that service directory:
+
+```bash
+swag init -g ./internal/app/api.go
+```
+
+## Useful commands
+
+```bash
+# Build the currently selected development images serially to reduce Docker resource pressure
+make dev.build ENV_FILE=.env.docker
+
+# Follow logs for one service
+make prod.logs SERVICE=servers-service
+
+# Start the sample monitoring-agent client stack
+make client.up ENV_FILE_CLIENT=.env.client
 ```

@@ -8,4 +8,5 @@ type ImportFailure struct {
 type ImportJobMessage struct {
 	JobID     string `json:"job_id"`
 	ObjectKey string `json:"key"` // MinIO object key
+	// UserID    uint   `json:"user_id"`
 }

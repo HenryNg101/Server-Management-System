@@ -3,7 +3,7 @@ package jobs
 import (
 	"errors"
 	"net"
-	"strconv"
+	"strings"
 
 	"github.com/HenryNg101/files-import-consumer/internal/model"
 )
@@ -16,37 +16,55 @@ func mapRow(headers, row []string) map[string]string {
 	return m
 }
 
-func parseServer(record map[string]string) (*model.Server, error) {
-	name := record["name"]
+// func parseServer(record map[string]string) (*model.Server, error) {
+// 	name := record["name"]
+// 	if name == "" {
+// 		return nil, errors.New("name is required")
+// 	}
+
+// 	status, err := strconv.ParseBool(record["status"])
+// 	if err != nil {
+// 		return nil, errors.New("invalid status")
+// 	}
+
+// 	ip := record["ipv4_address"]
+// 	if net.ParseIP(ip) == nil {
+// 		return nil, errors.New("invalid IP")
+// 	}
+
+// 	port, err := strconv.Atoi(record["port"])
+// 	if err != nil || port < 0 || port > 65535 {
+// 		return nil, errors.New("invalid port")
+// 	}
+
+// 	protocol := record["protocol"]
+// 	if protocol == "" {
+// 		protocol = "tcp"
+// 	}
+
+// 	return &model.Server{
+// 		Name:        name,
+// 		Status:      status,
+// 		IPv4Address: ip,
+// 		Port:        uint(port),
+// 		Protocol:    protocol,
+// 	}, nil
+// }
+
+func parseServer(record map[string]string, userID uint) (*model.Server, error) {
+	name := strings.TrimSpace(record["name"])
 	if name == "" {
 		return nil, errors.New("name is required")
 	}
 
-	status, err := strconv.ParseBool(record["status"])
-	if err != nil {
-		return nil, errors.New("invalid status")
-	}
-
-	ip := record["ipv4_address"]
+	ip := strings.TrimSpace(record["ipv4_address"])
 	if net.ParseIP(ip) == nil {
 		return nil, errors.New("invalid IP")
 	}
 
-	port, err := strconv.Atoi(record["port"])
-	if err != nil || port < 0 || port > 65535 {
-		return nil, errors.New("invalid port")
-	}
-
-	protocol := record["protocol"]
-	if protocol == "" {
-		protocol = "tcp"
-	}
-
 	return &model.Server{
-		Name:        name,
-		Status:      status,
-		IPv4Address: ip,
-		Port:        uint(port),
-		Protocol:    protocol,
+		Name:   name,
+		IPv4:   ip,
+		UserID: userID, // 🔥 inject here
 	}, nil
 }

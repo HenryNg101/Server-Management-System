@@ -53,23 +53,6 @@ services:
     ports:
       - "${HOST}:8088:8080" # Traefik dashboard
 
-  simulation:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CMD_PATH: ./cmd/simulation/multi_servers
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - APP_ENV=docker
-    networks:
-      - app-network
-
 networks:
   app-network:
     driver: bridge
