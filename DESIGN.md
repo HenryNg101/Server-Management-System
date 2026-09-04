@@ -22,7 +22,6 @@ The system follows a **service-oriented architecture (SOA-style)** with clear se
 ## 2.1 Functional Requirements
 
 - Manage servers (CRUD operations)
-- Periodically check server status
 - Store and query server status
 - Support filtering, pagination, and sorting
 - Import/export server data via CSV
@@ -36,7 +35,6 @@ The system follows a **service-oriented architecture (SOA-style)** with clear se
 ## 2.2 Non-Functional Requirements
 
 - Handle up to 10,000 servers
-- Support high-frequency health checks (every few seconds)
 - Ensure secure authentication using JWT
 - Use appropriate storage technologies:
   - PostgreSQL
@@ -82,7 +80,6 @@ flowchart LR
         Cron[Cron Scheduler]
         ImportWorker[Files Import Consumer]
         MetricsWorker[Metrics Consumer]
-        Checker[Server Ping Checker]
     end
 
     %% INFRASTRUCTURE
@@ -120,9 +117,6 @@ flowchart LR
     MetricsWorker --> Kafka
     MetricsWorker --> ES
 
-    Checker --> DB
-    Checker --> ES
-
     Cron --> DB
     Cron --> MinIO
 
@@ -132,16 +126,9 @@ flowchart LR
 
 ## Monitoring Models
 
-The system supports two monitoring approaches:
+The system supports the main monitoring approach of the **push model**, by letting each monitored server runs an agent that continuously pushes metrics to the system via API → Kafka → consumers → Elasticsearch.
 
-- **Push model (primary):**
-  Each monitored server runs an agent that continuously pushes metrics to the system via API → Kafka → consumers → Elasticsearch.
-
-- **Pull model (secondary):**
-  A centralized worker periodically performs health checks (e.g., ping) against registered servers and stores results in Elasticsearch.
-
-The **push model is the primary approach**, as it scales better, avoids network/firewall issues, and enables richer telemetry (CPU, memory, I/O).  
-The pull model is retained for **basic availability probing and fallback scenarios**.
+This approach is used, as it scales better, avoids network/firewall issues, and enables richer telemetry (CPU, memory, I/O) when compared to others like the pull model (i.e. pinging all servers at intervals)
 
 ## System components
 
@@ -172,7 +159,7 @@ The system consists of the following components:
 
 9. Kafka consumer workers: Kafka consumers to consume messages from async workflows, and keep processing and commit messages manually
 
-10. Ping checker: The pull model of the system. Being ran continuously for every X seconds, it performs checks on all servers through pings, then update statuses and write logs to Elasticsearch
+10. Files import consumer: Kafka consumer to consume CSV files import jobs. **RabbitMQ is currently considered** as future alternative instead
 
 ---
 
