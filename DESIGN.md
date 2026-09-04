@@ -151,7 +151,7 @@ The system consists of the following components:
 
 5. Jobs service: Manage all long-running tasks. Currently used for file uploading workflow, but in the future, it will be used to manage more workflows
 
-6. Monitoring service: Centralize the data aggregation of server's statuses. Right now it's just used for push and pull model of servers with metrics only, but in the future, it would be expanded for more things like collecting logs and traces
+6. Monitoring service: Centralize the data aggregation of server's statuses. Right now it's just used for push model of servers with metrics only, but in the future, it would be expanded for more things like collecting logs and traces
 
 7. Agent service: Manage all registered services and their operations, by allowing the registration of agents, and metrics ingestions from agents
 
@@ -876,20 +876,6 @@ Used for high-volume log storage.
 - `pids` (integer)
 - `oom.events` (integer)
 - `oom.kills` (integer)
-
-### For pull model (System pings)
-
-#### Purpose
-- Store health check logs for pull model
-- Support aggregation queries (uptime calculation)
-
-#### Data Stream
-- Pattern: `server-status*`
-
-#### Fields
-- `@timestamp` (date)
-- `server_id` (long)
-- `status` (boolean)
 
 ---
 
